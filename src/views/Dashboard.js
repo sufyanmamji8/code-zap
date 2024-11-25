@@ -4,7 +4,7 @@ import Header from "components/Headers/Header.js";
 import CreateWhatsappModal from "components/Pages/CreateWhatsappModal";
 import axios from "axios";
 import { COMPANY_API_ENDPOINT } from "Api/Constant";
-import { FaPlus } from 'react-icons/fa'; // Plus icon import from react-icons
+import { FaPlus } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
@@ -61,6 +61,15 @@ const Dashboard = () => {
     fetchWhatsappAccounts();
   }, []);
 
+  const handleOpenWhatsApp = () => {
+    // Navigate to the same route but with state indicating WhatsApp view
+    navigate('/admin/dashboard', { 
+      state: { 
+        whatsAppView: true // This will trigger the sidebar to show WhatsApp options
+      } 
+    });
+  };
+
   return (
     <>
       <Header />
@@ -76,7 +85,7 @@ const Dashboard = () => {
       <div style={{ position: "relative", marginBottom: "30px", textAlign: "center" }}>
         <Button
           color="primary"
-          onClick={toggleModal}
+          onClick={() => navigate('/admin/dashboard', { state: { expandSidebar: true } })}
           style={{
             position: "fixed",
             bottom: "20px",
@@ -109,7 +118,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* WhatsApp Accounts as Cards */}
+      {/* Modified WhatsApp Accounts Cards */}
       <Row className="mx-auto">
         {whatsappAccounts.length > 0 ? (
           whatsappAccounts.map((account) => (
@@ -120,60 +129,42 @@ const Dashboard = () => {
                   borderRadius: "10px", 
                   transition: "transform 0.3s ease", 
                   overflow: "hidden", 
-                  height: "300px", // Ensures all cards are the same height
+                  height: "300px",
                   display: "flex", 
                   flexDirection: "column", 
                   justifyContent: "space-between"
                 }}
               >
                 <CardBody>
-                  <CardTitle 
-                    tag="h5" 
-                    style={{
-                      fontWeight: "bold", 
-                      color: "#343a40"
-                    }}
-                  >
+                  <CardTitle tag="h5" style={{ fontWeight: "bold", color: "#343a40" }}>
                     Name: {account.name}
                   </CardTitle>
-                  <CardText 
-                    style={{
-                      color: "#6c757d", 
-                      fontStyle: "italic",
-                      fontSize:'12px'
-                    }}
-                  >
+                  <CardText style={{ color: "#6c757d", fontStyle: "italic", fontSize: '12px' }}>
                     Created At: {new Date(account.createdAt).toLocaleString()}
                   </CardText>
                   <CardText style={{ color: "#6c757d" }}>
                     Description: {account.description || "No description available"}
                   </CardText>
-                  <CardText 
-                    style={{
-                      fontWeight: "bold", 
-                      color: account.status === "active" ? "#28a745" : "#dc3545"
-                    }}
-                  >
+                  <CardText style={{ fontWeight: "bold", color: account.status === "active" ? "#28a745" : "#dc3545" }}>
                     Status: {account.status}
                   </CardText>
                 </CardBody>
 
-                {/* Open WhatsApp Button */}
+                {/* Modified Open WhatsApp Button */}
                 <Button
-                 onClick={() => navigate('/admin/dashboard', { state: { expandSidebar: true } })}
+                  onClick={handleOpenWhatsApp}
                   color="success"
-                  target="_blank"
                   style={{
-                    position: "absolute", // Fixed position inside the card
-                    bottom: "10px", // Adjusts the button to be closer to the bottom
-                    right: "10px", // Right side of the card
-                    fontSize: "12px", // Smaller font size
-                    padding: "5px 10px", // Smaller button size
-                    backgroundColor: "#81c784", // Very light green shade
-                    color: "white", // White text
-                    fontWeight: "bold", // Bold text
-                    borderRadius: "5px", // Slightly rounded edges
-                    boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)", // Optional shadow for depth
+                    position: "absolute", 
+                    bottom: "10px", 
+                    right: "10px", 
+                    fontSize: "12px", 
+                    padding: "5px 10px", 
+                    backgroundColor: "#81c784", 
+                    color: "white", 
+                    fontWeight: "bold", 
+                    borderRadius: "5px", 
+                    boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
                   }}
                 >
                   Open WhatsApp
@@ -188,8 +179,8 @@ const Dashboard = () => {
         )}
       </Row>
 
-      {/* Create WhatsApp Account Modal */}
-      <CreateWhatsappModal
+       {/* Create WhatsApp Account Modal */}
+       <CreateWhatsappModal
         isOpen={formModal}
         toggleModal={toggleModal}
         onSuccess={fetchWhatsappAccounts}

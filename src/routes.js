@@ -6,35 +6,36 @@ import Campaign from "views/examples/Campaign.js";
 import Templates from "views/examples/Templates.js";
 import EditCompany from "components/Pages/EditWhatsappAccount";
 import WhatsAppAccountList from "components/Pages/WhatsAppAccountList";
-
+import WhatsAppStats from "components/Pages/WhatsAppStats";
+import WhatsAppChats from "components/Pages/WhatsAppChats";
+import WhatsAppAgents from "components/Pages/WhatsAppAgents";
 
 var routes = [
   {
     path: "/dashboard",
     name: "Dashboard",
     icon: "ni ni-tv-2 text-gray",
-    component: <Dashboard/>,
+    component: <Dashboard />,
     layout: "/admin",
   },
   {
     path: "/whatsapp",
     name: "Whatsapp",
-    icon: "ni ni-chat-round text-gray", 
+    icon: "ni ni-chat-round text-gray",
     component: <WhatsApp />,
     layout: "/admin",
   },
   {
     path: "/templates",
     name: "Templates",
-    icon: "ni ni-folder-17 text-gray", 
+    icon: "ni ni-folder-17 text-gray",
     component: <Templates />,
     layout: "/admin",
   },
-  
   {
     path: "/campaigns",
     name: "Campaigns",
-    icon: "ni ni-send text-gray", 
+    icon: "ni ni-send text-gray",
     component: <Campaign />,
     layout: "/admin",
   },
@@ -58,7 +59,7 @@ var routes = [
     icon: "ni ni-circle-08 text-gray",
     component: <EditCompany />,
     layout: "/admin",
-    showInSidebar: false
+    showInSidebar: false,
   },
   {
     path: "/whatsapplist",
@@ -66,7 +67,32 @@ var routes = [
     icon: "ni ni-circle-08 text-gray",
     component: <WhatsAppAccountList />,
     layout: "/admin",
-    showInSidebar: false
+    showInSidebar: false,
+  },
+  {
+    path: "/stats",
+    name: "WhatsAppStats",
+    icon: "ni ni-circle-08 text-gray",
+    component: <WhatsAppStats />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/chats",
+    name: "WhatsAppStats",
+    icon: "ni ni-circle-08 text-gray",
+    component: <WhatsAppChats />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/agents",
+    name: "WhatsAppStats",
+    icon: "ni ni-circle-08 text-gray",
+    component: <WhatsAppAgents />,
+    layout: "/admin",
+    showInSidebar: false,
   },
 ];
+
 export default routes;

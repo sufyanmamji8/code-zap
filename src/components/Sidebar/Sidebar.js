@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink as NavLinkRRD, Link } from "react-router-dom";
+import { NavLink as NavLinkRRD, Link, useLocation, useNavigate } from "react-router-dom";
 import { PropTypes } from "prop-types";
 import {
   UncontrolledDropdown,
@@ -14,20 +14,81 @@ import {
   Container,
   Row,
   Col,
-  Media,
   Collapse,
 } from "reactstrap";
 
 const Sidebar = (props) => {
   const [collapseOpen, setCollapseOpen] = useState(false);
   const [activeWhatsapp, setActiveWhatsapp] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isWhatsAppView, setIsWhatsAppView] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate(); // Initialize navigate hook
 
-  // Check login status
   useEffect(() => {
-    const token = localStorage.getItem("token"); // Replace 'authToken' with your token key
-    setIsLoggedIn(!!token);
-  }, []);
+    // Check if we're in WhatsApp view based on state
+    if (location.state?.whatsAppView) {
+      // If in WhatsApp view, navigate to /admin/chats
+      setIsWhatsAppView(true);
+      navigate("/admin/chats");
+    }
+  }, [location, navigate]);
+
+  const whatsAppRoutes = [
+    {
+      name: "Back to Owner",
+      icon: "ni ni-bold-left",
+      path: "/owner",  // Route updated to /owner
+      layout: "/admin",
+    },
+    {
+      name: "Stats",
+      icon: "ni ni-chart-bar-32",
+      path: "/stats",
+      layout: "/admin",
+    },
+    {
+      name: "Chats",
+      icon: "ni ni-chat-round",
+      path: "/chats",
+      layout: "/admin",
+    },
+    {
+      name: "Agents",  
+      icon: "ni ni-circle-08",
+      path: "/agents",
+      layout: "/admin",
+      dropdown: true,
+      subRoutes: [
+        { name: "List", path: "/agentslist" },
+        { name: "Create Agent", path: "/agentsAdd" },
+      ]
+    },
+    {
+      name: "Contacts",  
+      icon: "ni ni-single-02",
+      path: "/contacts",
+      layout: "/admin",
+      dropdown: true,
+      subRoutes: [
+        { name: "List", path: "/contactslist" },
+        { name: "Group", path: "/contactsGroup" },
+        { name: "Fields", path: "/contactsFields" },
+        { name: "Import Fields", path: "/contactsImport" },
+      ]
+    },
+    {
+      name: "Templates",
+      icon: "ni ni-single-copy-04",
+      path: "/templates",
+      layout: "/admin",
+    },
+    {
+      name: "Campaign",
+      icon: "ni ni-notification-70",
+      path: "/campaign",
+      layout: "/admin",
+    },
+  ];
 
   const activeRoute = (routeName) => {
     return props.location.pathname.indexOf(routeName) > -1 ? "active" : "";
@@ -42,40 +103,98 @@ const Sidebar = (props) => {
   };
 
   const createLinks = (routes) => {
-    return routes
-      .filter((prop) => {
-        if (!isLoggedIn && (prop.name === "Login" || prop.name === "Register")) {
-          return true; // Show login/register if not logged in
-        }
-        if (isLoggedIn && (prop.name === "Login" || prop.name === "Register")) {
-          return false; // Hide login/register if logged in
-        }
-        return prop.showInSidebar !== false; // Include visible routes
-      })
+    const currentRoutes = isWhatsAppView ? whatsAppRoutes : routes;
+
+    return currentRoutes
+      .filter((prop) => prop.showInSidebar !== false)
       .map((prop, key) => {
-        if (prop.name === "Whatsapp") {
+        // Special handling for "Back to Owner" in WhatsApp view
+        if (prop.name === "Back to Owner") {
+          return (
+            <NavItem key={key}>
+              <NavLink
+                to={prop.layout + prop.path}
+                tag={NavLinkRRD}
+                onClick={() => {
+                  closeCollapse();
+                  setIsWhatsAppView(false); // Reset to default view
+                }}
+                className="text-primary"
+              >
+                <i className={prop.icon} />
+                {prop.name}
+              </NavLink>
+            </NavItem>
+          );
+        }
+
+        // Handling for "Open WhatsApp" to redirect to Dashboard and automatically go to Chats
+        if (prop.name === "Whatsapp" && !isWhatsAppView) {
+          return (
+            <NavItem key={key}>
+              <NavLink
+                to="#"
+                onClick={() => {
+                  closeCollapse();
+                  // Redirect to Dashboard and pass state to indicate WhatsApp view
+                  navigate("/admin/dashboard", { state: { whatsAppView: true } });
+                }}
+                className="text-primary"
+              >
+                <i className={prop.icon} />
+                {prop.name}
+              </NavLink>
+            </NavItem>
+          );
+        }
+
+        // Handling for Agents and Contacts dropdowns and other routes
+        if (prop.dropdown && prop.name === "Agents") {
           return (
             <NavItem key={key}>
               <UncontrolledDropdown nav inNavbar>
                 <DropdownToggle
                   nav
                   className={`d-flex align-items-center ${activeWhatsapp ? "text-success" : "text-muted"}`}
-                  onClick={() => {
-                    setActiveWhatsapp(!activeWhatsapp);
-                  }}
+                  onClick={() => setActiveWhatsapp(!activeWhatsapp)}
                   onMouseEnter={() => setActiveWhatsapp(true)}
                   onMouseLeave={() => setActiveWhatsapp(false)}
                 >
                   <i className={prop.icon} /> {prop.name}
                   <i className="fa fa-caret-down ml-2" />
                 </DropdownToggle>
-                <DropdownMenu className="dropdown-menu-arrow" right>
-                  <DropdownItem to="/admin/whatsapplist" tag={Link}>
-                    <i className="fa fa-list mr-2" /> List
-                  </DropdownItem>
-                  <DropdownItem to="/admin/AddWhatsapp" tag={Link}>
-                    <i className="fa fa-plus-circle mr-2" /> Add WhatsApp
-                  </DropdownItem>
+                <DropdownMenu className="dropdown-menu-arrow" right style={{ position: 'relative' }}>
+                  {prop.subRoutes.map((subRoute, subKey) => (
+                    <DropdownItem to={prop.layout + subRoute.path} tag={Link} key={subKey}>
+                      <i className="fa fa-list mr-2" /> {subRoute.name}
+                    </DropdownItem>
+                  ))}
+                </DropdownMenu>
+              </UncontrolledDropdown>
+            </NavItem>
+          );
+        }
+
+        if (prop.dropdown && prop.name === "Contacts") {
+          return (
+            <NavItem key={key}>
+              <UncontrolledDropdown nav inNavbar>
+                <DropdownToggle
+                  nav
+                  className={`d-flex align-items-center ${activeWhatsapp ? "text-success" : "text-muted"}`}
+                  onClick={() => setActiveWhatsapp(!activeWhatsapp)}
+                  onMouseEnter={() => setActiveWhatsapp(true)}
+                  onMouseLeave={() => setActiveWhatsapp(false)}
+                >
+                  <i className={prop.icon} /> {prop.name}
+                  <i className="fa fa-caret-down ml-2" />
+                </DropdownToggle>
+                <DropdownMenu className="dropdown-menu-arrow" right style={{ position: 'relative' }}>
+                  {prop.subRoutes.map((subRoute, subKey) => (
+                    <DropdownItem to={prop.layout + subRoute.path} tag={Link} key={subKey}>
+                      <i className="fa fa-list mr-2" /> {subRoute.name}
+                    </DropdownItem>
+                  ))}
                 </DropdownMenu>
               </UncontrolledDropdown>
             </NavItem>
