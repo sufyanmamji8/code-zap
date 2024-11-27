@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { COMPANY_API_ENDPOINT } from "Api/Constant";
 import Header from "components/Headers/Header";
+import { toast } from "sonner";
 
 const EditCompany = () => {
   const { id } = useParams();
@@ -50,14 +51,14 @@ const EditCompany = () => {
         },
       });
       if (response.status === 200) {
-        alert("Company updated successfully!");
+        toast.success('Company updated successfully!')
         navigate("/admin/dashboard");
       } else {
         alert("Failed to update company. Please try again.");
       }
     } catch (error) {
       console.error("Error updating company:", error);
-      alert("An error occurred while updating the company.");
+     toast.error('An error occurred while updating the company.')
     }
   };
 

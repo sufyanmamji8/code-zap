@@ -16,18 +16,17 @@ import {
   Col,
   Collapse,
 } from "reactstrap";
+import { toast } from "sonner";
 
 const Sidebar = (props) => {
   const [collapseOpen, setCollapseOpen] = useState(false);
   const [activeWhatsapp, setActiveWhatsapp] = useState(false);
   const [isWhatsAppView, setIsWhatsAppView] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate(); // Initialize navigate hook
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if we're in WhatsApp view based on state
     if (location.state?.whatsAppView) {
-      // If in WhatsApp view, navigate to /admin/chats
       setIsWhatsAppView(true);
       navigate("/admin/chats");
     }
@@ -37,7 +36,7 @@ const Sidebar = (props) => {
     {
       name: "Back to Owner",
       icon: "ni ni-bold-left",
-      path: "/owner",  // Route updated to /owner
+      path: "/dashboard",
       layout: "/admin",
     },
     {
@@ -53,18 +52,18 @@ const Sidebar = (props) => {
       layout: "/admin",
     },
     {
-      name: "Agents",  
+      name: "Agents",
       icon: "ni ni-circle-08",
       path: "/agents",
       layout: "/admin",
       dropdown: true,
       subRoutes: [
         { name: "List", path: "/agentslist" },
-        { name: "Create Agent", path: "/agentsAdd" },
+        { name: "Create Agent", path: "/createagents" },
       ]
     },
     {
-      name: "Contacts",  
+      name: "Contacts",
       icon: "ni ni-single-02",
       path: "/contacts",
       layout: "/admin",
@@ -88,6 +87,12 @@ const Sidebar = (props) => {
       path: "/campaign",
       layout: "/admin",
     },
+    {
+      name: "Settings",
+      icon: "fa fa-cog",
+      path: "/settings",
+      layout: "/admin",
+    },
   ];
 
   const activeRoute = (routeName) => {
@@ -108,7 +113,35 @@ const Sidebar = (props) => {
     return currentRoutes
       .filter((prop) => prop.showInSidebar !== false)
       .map((prop, key) => {
-        // Special handling for "Back to Owner" in WhatsApp view
+        // WhatsApp Dropdown
+        if (prop.name === "Whatsapp" && !isWhatsAppView) {
+          return (
+            <NavItem key={key}>
+              <UncontrolledDropdown nav inNavbar>
+                <DropdownToggle
+                  nav
+                  className={`d-flex align-items-center ${activeWhatsapp ? "text-success" : "text-muted"}`}
+                  onClick={() => setActiveWhatsapp(!activeWhatsapp)}
+                  onMouseEnter={() => setActiveWhatsapp(true)}
+                  onMouseLeave={() => setActiveWhatsapp(false)}
+                >
+                  <i className={prop.icon} /> {prop.name}
+                  <i className="fa fa-caret-down ml-2" />
+                </DropdownToggle>
+                <DropdownMenu className="dropdown-menu-arrow" right>
+                  <DropdownItem to="/admin/whatsapplist" tag={Link}>
+                    <i className="fa fa-list mr-2" /> List
+                  </DropdownItem>
+                  <DropdownItem to="/admin/AddWhatsapp" tag={Link}>
+                    <i className="fa fa-plus-circle mr-2" /> Add WhatsApp
+                  </DropdownItem>
+                </DropdownMenu>
+              </UncontrolledDropdown>
+            </NavItem>
+          );
+        }
+
+        // Back to Owner when in WhatsApp view
         if (prop.name === "Back to Owner") {
           return (
             <NavItem key={key}>
@@ -128,54 +161,8 @@ const Sidebar = (props) => {
           );
         }
 
-        // Handling for "Open WhatsApp" to redirect to Dashboard and automatically go to Chats
-        if (prop.name === "Whatsapp" && !isWhatsAppView) {
-          return (
-            <NavItem key={key}>
-              <NavLink
-                to="#"
-                onClick={() => {
-                  closeCollapse();
-                  // Redirect to Dashboard and pass state to indicate WhatsApp view
-                  navigate("/admin/dashboard", { state: { whatsAppView: true } });
-                }}
-                className="text-primary"
-              >
-                <i className={prop.icon} />
-                {prop.name}
-              </NavLink>
-            </NavItem>
-          );
-        }
-
-        // Handling for Agents and Contacts dropdowns and other routes
-        if (prop.dropdown && prop.name === "Agents") {
-          return (
-            <NavItem key={key}>
-              <UncontrolledDropdown nav inNavbar>
-                <DropdownToggle
-                  nav
-                  className={`d-flex align-items-center ${activeWhatsapp ? "text-success" : "text-muted"}`}
-                  onClick={() => setActiveWhatsapp(!activeWhatsapp)}
-                  onMouseEnter={() => setActiveWhatsapp(true)}
-                  onMouseLeave={() => setActiveWhatsapp(false)}
-                >
-                  <i className={prop.icon} /> {prop.name}
-                  <i className="fa fa-caret-down ml-2" />
-                </DropdownToggle>
-                <DropdownMenu className="dropdown-menu-arrow" right style={{ position: 'relative' }}>
-                  {prop.subRoutes.map((subRoute, subKey) => (
-                    <DropdownItem to={prop.layout + subRoute.path} tag={Link} key={subKey}>
-                      <i className="fa fa-list mr-2" /> {subRoute.name}
-                    </DropdownItem>
-                  ))}
-                </DropdownMenu>
-              </UncontrolledDropdown>
-            </NavItem>
-          );
-        }
-
-        if (prop.dropdown && prop.name === "Contacts") {
+        // Other Routes
+        if (prop.dropdown) {
           return (
             <NavItem key={key}>
               <UncontrolledDropdown nav inNavbar>
@@ -254,7 +241,7 @@ const Sidebar = (props) => {
                 src={require("../../assets/img/brand/free-waba-logo.png")}
                 style={{ height: "40px", width: "auto" }}
               />
-              <h2 className="ml-3 mb-0">Free Waba</h2>
+              <h2 className="ml-3 mb-0">Codovia</h2>
             </div>
           </NavbarBrand>
         ) : null}

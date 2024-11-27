@@ -1,5 +1,5 @@
 import Header from "components/Headers/Header";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Container, Row, Col, Input, Button } from "reactstrap";
 import { 
   FaSearch, 
@@ -8,14 +8,22 @@ import {
   FaSmile, 
   FaPaperclip, 
   FaCheck, 
-  FaCheckDouble 
+  FaCheckDouble,
+  FaMicrophone 
 } from 'react-icons/fa';
+import AttachmentOptions from './AttachmentOptions';
 
 const WhatsAppChats = () => {
   const users = [
     { id: 1, name: "John Doe", phone: "+1234567890", avatar: "https://randomuser.me/api/portraits/men/1.jpg" },
     { id: 2, name: "Jane Smith", phone: "+0987654321", avatar: "https://randomuser.me/api/portraits/women/1.jpg" },
-    { id: 3, name: "Mike Johnson", phone: "+1122334455", avatar: "https://randomuser.me/api/portraits/men/2.jpg" }
+    { id: 3, name: "Mike Johnson", phone: "+1122334455", avatar: "https://randomuser.me/api/portraits/men/2.jpg" },
+    { id: 1, name: "Hamza Mamji", phone: "+1234567890", avatar: "https://randomuser.me/api/portraits/men/1.jpg" },
+    { id: 2, name: "Jane Smith", phone: "+0987654321", avatar: "https://randomuser.me/api/portraits/women/1.jpg" },
+    { id: 3, name: "Mike Johnson", phone: "+1122334455", avatar: "https://randomuser.me/api/portraits/men/2.jpg" },
+    { id: 1, name: "John Doe", phone: "+1234567890", avatar: "https://randomuser.me/api/portraits/men/1.jpg" },
+    { id: 2, name: "Jane Smith", phone: "+0987654321", avatar: "https://randomuser.me/api/portraits/women/1.jpg" },
+    { id: 3, name: "Mike Johnson", phone: "+1122334455", avatar: "https://randomuser.me/api/portraits/men/2.jpg" },
   ];
 
   const [selectedUser, setSelectedUser] = useState(users[0]);
@@ -23,6 +31,13 @@ const WhatsAppChats = () => {
   const [message, setMessage] = useState("");
   const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
   const [showUserList, setShowUserList] = useState(true);
+  const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
+
+
+  
+
   const [userChats, setUserChats] = useState({
     1: [
       { id: 1, sender: 'other', text: "Hello John, how are you?", timestamp: new Date(), status: 'read' },
@@ -37,6 +52,15 @@ const WhatsAppChats = () => {
       { id: 2, sender: 'me', text: "Just checking in", timestamp: new Date(), status: 'sent' }
     ]
   });
+  
+ 
+  useEffect(() => {
+    scrollToBottom();
+  }, [selectedUser, userChats]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -57,6 +81,7 @@ const WhatsAppChats = () => {
       setShowUserList(false);
     }
   };
+  
 
   const handleSendMessage = () => {
     if (message.trim()) {
@@ -74,12 +99,26 @@ const WhatsAppChats = () => {
       }));
       
       setMessage("");
+      setIsTyping(false);
     }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
+  };
+
+  const handleMessageChange = (e) => {
+    const inputValue = e.target.value;
+    setMessage(inputValue);
+    setIsTyping(inputValue.trim().length > 0);
   };
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
 
   const filteredMessages = userChats[selectedUser.id].filter((msg) =>
     msg.text.toLowerCase().includes(searchTerm.toLowerCase())
@@ -91,9 +130,9 @@ const WhatsAppChats = () => {
 
   const renderMessageStatus = (status) => {
     switch(status) {
-      case 'sent': return <FaCheck color="gray" />;
-      case 'delivered': return <FaCheckDouble color="blue" />;
-      case 'read': return <FaCheckDouble color="green" />;
+      case 'sent': return <FaCheck color="gray" size={10} />;
+      case 'delivered': return <FaCheckDouble color="blue" size={10} />;
+      case 'read': return <FaCheckDouble color="green" size={10} />;
       default: return null;
     }
   };
@@ -104,115 +143,157 @@ const WhatsAppChats = () => {
       md="4" 
       style={{ 
         backgroundColor: '#f7f7f7', 
-        height: '100vh', 
-        overflowY: 'auto', 
-        display: isMobileView && !showUserList ? 'none' : 'block',
-        padding: '15px'
+        height: 'calc(100vh - 100px)', 
+        display: isMobileView && !showUserList ? 'none' : 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        borderRight: '1px solid #e0e0e0'
       }}
     >
-      <div className="mb-3 position-relative">
+      <div className="mb-2 position-relative" style={{ padding: '10px', paddingBottom: 0 }}>
         <Input 
           type="text" 
-          placeholder="Search users or messages..." 
+          placeholder="Search users" 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{ 
-            paddingLeft: '40px', 
+            paddingLeft: '35px', 
             borderRadius: '20px', 
-            backgroundColor: '#e9ecef'
+            backgroundColor: '#e9ecef',
+            height: '35px'
           }}
         />
         <FaSearch 
           style={{ 
             position: 'absolute', 
-            left: '15px', 
-            top: '12px', 
-            color: '#6c757d' 
+            left: '20px', 
+            top: '20px', 
+            color: '#6c757d',
+            fontSize: '14px' 
           }} 
         />
       </div>
 
-      {filteredUsers.map(user => (
-        <div 
-          key={user.id} 
-          onClick={() => handleUserSelect(user)}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            padding: '10px', 
-            borderRadius: '10px', 
-            marginBottom: '10px',
-            backgroundColor: selectedUser.id === user.id ? '#e9ecef' : 'transparent',
-            cursor: 'pointer'
-          }}
-        >
-          <img 
-            src={user.avatar} 
-            alt={user.name} 
+      <div 
+        style={{ 
+          overflowY: 'auto', 
+          flexGrow: 1,
+          padding: '10px',
+          paddingTop: 0 
+        }}
+      >
+        {filteredUsers.map(user => (
+          <div 
+            key={user.id} 
+            onClick={() => handleUserSelect(user)}
             style={{ 
-              width: '50px', 
-              height: '50px', 
-              borderRadius: '50%', 
-              marginRight: '15px' 
-            }} 
-          />
-          <div>
-            <h6 style={{ margin: 0, fontWeight: 'bold' }}>{user.name}</h6>
-            <small className="text-muted">{user.phone}</small>
+              display: 'flex', 
+              alignItems: 'center', 
+              padding: '8px', 
+              borderRadius: '10px', 
+              marginBottom: '8px',
+              backgroundColor: selectedUser.id === user.id ? '#e9ecef' : 'transparent',
+              cursor: 'pointer'
+            }}
+          >
+            <img 
+              src={user.avatar} 
+              alt={user.name} 
+              style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                marginRight: '10px' 
+              }} 
+            />
+            <div>
+              <h6 style={{ margin: 0, fontWeight: 'bold', fontSize: '14px' }}>{user.name}</h6>
+              <small className="text-muted" style={{ fontSize: '12px' }}>{user.phone}</small>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </Col>
   );
+
+  
 
   const renderChatWindow = () => (
     <Col 
       xs="12" 
       md="8" 
       style={{ 
-        height: '100vh', 
+        height: 'calc(100vh - 100px)', 
         display: isMobileView && showUserList ? 'none' : 'flex', 
         flexDirection: 'column', 
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        position: 'relative'
       }}
     >
-      {/* User Header */}
       {isMobileView && (
         <div 
           onClick={() => setShowUserList(true)}
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            padding: '15px', 
+            padding: '10px', 
             backgroundColor: '#f7f7f7',
             borderBottom: '1px solid #e0e0e0'
           }}
         >
-          <FaArrowLeft style={{ marginRight: '15px' }} />
+          <FaArrowLeft style={{ marginRight: '10px', fontSize: '16px' }} />
           <img 
             src={selectedUser.avatar} 
             alt={selectedUser.name} 
             style={{ 
-              width: '40px', 
-              height: '40px', 
+              width: '35px', 
+              height: '35px', 
               borderRadius: '50%', 
-              marginRight: '15px' 
+              marginRight: '10px' 
             }} 
           />
           <div>
-            <h6 style={{ margin: 0, fontWeight: 'bold' }}>{selectedUser.name}</h6>
-            <small className="text-muted">Online</small>
+            <h6 style={{ margin: 0, fontWeight: 'bold', fontSize: '14px' }}>{selectedUser.name}</h6>
+            <small className="text-muted" style={{ fontSize: '12px' }}>Online</small>
           </div>
         </div>
       )}
 
-      {/* Messages Container */}
+      {!isMobileView && (
+        <div 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            padding: '10px', 
+            backgroundColor: '#f7f7f7',
+            borderBottom: '1px solid #e0e0e0'
+          }}
+        >
+          <img 
+            src={selectedUser.avatar} 
+            alt={selectedUser.name} 
+            style={{ 
+              width: '35px', 
+              height: '35px', 
+              borderRadius: '50%', 
+              marginRight: '10px' 
+            }} 
+          />
+          <div>
+            <h6 style={{ margin: 0, fontWeight: 'bold', fontSize: '14px' }}>{selectedUser.name}</h6>
+            <small className="text-muted" style={{ fontSize: '12px' }}>Online</small>
+          </div>
+        </div>
+      )}
+
       <div 
         style={{ 
           flexGrow: 1, 
           overflowY: 'auto', 
-          padding: '15px', 
-          backgroundColor: '#f5f5f5' 
+          padding: '10px', 
+          backgroundColor: '#f5f5f5',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {filteredMessages.map(msg => (
@@ -221,24 +302,25 @@ const WhatsAppChats = () => {
             style={{ 
               display: 'flex', 
               justifyContent: msg.sender === 'me' ? 'flex-end' : 'flex-start',
-              marginBottom: '10px' 
+              marginBottom: '8px' 
             }}
           >
             <div 
               style={{ 
                 maxWidth: '70%', 
                 backgroundColor: msg.sender === 'me' ? '#dcf8c6' : '#ffffff',
-                padding: '10px 15px', 
-                borderRadius: '15px',
-                position: 'relative'
+                padding: '6px 10px', 
+                borderRadius: '12px',
+                fontSize: '13px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
               }}
             >
               {msg.text}
               <div 
                 style={{ 
-                  fontSize: '10px', 
+                  fontSize: '9px', 
                   color: '#888', 
-                  marginTop: '5px', 
+                  marginTop: '4px', 
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'flex-end' 
@@ -246,7 +328,7 @@ const WhatsAppChats = () => {
               >
                 {formatTime(msg.timestamp)}
                 {msg.sender === 'me' && (
-                  <span style={{ marginLeft: '5px' }}>
+                  <span style={{ marginLeft: '4px' }}>
                     {renderMessageStatus(msg.status)}
                   </span>
                 )}
@@ -254,61 +336,83 @@ const WhatsAppChats = () => {
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
       <div 
         style={{ 
           display: 'flex', 
-          padding: '15px', 
+          padding: '10px', 
           backgroundColor: '#f7f7f7',
-          alignItems: 'center'
+          alignItems: 'center',
+          position: 'relative'
         }}
       >
         <Button 
           color="link" 
-          style={{ padding: '0 10px', color: '#6c757d' }}
+          style={{ padding: '0 8px', color: '#6c757d' }}
         >
-          <FaSmile size={20} />
+          <FaSmile size={16} />
         </Button>
         <Button 
           color="link" 
-          style={{ padding: '0 10px', color: '#6c757d' }}
+          style={{ padding: '0 8px', color: '#6c757d' }}
+          onClick={() => setShowAttachmentOptions(!showAttachmentOptions)}
         >
-          <FaPaperclip size={20} />
+          <FaPaperclip size={16} />
         </Button>
+        
+        <AttachmentOptions 
+          isOpen={showAttachmentOptions} 
+          onClose={() => setShowAttachmentOptions(false)} 
+        />
+
         <Input 
           type="text" 
           placeholder="Type a message..." 
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleMessageChange}
+          onKeyPress={handleKeyPress}
           style={{ 
             borderRadius: '20px', 
-            marginRight: '10px',
-            marginLeft: '10px'
+            marginRight: '8px',
+            marginLeft: '8px',
+            height: '35px',
+            fontSize: '13px'
           }}
         />
         <Button 
           color="primary" 
           onClick={handleSendMessage}
-          style={{ borderRadius: '50%', padding: '10px 12px' }}
+          style={{ 
+            borderRadius: '50%', 
+            padding: '8px 10px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
         >
-          <FaPaperPlane />
+          {isTyping ? (
+            <FaPaperPlane size={16} />
+          ) : (
+            <FaMicrophone size={16} />
+          )}
         </Button>
       </div>
     </Col>
+    
   );
 
   return (
-    <>
-      <Header style={{ zIndex: "10", position: "relative" }} />
-      <Container fluid className="p-0">
-        <Row noGutters>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Header style={{ zIndex: "10", position: "relative", flexShrink: 0 }} />
+      <Container fluid style={{ flexGrow: 1, overflow: 'hidden', padding: 0 }}>
+        <Row noGutters style={{ height: '100%' }}>
           {renderUserList()}
           {renderChatWindow()}
         </Row>
       </Container>
-    </>
+    </div>
   );
 };
 

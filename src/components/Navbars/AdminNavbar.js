@@ -1,6 +1,4 @@
-
-import { Link } from "react-router-dom";
-
+import { Link, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownItem,
@@ -11,8 +9,18 @@ import {
   Container,
   Media,
 } from "reactstrap";
+import { toast } from "sonner";  // Importing the toast library
 
 const AdminNavbar = (props) => {
+  const navigate = useNavigate();
+
+  // Handle the log out process and show the success toast
+  const handleLogOut = () => {
+    localStorage.removeItem('token');  // Remove token from local storage
+    toast.success("Successfully logged out!");  // Show success toast message
+    navigate('/auth/login');  // Redirect to the login page
+  };
+
   return (
     <>
       <Navbar className="navbar-top navbar-dark" expand="md" id="navbar-main">
@@ -23,7 +31,7 @@ const AdminNavbar = (props) => {
           >
             {props.brandText}
           </Link>
-          
+
           <Nav className="align-items-center d-none d-md-flex" navbar>
             <UncontrolledDropdown nav>
               <DropdownToggle className="pr-0" nav>
@@ -31,12 +39,12 @@ const AdminNavbar = (props) => {
                   <span className="avatar avatar-sm rounded-circle">
                     <img
                       alt="..."
-                      src={require("../../assets/img/theme/sketch.jpg")}
+                      src={require("../../assets/img/theme/team-2-800x800.jpg")}
                     />
                   </span>
                   <Media className="ml-2 d-none d-lg-block">
                     <span className="mb-0 text-sm font-weight-bold">
-                      Free Waba
+                     Codovia 
                     </span>
                   </Media>
                 </Media>
@@ -49,11 +57,8 @@ const AdminNavbar = (props) => {
                   <i className="ni ni-single-02" />
                   <span>My profile</span>
                 </DropdownItem>
-                
-                
-                
                 <DropdownItem divider />
-                <DropdownItem href="#pablo" onClick={(e) => e.preventDefault()}>
+                <DropdownItem onClick={handleLogOut}>
                   <i className="ni ni-user-run" />
                   <span>Logout</span>
                 </DropdownItem>

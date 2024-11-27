@@ -17,7 +17,7 @@ import {
   Row,
   Col,
 } from "reactstrap";
-import { toast } from "sonner";
+import { toast } from "sonner"; // Make sure you're using sonner for toast notifications
 
 const Login = () => {
   const [input, setInput] = useState({
@@ -28,16 +28,19 @@ const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  // Handle input field change
   const ChangeEventHandler = (e) => {
     setInput({ ...input, [e.target.name]: e.target.value });
   };
 
+  // Submit handler for the login form
   const submitHandler = async (e) => {
     e.preventDefault();
 
-    console.log('Submitting:', input);  // Debugging step
+    console.log('Submitting:', input); // Debugging step
 
     try {
+      // Make API request for login
       const res = await axios.post(`${USER_API_ENDPOINT}/login`, input, {
         headers: {
           "Content-Type": "application/json",
@@ -45,15 +48,19 @@ const Login = () => {
         withCredentials: true,
       });
 
-      console.log('API Response:', res);  // Log the response for debugging
+      console.log('API Response:', res); // Log the response for debugging
 
       if (res.data.success) {
-        localStorage.setItem("token", res.data.token);
-        toast.success(res.data.message);
-        navigate("/dashboard");  // Navigate to the home page or dashboard on success
+        localStorage.setItem("token", res.data.token); // Save token in local storage
+        toast.success(res.data.message); // Display success toast
+        navigate("/dashboard"); // Navigate to dashboard or home page
+      } else {
+        // If login failed, show error toast
+        toast.error(res.data.message || "Login failed. Please try again.");
       }
     } catch (error) {
-      console.error('Error during login:', error);  // Log any errors
+      console.error('Error during login:', error); // Log any errors
+      toast.error("An error occurred. Please try again later."); // Show error toast if the API call fails
     }
   };
 
@@ -78,11 +85,12 @@ const Login = () => {
                     type="email"
                     autoComplete="new-email"
                     name="email"
-                    value={input.email}  // Bind state
+                    value={input.email}  // Bind state to input field
                     onChange={ChangeEventHandler}
                   />
                 </InputGroup>
               </FormGroup>
+
               <FormGroup>
                 <InputGroup className="input-group-alternative">
                   <InputGroupAddon addonType="prepend">
@@ -95,24 +103,26 @@ const Login = () => {
                     type="password"
                     autoComplete="new-password"
                     name="password"
-                    value={input.password}  // Bind state
+                    value={input.password}  // Bind state to input field
                     onChange={ChangeEventHandler}
                   />
                 </InputGroup>
               </FormGroup>
+
               <div className="custom-control custom-control-alternative custom-checkbox">
                 <input
                   className="custom-control-input"
-                  id=" customCheckLogin"
+                  id="customCheckLogin"
                   type="checkbox"
                 />
                 <label
                   className="custom-control-label"
-                  htmlFor=" customCheckLogin"
+                  htmlFor="customCheckLogin"
                 >
                   <span className="text-muted">Remember me</span>
                 </label>
               </div>
+
               <div className="text-center">
                 <Button className="my-4" color="primary" type="submit">
                   Sign in
@@ -121,6 +131,8 @@ const Login = () => {
             </Form>
           </CardBody>
         </Card>
+
+        {/* Links for Forgot Password and Create New Account */}
         <Row className="mt-3">
           <Col xs="6">
             <a

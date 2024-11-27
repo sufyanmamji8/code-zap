@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { USER_API_ENDPOINT } from "Api/Constant";
+import { toast } from "sonner";  // Importing toast for notifications
 
 const Register = () => {
   const [role, setRole] = useState("individual");
@@ -36,7 +37,6 @@ const Register = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
- 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setInput({ ...input, [name]: value });
@@ -44,28 +44,26 @@ const Register = () => {
 
   const validateForm = () => {
     if (!input.fullname || !input.email || !input.password || !input.phoneNumber) {
-      alert("Please fill all required fields.");
+      toast.error("Please fill all required fields.");
       return false;
     }
    
     if (role === "corporate") {
       if (!input.companyName || !input.companyAddress) {
-        alert("Please fill out both Company Name and Company Address.");
+        toast.error("Please fill out both Company Name and Company Address.");
         return false;
       }
     }
     return true;
   };
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) {
-      return; 
+      return; // If validation fails, prevent submission
     }
 
- 
     const formData = new FormData();
     formData.append("fullname", input.fullname);
     formData.append("email", input.email);
@@ -85,14 +83,14 @@ const Register = () => {
         },
       })
       if (res.data?.success) {
-        alert("Registration successful! Welcome.");
-        navigate("/login");
+        toast.success("Registration successful! Welcome.");
+        navigate("/auth/login");
       } else {
-        alert(res.data?.message || "An error occurred. Please try again.");
+        toast.error(res.data?.message || "An error occurred. Please try again.");
       }
     } catch (error) {
       console.error(error);
-      alert("An error occurred during registration. Please try again.");
+      toast.error("An error occurred during registration. Please try again.");
     }
   };
 
@@ -124,7 +122,7 @@ const Register = () => {
               </InputGroup>
             </FormGroup>
 
-           
+            {/* Email */}
             <FormGroup>
               <InputGroup className="input-group-alternative mb-3">
                 <InputGroupAddon addonType="prepend">
@@ -143,6 +141,7 @@ const Register = () => {
               </InputGroup>
             </FormGroup>
 
+            {/* Password */}
             <FormGroup>
               <InputGroup className="input-group-alternative">
                 <InputGroupAddon addonType="prepend">
@@ -161,7 +160,7 @@ const Register = () => {
               </InputGroup>
             </FormGroup>
 
-            
+            {/* Phone Number */}
             <FormGroup>
               <InputGroup className="input-group-alternative">
                 <InputGroupAddon addonType="prepend">
@@ -180,6 +179,7 @@ const Register = () => {
               </InputGroup>
             </FormGroup>
 
+            {/* Role Dropdown */}
             <FormGroup>
               <InputGroup className="input-group-alternative">
                 <InputGroupAddon addonType="prepend">
@@ -203,7 +203,7 @@ const Register = () => {
               </InputGroup>
             </FormGroup>
 
-           
+            {/* Corporate Fields */}
             {role === "corporate" && (
               <>
                 <FormGroup>
@@ -241,7 +241,7 @@ const Register = () => {
               </>
             )}
 
-            
+            {/* Submit Button */}
             <div className="text-center">
               <Button color="primary" type="submit" disabled={loading}>
                 {loading ? "Please Wait..." : "Create Account"}

@@ -9,6 +9,11 @@ import WhatsAppAccountList from "components/Pages/WhatsAppAccountList";
 import WhatsAppStats from "components/Pages/WhatsAppStats";
 import WhatsAppChats from "components/Pages/WhatsAppChats";
 import WhatsAppAgents from "components/Pages/WhatsAppAgents";
+import CreateWhatsappModal from "components/Pages/CreateWhatsappModal";
+import AddWhatsapp from "components/Pages/AddWhatsapp";
+import AgentsList from "components/Pages/AgentsList";
+import AgentsAdd from "components/Pages/AgentsAdd";
+import Settings from "components/Pages/Settings";
 
 var routes = [
   {
@@ -90,6 +95,38 @@ var routes = [
     name: "WhatsAppStats",
     icon: "ni ni-circle-08 text-gray",
     component: <WhatsAppAgents />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/AddWhatsapp",
+    name: "AddWhatsapp",
+    icon: "ni ni-circle-08 text-gray",
+    component: <AddWhatsapp />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/agentslist",
+    name: "AgentsList",
+    icon: "ni ni-circle-08 text-gray",
+    component: <AgentsList />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/createagents",
+    name: "AgentsAdd",
+    icon: "ni ni-circle-08 text-gray",
+    component: <AgentsAdd />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "settings",
+    name: "Settings",
+    icon: "fa fa-cog",
+    component: <Settings />,
     layout: "/admin",
     showInSidebar: false,
   },

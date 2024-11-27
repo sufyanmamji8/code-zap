@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Button, Card, CardBody, CardTitle, CardText, Row, Col, Spinner } from "reactstrap";
 import Header from "components/Headers/Header.js";
-import CreateWhatsappModal from "components/Pages/CreateWhatsappModal";
 import axios from "axios";
 import { COMPANY_API_ENDPOINT } from "Api/Constant";
 import { FaPlus } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Dashboard = () => {
-  const [formModal, setFormModal] = useState(false);
   const [whatsappAccounts, setWhatsappAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const toggleModal = () => {
-    setFormModal(!formModal);
-  };
+ 
 
   const fetchWhatsappAccounts = async () => {
     setLoading(true);
@@ -63,6 +60,7 @@ const Dashboard = () => {
 
   const handleOpenWhatsApp = () => {
     // Navigate to the same route but with state indicating WhatsApp view
+    toast.success("Successfully login!"); 
     navigate('/admin/dashboard', { 
       state: { 
         whatsAppView: true // This will trigger the sidebar to show WhatsApp options
@@ -81,32 +79,7 @@ const Dashboard = () => {
         WhatsApp Accounts
       </h2>
 
-      {/* Floating Plus Sign Button */}
-      <div style={{ position: "relative", marginBottom: "30px", textAlign: "center" }}>
-        <Button
-          color="primary"
-          onClick={() => navigate('/admin/dashboard', { state: { expandSidebar: true } })}
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            right: "20px",
-            borderRadius: "50%",
-            width: "70px",
-            height: "70px",
-            fontSize: "40px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "linear-gradient(to bottom, #17a2b8, #0d6efd)",
-            boxShadow: "0 6px 20px rgba(13, 110, 253, 0.6)",
-            transition: "all 0.3s ease-in-out",
-            zIndex: 999,
-          }}
-          className="hover-shadow"
-        >
-          <FaPlus style={{ color: "white" }} />
-        </Button>
-      </div>
+      
 
       {/* Error Message */}
       {error && <div className="alert alert-danger text-center">{error}</div>}
@@ -179,12 +152,7 @@ const Dashboard = () => {
         )}
       </Row>
 
-       {/* Create WhatsApp Account Modal */}
-       <CreateWhatsappModal
-        isOpen={formModal}
-        toggleModal={toggleModal}
-        onSuccess={fetchWhatsappAccounts}
-      />
+     
     </>
   );
 };

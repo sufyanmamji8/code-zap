@@ -4,6 +4,7 @@ import Header from "components/Headers/Header.js";
 import axios from "axios";
 import { COMPANY_API_ENDPOINT } from "Api/Constant";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const WhatsAppAccountList = () => {
   const [whatsappAccounts, setWhatsappAccounts] = useState([]);
@@ -59,7 +60,7 @@ const WhatsAppAccountList = () => {
 
   // Handle Delete
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this account?")) {
+    {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.delete(`${COMPANY_API_ENDPOINT}/deleteCompany/${id}`, {
@@ -69,14 +70,14 @@ const WhatsAppAccountList = () => {
         });
 
         if (res.status === 200) {
-          alert("Account deleted successfully!");
+          toast.success('Account deleted successfully!')
           fetchWhatsappAccounts();
         } else {
-          alert("Failed to delete account. Please try again.");
+        toast.error('Failed to delete account. Please try again.')
         }
       } catch (error) {
         console.error("Error deleting account:", error);
-        alert("An error occurred while deleting the account.");
+        toast.error('An error occurred while deleting the account.')
       }
     }
   };
