@@ -9,11 +9,12 @@ import WhatsAppAccountList from "components/Pages/WhatsAppAccountList";
 import WhatsAppStats from "components/Pages/WhatsAppStats";
 import WhatsAppChats from "components/Pages/WhatsAppChats";
 import WhatsAppAgents from "components/Pages/WhatsAppAgents";
-import CreateWhatsappModal from "components/Pages/CreateWhatsappModal";
 import AddWhatsapp from "components/Pages/AddWhatsapp";
 import AgentsList from "components/Pages/AgentsList";
 import AgentsAdd from "components/Pages/AgentsAdd";
 import Settings from "components/Pages/Settings";
+import Contactlist from "components/Pages/Contactlist";
+import AdminNavbar from "components/Navbars/AdminNavbar";
 
 var routes = [
   {
@@ -38,7 +39,7 @@ var routes = [
     layout: "/admin",
   },
   {
-    path: "/campaigns",
+    path: "/campaign",
     name: "Campaigns",
     icon: "ni ni-send text-gray",
     component: <Campaign />,
@@ -127,6 +128,21 @@ var routes = [
     name: "Settings",
     icon: "fa fa-cog",
     component: <Settings />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/contactslist",
+    name: "Contactlist",
+    icon: "ni ni-single-02",
+    component: <Contactlist />,
+    layout: "/admin",
+    showInSidebar: false,
+  }, {
+    path: "/User-profile",
+    name: "Userprofile",
+    icon: "ni ni-single-02",
+    component: <AdminNavbar />,
     layout: "/admin",
     showInSidebar: false,
   },

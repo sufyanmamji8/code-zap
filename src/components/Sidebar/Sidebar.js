@@ -241,7 +241,7 @@ const Sidebar = (props) => {
                 src={require("../../assets/img/brand/free-waba-logo.png")}
                 style={{ height: "40px", width: "auto" }}
               />
-              <h2 className="ml-3 mb-0">Codovia</h2>
+              <h2 className="ml-3 mb-0">Codovio</h2>
             </div>
           </NavbarBrand>
         ) : null}

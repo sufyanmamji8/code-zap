@@ -34,35 +34,39 @@ const Login = () => {
   };
 
   // Submit handler for the login form
-  const submitHandler = async (e) => {
-    e.preventDefault();
+const submitHandler = async (e) => {
+  e.preventDefault();
 
-    console.log('Submitting:', input); // Debugging step
+  try {
+    const res = await axios.post(`${USER_API_ENDPOINT}/login`, input, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    });
 
-    try {
-      // Make API request for login
-      const res = await axios.post(`${USER_API_ENDPOINT}/login`, input, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      });
+    console.log('API Response:', res); // Check API response in console
 
-      console.log('API Response:', res); // Log the response for debugging
+    if (res.data.success) {
+      // Save token in localStorage
+      localStorage.setItem("token", res.data.token);
+      
+      // Dispatch user data to Redux store
 
-      if (res.data.success) {
-        localStorage.setItem("token", res.data.token); // Save token in local storage
-        toast.success(res.data.message); // Display success toast
-        navigate("/dashboard"); // Navigate to dashboard or home page
-      } else {
-        // If login failed, show error toast
-        toast.error(res.data.message || "Login failed. Please try again.");
-      }
-    } catch (error) {
-      console.error('Error during login:', error); // Log any errors
-      toast.error("An error occurred. Please try again later."); // Show error toast if the API call fails
+      // Show success message
+      toast.success(res.data.message);
+      
+      // Redirect to the dashboard
+      navigate("/dashboard");
+    } else {
+      toast.error(res.data.message || "Login failed. Please try again.");
     }
-  };
+  } catch (error) {
+    console.error('Error during login:', error); // Log error in console
+    toast.error("An error occurred. Please try again later.");
+  }
+};
+
 
   return (
     <>

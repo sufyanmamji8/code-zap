@@ -7,60 +7,70 @@ import {
   FaArrowLeft, 
   FaSmile, 
   FaPaperclip, 
-  FaCheck, 
-  FaCheckDouble,
-  FaMicrophone 
 } from 'react-icons/fa';
-import AttachmentOptions from './AttachmentOptions';
+import axios from "axios";
+import Avatar from 'react-avatar';
+
+const API_URL = 'http://192.168.0.106:4000/api/v1/webHooks/getMessages'; // Your API for messages
+const GET_MESSAGES_BY_USER_API = 'http://192.168.0.106:4000/api/v1/webHooks/getMessagesByUser'; // Your API for fetching messages by user
 
 const WhatsAppChats = () => {
-  const users = [
-    { id: 1, name: "John Doe", phone: "+1234567890", avatar: "https://randomuser.me/api/portraits/men/1.jpg" },
-    { id: 2, name: "Jane Smith", phone: "+0987654321", avatar: "https://randomuser.me/api/portraits/women/1.jpg" },
-    { id: 3, name: "Mike Johnson", phone: "+1122334455", avatar: "https://randomuser.me/api/portraits/men/2.jpg" },
-    { id: 1, name: "Hamza Mamji", phone: "+1234567890", avatar: "https://randomuser.me/api/portraits/men/1.jpg" },
-    { id: 2, name: "Jane Smith", phone: "+0987654321", avatar: "https://randomuser.me/api/portraits/women/1.jpg" },
-    { id: 3, name: "Mike Johnson", phone: "+1122334455", avatar: "https://randomuser.me/api/portraits/men/2.jpg" },
-    { id: 1, name: "John Doe", phone: "+1234567890", avatar: "https://randomuser.me/api/portraits/men/1.jpg" },
-    { id: 2, name: "Jane Smith", phone: "+0987654321", avatar: "https://randomuser.me/api/portraits/women/1.jpg" },
-    { id: 3, name: "Mike Johnson", phone: "+1122334455", avatar: "https://randomuser.me/api/portraits/men/2.jpg" },
-  ];
-
-  const [selectedUser, setSelectedUser] = useState(users[0]);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [message, setMessage] = useState("");
   const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
   const [showUserList, setShowUserList] = useState(true);
-  const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [userChats, setUserChats] = useState([]); // All users and their messages
+  const [selectedUserMessages, setSelectedUserMessages] = useState([]); // Messages of selected user
+  const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
 
-
-  
-
-  const [userChats, setUserChats] = useState({
-    1: [
-      { id: 1, sender: 'other', text: "Hello John, how are you?", timestamp: new Date(), status: 'read' },
-      { id: 2, sender: 'me', text: "I'm good, thanks!", timestamp: new Date(), status: 'read' }
-    ],
-    2: [
-      { id: 1, sender: 'other', text: "Hey Jane, what's up?", timestamp: new Date(), status: 'read' },
-      { id: 2, sender: 'me', text: "Not much, working on a project", timestamp: new Date(), status: 'delivered' }
-    ],
-    3: [
-      { id: 1, sender: 'other', text: "Hi Mike, need any help?", timestamp: new Date(), status: 'read' },
-      { id: 2, sender: 'me', text: "Just checking in", timestamp: new Date(), status: 'sent' }
-    ]
-  });
-  
- 
+  // Fetch all users and their messages on component load
   useEffect(() => {
-    scrollToBottom();
-  }, [selectedUser, userChats]);
+    const fetchMessages = async () => {
+      try {
+        const response = await axios.get(API_URL); // Fetch all messages
+        if (response.data.success) {
+          setUserChats(response.data.messages); // Set all users and their messages to state
+          setLoading(false);
+        } else {
+          console.error("Error fetching messages:", response.data.message);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error fetching data from backend:', error);
+        setLoading(false);
+      }
+    };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    fetchMessages();
+  }, []);
+
+  // Fetch messages for the selected user
+  useEffect(() => {
+    if (selectedUser) {
+      const fetchMessagesForUser = async () => {
+        try {
+          const response = await axios.get(GET_MESSAGES_BY_USER_API, {
+            params: {
+              senderWaId: selectedUser.senderWaId // Pass the senderWaId as query param
+            }
+          });
+          if (response.data.success) {
+            setSelectedUserMessages(response.data.messages); // Set messages of the selected user
+          } else {
+            console.error("Error fetching messages for selected user:", response.data.message);
+          }
+        } catch (error) {
+          console.error('Error fetching messages for selected user:', error);
+        }
+      };
+
+      fetchMessagesForUser();
+    }
+  }, [selectedUser]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -81,25 +91,31 @@ const WhatsAppChats = () => {
       setShowUserList(false);
     }
   };
-  
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleSendMessage = () => {
     if (message.trim()) {
-      const newMessage = { 
-        id: userChats[selectedUser.id].length + 1, 
-        sender: 'me', 
-        text: message,
-        timestamp: new Date(),
-        status: 'sent'
+      const updatedUser = { 
+        ...selectedUser, 
+        messages: selectedUser.messages || [] // Initialize messages if undefined
       };
-      
-      setUserChats(prev => ({
-        ...prev,
-        [selectedUser.id]: [...prev[selectedUser.id], newMessage]
-      }));
-      
-      setMessage("");
-      setIsTyping(false);
+
+      // Prepare the new message
+      const newMessage = { 
+        id: updatedUser.messages.length + 1, 
+        sender: 'me', 
+        messageBody: message,
+        timestamp: Date.now() / 1000, // Use Unix timestamp (in seconds)
+      };
+
+      updatedUser.messages = [...updatedUser.messages, newMessage]; // Add new message
+      setSelectedUser(updatedUser); // Update the selected user with the new message
+      setMessage("");  // Clear the input field
+      setIsTyping(false); // Reset typing indicator
+      scrollToBottom(); // Scroll to the bottom of the chat window
     }
   };
 
@@ -115,108 +131,81 @@ const WhatsAppChats = () => {
     setIsTyping(inputValue.trim().length > 0);
   };
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = userChats.filter(user => 
+    user.senderName.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
 
-  const filteredMessages = userChats[selectedUser.id].filter((msg) =>
-    msg.text.toLowerCase().includes(searchTerm.toLowerCase())
+  const uniqueUsers = Array.from(
+    new Map(filteredUsers.map(user => [user.senderWaId, user])).values()
+  );
+
+  // Display messages for the selected user
+  const filteredMessages = selectedUserMessages.filter((msg) =>
+    msg.messageBody.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatTime = (timestamp) => {
-    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const renderMessageStatus = (status) => {
-    switch(status) {
-      case 'sent': return <FaCheck color="gray" size={10} />;
-      case 'delivered': return <FaCheckDouble color="blue" size={10} />;
-      case 'read': return <FaCheckDouble color="green" size={10} />;
-      default: return null;
-    }
+    const date = new Date(timestamp * 1000); // Convert from Unix timestamp (seconds)
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const renderUserList = () => (
-    <Col 
-      xs="12" 
-      md="4" 
-      style={{ 
-        backgroundColor: '#f7f7f7', 
-        height: 'calc(100vh - 100px)', 
+    <Col
+      xs="12"
+      md="4"
+      style={{
+        backgroundColor: '#f0f4f8', // Lighter background for the user list
+        height: 'calc(100vh - 100px)',
         display: isMobileView && !showUserList ? 'none' : 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        borderRight: '1px solid #e0e0e0'
+        borderRight: '1px solid #e0e0e0',
+        padding: '10px',
       }}
     >
-      <div className="mb-2 position-relative" style={{ padding: '10px', paddingBottom: 0 }}>
-        <Input 
-          type="text" 
-          placeholder="Search users" 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ 
-            paddingLeft: '35px', 
-            borderRadius: '20px', 
-            backgroundColor: '#e9ecef',
-            height: '35px'
-          }}
-        />
-        <FaSearch 
-          style={{ 
-            position: 'absolute', 
-            left: '20px', 
-            top: '20px', 
-            color: '#6c757d',
-            fontSize: '14px' 
-          }} 
-        />
-      </div>
-
-      <div 
-        style={{ 
-          overflowY: 'auto', 
+      <div
+        style={{
+          overflowY: 'auto',
           flexGrow: 1,
-          padding: '10px',
-          paddingTop: 0 
         }}
       >
-        {filteredUsers.map(user => (
-          <div 
-            key={user.id} 
+        {/* Ensure only unique users are shown */}
+        {uniqueUsers.map(user => (
+          <div
+            key={user.senderWaId} // Using senderWaId for unique key
             onClick={() => handleUserSelect(user)}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              padding: '8px', 
-              borderRadius: '10px', 
-              marginBottom: '8px',
-              backgroundColor: selectedUser.id === user.id ? '#e9ecef' : 'transparent',
-              cursor: 'pointer'
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '10px',
+              borderRadius: '10px',
+              marginBottom: '10px',
+              backgroundColor: selectedUser?.senderWaId === user.senderWaId ? '#E0F7FA' : 'transparent', // Light blue highlight
+              color: selectedUser?.senderWaId === user.senderWaId ? '#00796B' : '#000',
+              cursor: 'pointer',
+              boxShadow: selectedUser?.senderWaId === user.senderWaId ? '0 4px 8px rgba(0, 120, 212, 0.2)' : 'none',
+              transition: 'background-color 0.3s ease',
             }}
           >
-            <img 
-              src={user.avatar} 
-              alt={user.name} 
-              style={{ 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '50%', 
-                marginRight: '10px' 
-              }} 
+            <Avatar
+              name={user.senderName}
+              size="40"
+              round={true}
+              style={{ marginRight: '10px' }}
             />
             <div>
-              <h6 style={{ margin: 0, fontWeight: 'bold', fontSize: '14px' }}>{user.name}</h6>
-              <small className="text-muted" style={{ fontSize: '12px' }}>{user.phone}</small>
+              <h6 style={{ margin: 0, fontWeight: 'bold', fontSize: '14px', color: selectedUser?.senderWaId === user.senderWaId ? '#00796B' : '#000' }}>
+                {user.senderName}
+              </h6>
+              <small className="text-muted" style={{ fontSize: '12px' }}>
+                {user.senderWaId}
+              </small>
             </div>
           </div>
         ))}
       </div>
     </Col>
   );
-
-  
 
   const renderChatWindow = () => (
     <Col 
@@ -226,112 +215,74 @@ const WhatsAppChats = () => {
         height: 'calc(100vh - 100px)', 
         display: isMobileView && showUserList ? 'none' : 'flex', 
         flexDirection: 'column', 
-        backgroundColor: '#ffffff',
-        position: 'relative'
+        justifyContent: 'flex-end', 
+        overflow: 'hidden',
+        backgroundColor: selectedUser ? '#f4f8fb' : '#fff', // White background
       }}
     >
-      {isMobileView && (
-        <div 
-          onClick={() => setShowUserList(true)}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            padding: '10px', 
-            backgroundColor: '#f7f7f7',
-            borderBottom: '1px solid #e0e0e0'
-          }}
-        >
-          <FaArrowLeft style={{ marginRight: '10px', fontSize: '16px' }} />
-          <img 
-            src={selectedUser.avatar} 
-            alt={selectedUser.name} 
-            style={{ 
-              width: '35px', 
-              height: '35px', 
-              borderRadius: '50%', 
-              marginRight: '10px' 
-            }} 
-          />
-          <div>
-            <h6 style={{ margin: 0, fontWeight: 'bold', fontSize: '14px' }}>{selectedUser.name}</h6>
-            <small className="text-muted" style={{ fontSize: '12px' }}>Online</small>
-          </div>
-        </div>
-      )}
-
-      {!isMobileView && (
-        <div 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            padding: '10px', 
-            backgroundColor: '#f7f7f7',
-            borderBottom: '1px solid #e0e0e0'
-          }}
-        >
-          <img 
-            src={selectedUser.avatar} 
-            alt={selectedUser.name} 
-            style={{ 
-              width: '35px', 
-              height: '35px', 
-              borderRadius: '50%', 
-              marginRight: '10px' 
-            }} 
-          />
-          <div>
-            <h6 style={{ margin: 0, fontWeight: 'bold', fontSize: '14px' }}>{selectedUser.name}</h6>
-            <small className="text-muted" style={{ fontSize: '12px' }}>Online</small>
-          </div>
-        </div>
-      )}
+      <div 
+        style={{ 
+          padding: '15px', 
+          backgroundColor: selectedUser ? '#00796B' : '#f0f4f8', // Header color based on selected user
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderRadius: '10px 10px 0 0',
+        }}
+      >
+        {/* Title with selected user name */}
+        {selectedUser ? (
+          <h5 style={{ margin: 0, display: 'flex', alignItems: 'center', color: '#fff' }}>
+            <Avatar name={selectedUser.senderName} size="30" round={true} style={{ marginRight: '10px' }} />
+            {selectedUser.senderName}
+          </h5>
+        ) : (
+          <h5 style={{ margin: 0, color: '#ddd' }}>Select a user</h5>
+        )}
+        <Button onClick={() => setShowUserList(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#fff' }}>
+          <FaArrowLeft />
+        </Button>
+      </div>
 
       <div 
         style={{ 
           flexGrow: 1, 
-          overflowY: 'auto', 
-          padding: '10px', 
-          backgroundColor: '#f5f5f5',
-          display: 'flex',
-          flexDirection: 'column'
+          padding: '20px', 
+          overflowY: 'auto',
+          marginTop: '20px'
         }}
       >
-        {filteredMessages.map(msg => (
+        {/* Display messages */}
+        {filteredMessages.map((message, index) => (
           <div 
-            key={msg.id}
-            style={{ 
-              display: 'flex', 
-              justifyContent: msg.sender === 'me' ? 'flex-end' : 'flex-start',
-              marginBottom: '8px' 
+            key={index}
+            style={{
+              display: 'flex',
+              justifyContent: message.sender === 'me' ? 'flex-end' : 'flex-start',
+              marginBottom: '10px',
             }}
           >
             <div 
-              style={{ 
-                maxWidth: '70%', 
-                backgroundColor: msg.sender === 'me' ? '#dcf8c6' : '#ffffff',
-                padding: '6px 10px', 
-                borderRadius: '12px',
-                fontSize: '13px',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+              style={{
+                maxWidth: '70%',
+                padding: '10px',
+                backgroundColor: message.sender === 'me' ? '#00796B' : '#e9ecef',
+                borderRadius: '10px',
+                color: message.sender === 'me' ? '#fff' : '#000',
+                fontSize: '14px'
               }}
             >
-              {msg.text}
+              {message.messageBody}
               <div 
-                style={{ 
-                  fontSize: '9px', 
-                  color: '#888', 
-                  marginTop: '4px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'flex-end' 
+                style={{
+                  display: 'flex',
+                  justifyContent: message.sender === 'me' ? 'flex-end' : 'flex-start',
+                  fontSize: '12px',
+                  color: '#6c757d'
                 }}
               >
-                {formatTime(msg.timestamp)}
-                {msg.sender === 'me' && (
-                  <span style={{ marginLeft: '4px' }}>
-                    {renderMessageStatus(msg.status)}
-                  </span>
-                )}
+                <span>{formatTime(message.timestamp)}</span>
               </div>
             </div>
           </div>
@@ -339,75 +290,52 @@ const WhatsAppChats = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div 
-        style={{ 
-          display: 'flex', 
-          padding: '10px', 
-          backgroundColor: '#f7f7f7',
-          alignItems: 'center',
-          position: 'relative'
-        }}
-      >
-        <Button 
-          color="link" 
-          style={{ padding: '0 8px', color: '#6c757d' }}
-        >
-          <FaSmile size={16} />
-        </Button>
-        <Button 
-          color="link" 
-          style={{ padding: '0 8px', color: '#6c757d' }}
-          onClick={() => setShowAttachmentOptions(!showAttachmentOptions)}
-        >
-          <FaPaperclip size={16} />
-        </Button>
-        
-        <AttachmentOptions 
-          isOpen={showAttachmentOptions} 
-          onClose={() => setShowAttachmentOptions(false)} 
-        />
+      <div style={{ padding: '10px', borderTop: '1px solid #e0e0e0' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            style={{ background: '#f1f1f1', border: 'none', marginRight: '10px' }}
+            onClick={() => setShowAttachmentOptions(!showAttachmentOptions)}
+          >
+            <FaPaperclip />
+          </Button>
 
-        <Input 
-          type="text" 
-          placeholder="Type a message..." 
-          value={message}
-          onChange={handleMessageChange}
-          onKeyPress={handleKeyPress}
-          style={{ 
-            borderRadius: '20px', 
-            marginRight: '8px',
-            marginLeft: '8px',
-            height: '35px',
-            fontSize: '13px'
-          }}
-        />
-        <Button 
-          color="primary" 
-          onClick={handleSendMessage}
-          style={{ 
-            borderRadius: '50%', 
-            padding: '8px 10px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}
-        >
-          {isTyping ? (
-            <FaPaperPlane size={16} />
-          ) : (
-            <FaMicrophone size={16} />
-          )}
-        </Button>
+          <Input
+            type="text"
+            value={message}
+            onChange={handleMessageChange}
+            onKeyPress={handleKeyPress}
+            placeholder="Type a message..."
+            style={{
+              borderRadius: '20px',
+              height: '40px',
+              fontSize: '14px',
+              paddingLeft: '15px',
+              flexGrow: 1,
+              marginRight: '10px'
+            }}
+          />
+
+          <Button 
+            style={{
+              backgroundColor: '#00796B', 
+              borderRadius: '50%', 
+              padding: '10px', 
+              border: 'none'
+            }}
+            onClick={handleSendMessage}
+          >
+            <FaPaperPlane color="#fff" />
+          </Button>
+        </div>
       </div>
     </Col>
-    
   );
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header style={{ zIndex: "10", position: "relative", flexShrink: 0 }} />
-      <Container fluid style={{ flexGrow: 1, overflow: 'hidden', padding: 0 }}>
-        <Row noGutters style={{ height: '100%' }}>
+    <div>
+      <Header />
+      <Container fluid style={{ marginTop: '20px' }}>
+        <Row>
           {renderUserList()}
           {renderChatWindow()}
         </Row>
