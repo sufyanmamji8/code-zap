@@ -1,4 +1,4 @@
-import Header from "components/Headers/Header";
+ import Header from "components/Headers/Header";
 import React, { useState, useEffect, useRef } from "react";
 import { Container, Row, Col, Input, Button } from "reactstrap";
 import { 
@@ -12,11 +12,17 @@ import axios from "axios";
 import Avatar from 'react-avatar';
 
 const API_URL = 'http://192.168.0.106:4000/api/v1/webHooks/getMessages'; // Your API for messages
-const GET_MESSAGES_BY_USER_API = 'http://192.168.0.106:4000/api/v1/webHooks/getMessagesByUser'; // Your API for fetching messages by user
+const GET_MESSAGES_BY_USER_API = 'http://192.168.0.106:4000/api/v1/webHooks/getMessagesByUser';
+const GET_RECENT_MESSAGE_API = "http://192.168.0.106:4000/api/v1/webHooks/recentMessages";
+const SEND_MESSAGE_API = 'http://192.168.0.106:4000/api/v1/messages/send';
+ const GET_MESSAGES_BY_CONTACT_API ='http://192.168.0.106:4000/api/v1/messages/getMessagesByContact';
+
 
 const WhatsAppChats = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedContact, setSelectedContact] = useState(null); // Newly added state for selected contact
+  const [selectedContactMessages, setSelectedContactMessages] = useState([]); 
   const [message, setMessage] = useState("");
   const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
   const [showUserList, setShowUserList] = useState(true);
@@ -47,6 +53,35 @@ const WhatsAppChats = () => {
 
     fetchMessages();
   }, []);
+
+  // Fetch messages when a contact is selected
+  useEffect(() => {
+    if (selectedContact) {
+      console.log("Fetching messages for contact:", selectedContact);
+      const fetchMessagesByContact = async () => {
+        try {
+          const response = await axios.get(GET_MESSAGES_BY_CONTACT_API, {
+            params: {
+              contactNumber: selectedContact, // Selected contact number
+            },
+          });
+  
+          if (response.data.success) {
+            setSelectedContactMessages(response.data.messages);
+            console.log(response.data.messages) // Store messages in state
+          } else {
+            console.error("Error fetching messages");
+          }
+        } catch (error) {
+          console.error("Error fetching messages:", error);
+        }
+      };
+  
+      fetchMessagesByContact();
+    }
+  }, [selectedContact]); // Trigger this useEffect when selectedContact changes
+   // Only trigger this when the selected contact changes
+
 
   // Fetch messages for the selected user
   useEffect(() => {
@@ -87,6 +122,7 @@ const WhatsAppChats = () => {
 
   const handleUserSelect = (user) => {
     setSelectedUser(user);
+    // setSelectedContact(user.senderWaId);
     if (isMobileView) {
       setShowUserList(false);
     }
@@ -96,29 +132,82 @@ const WhatsAppChats = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      const updatedUser = { 
-        ...selectedUser, 
-        messages: selectedUser.messages || [] // Initialize messages if undefined
+  const handleSendMessage = async () => {
+    if (message.trim() && selectedUser) {
+      const newMessage = {
+        to: selectedUser.senderWaId, // ID of the user you're chatting with
+        body: message, // The message text
       };
-
-      // Prepare the new message
-      const newMessage = { 
-        id: updatedUser.messages.length + 1, 
-        sender: 'me', 
-        messageBody: message,
-        timestamp: Date.now() / 1000, // Use Unix timestamp (in seconds)
-      };
-
-      updatedUser.messages = [...updatedUser.messages, newMessage]; // Add new message
-      setSelectedUser(updatedUser); // Update the selected user with the new message
-      setMessage("");  // Clear the input field
-      setIsTyping(false); // Reset typing indicator
-      scrollToBottom(); // Scroll to the bottom of the chat window
+  
+      try {
+        const response = await axios.post(SEND_MESSAGE_API, newMessage, {
+          headers: {
+            Authorization: 'Bearer EAAGKLL1270UBO8Xr3L8WqH8hTKHpCuI36k75kfqNlCAmaZAhYgJj8wtYLykxh761zgaPOwTYTyIZAacEcwEXy2b6zvdCYixixOXRvwnZBEEhQ2ZBOif7e7uwgvMwPXiC4b9WK7UMAIrVKf2mbElJIYN4xfnduyfZA2cN0aYsYhL5lA7WMb8CtSV7ZCB1sHp5hO1QZDZD', 
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        if (response.data.success) {
+          const updatedMessage = {
+            id: Date.now(),
+            sender: 'me',
+            messageBody: message,
+            timestamp: Date.now() / 1000,
+          };
+  
+          // Update the message history
+          setSelectedUserMessages((prevMessages) => [...prevMessages, updatedMessage]);
+          setSelectedContactMessages((prevMessages) => [...prevMessages, updatedMessage]);
+  
+          setMessage(""); // Clear the message input
+          setIsTyping(false);
+          scrollToBottom(); // Scroll to the bottom of the chat window
+        } else {
+          console.error("Error response from API:", response.data);
+          alert("Failed to send message. Please try again.");
+        }
+      } catch (error) {
+        console.error("Axios error details:", error);
+        alert("An error occurred while sending the message. Please try again.");
+      }
     }
   };
+  
+  
 
+  useEffect(() => {
+    const fetchRecentMessages = async () => {
+      try {
+        const updatedUsers = await Promise.all(
+          userChats.map(async (user) => {
+            try {
+              const response = await axios.get(GET_RECENT_MESSAGE_API, {
+                params: { senderWaId: user.senderWaId },
+              });
+  
+              // Attach the recent message to the user
+              return {
+                ...user,
+                recentMessage: response.data.success
+                  ? response.data.data?.messageBody || "No messages yet"
+                  : "Error fetching message",
+              };
+            } catch (err) {
+              console.error(`Error fetching recent message for ${user.senderWaId}:`, err);
+              return { ...user, recentMessage: "Error fetching message" };
+            }
+          })
+        );
+  
+        setUserChats(updatedUsers); // Update state
+      } catch (error) {
+        console.error("Error in fetching recent messages:", error);
+      }
+    };
+  
+    if (userChats.length > 0) fetchRecentMessages(); // Trigger only when users are loaded
+  }, [userChats]);
+  
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSendMessage();
@@ -149,63 +238,73 @@ const WhatsAppChats = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const renderUserList = () => (
-    <Col
-      xs="12"
-      md="4"
+  // Render User List
+const renderUserList = () => (
+  <Col
+    xs="12"
+    md="4"
+    style={{
+      backgroundColor: '#f0f4f8',
+      height: 'calc(100vh - 100px)',
+      display: isMobileView && !showUserList ? 'none' : 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      borderRight: '1px solid #e0e0e0',
+      padding: '10px',
+    }}
+  >
+    <div
       style={{
-        backgroundColor: '#f0f4f8', // Lighter background for the user list
-        height: 'calc(100vh - 100px)',
-        display: isMobileView && !showUserList ? 'none' : 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        borderRight: '1px solid #e0e0e0',
-        padding: '10px',
+        overflowY: 'auto',
+        flexGrow: 1,
       }}
     >
-      <div
-        style={{
-          overflowY: 'auto',
-          flexGrow: 1,
-        }}
-      >
-        {/* Ensure only unique users are shown */}
-        {uniqueUsers.map(user => (
-          <div
-            key={user.senderWaId} // Using senderWaId for unique key
-            onClick={() => handleUserSelect(user)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '10px',
-              borderRadius: '10px',
-              marginBottom: '10px',
-              backgroundColor: selectedUser?.senderWaId === user.senderWaId ? '#E0F7FA' : 'transparent', // Light blue highlight
-              color: selectedUser?.senderWaId === user.senderWaId ? '#00796B' : '#000',
-              cursor: 'pointer',
-              boxShadow: selectedUser?.senderWaId === user.senderWaId ? '0 4px 8px rgba(0, 120, 212, 0.2)' : 'none',
-              transition: 'background-color 0.3s ease',
-            }}
-          >
-            <Avatar
-              name={user.senderName}
-              size="40"
-              round={true}
-              style={{ marginRight: '10px' }}
-            />
-            <div>
-              <h6 style={{ margin: 0, fontWeight: 'bold', fontSize: '14px', color: selectedUser?.senderWaId === user.senderWaId ? '#00796B' : '#000' }}>
-                {user.senderName}
-              </h6>
-              <small className="text-muted" style={{ fontSize: '12px' }}>
-                {user.senderWaId}
-              </small>
-            </div>
+      {/* Ensure only unique users are shown */}
+      {uniqueUsers.map(user => (
+        <div
+          key={user.senderWaId}
+          onClick={() => handleUserSelect(user)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px',
+            borderRadius: '10px',
+            marginBottom: '10px',
+            backgroundColor: selectedUser?.senderWaId === user.senderWaId ? '#E0F7FA' : 'transparent',
+            color: selectedUser?.senderWaId === user.senderWaId ? '#00796B' : '#000',
+            cursor: 'pointer',
+            boxShadow: selectedUser?.senderWaId === user.senderWaId ? '0 4px 8px rgba(0, 120, 212, 0.2)' : 'none',
+            transition: 'background-color 0.3s ease',
+          }}
+        >
+          <Avatar
+            name={user.senderName}
+            size="40"
+            round={true}
+            style={{ marginRight: '10px' }}
+          />
+          <div>
+            <h6
+              style={{
+                margin: 0,
+                fontWeight: 'bold',
+                fontSize: '14px',
+                color: selectedUser?.senderWaId === user.senderWaId ? '#00796B' : '#000',
+              }}
+            >
+              {user.senderName}
+            </h6>
+            {/* Recent Message Display */}
+            <small className="text-muted" style={{ fontSize: '12px' }}>
+              {user.recentMessage || 'No messages yet'}
+            </small>
           </div>
-        ))}
-      </div>
-    </Col>
-  );
+        </div>
+      ))}
+    </div>
+  </Col>
+);
+
 
   const renderChatWindow = () => (
     <Col 
@@ -245,50 +344,44 @@ const WhatsAppChats = () => {
         </Button>
       </div>
 
+      <div style={{ flexGrow: 1, padding: '20px', overflowY: 'auto', marginTop: '20px' }}>
+  {/* Display messages */}
+  {(selectedContactMessages.length > 0 ? selectedContactMessages : selectedUserMessages).map((message, index) => (
+    <div 
+      key={index}
+      style={{
+        display: 'flex',
+        justifyContent: message.sender === 'me' ? 'flex-end' : 'flex-start',
+        marginBottom: '10px',
+      }}
+    >
       <div 
-        style={{ 
-          flexGrow: 1, 
-          padding: '20px', 
-          overflowY: 'auto',
-          marginTop: '20px'
+        style={{
+          maxWidth: '70%',
+          padding: '10px',
+          backgroundColor: message.sender === 'me' ? '#00796B' : '#e9ecef',
+          borderRadius: '10px',
+          color: message.sender === 'me' ? '#fff' : '#000',
+          fontSize: '14px'
         }}
       >
-        {/* Display messages */}
-        {filteredMessages.map((message, index) => (
-          <div 
-            key={index}
-            style={{
-              display: 'flex',
-              justifyContent: message.sender === 'me' ? 'flex-end' : 'flex-start',
-              marginBottom: '10px',
-            }}
-          >
-            <div 
-              style={{
-                maxWidth: '70%',
-                padding: '10px',
-                backgroundColor: message.sender === 'me' ? '#00796B' : '#e9ecef',
-                borderRadius: '10px',
-                color: message.sender === 'me' ? '#fff' : '#000',
-                fontSize: '14px'
-              }}
-            >
-              {message.messageBody}
-              <div 
-                style={{
-                  display: 'flex',
-                  justifyContent: message.sender === 'me' ? 'flex-end' : 'flex-start',
-                  fontSize: '12px',
-                  color: '#6c757d'
-                }}
-              >
-                <span>{formatTime(message.timestamp)}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+        {message.messageBody}
+        <div 
+          style={{
+            display: 'flex',
+            justifyContent: message.sender === 'me' ? 'flex-end' : 'flex-start',
+            fontSize: '12px',
+            color: '#6c757d'
+          }}
+        >
+          <span>{formatTime(message.timestamp)}</span>
+        </div>
       </div>
+    </div>
+  ))}
+  <div ref={messagesEndRef} />
+</div>
+
 
       <div style={{ padding: '10px', borderTop: '1px solid #e0e0e0' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -341,6 +434,7 @@ const WhatsAppChats = () => {
         </Row>
       </Container>
     </div>
+
   );
 };
 
