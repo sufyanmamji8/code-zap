@@ -1,126 +1,180 @@
- import Header from "components/Headers/Header";
-import React, { useState, useEffect, useRef } from "react";
-import { Container, Row, Col, Input, Button } from "reactstrap";
-import { 
-  FaSearch, 
-  FaPaperPlane, 
-  FaArrowLeft, 
-  FaSmile, 
-  FaPaperclip, 
-} from 'react-icons/fa';
 import axios from "axios";
-import Avatar from 'react-avatar';
+import Header from "components/Headers/Header";
+import { useEffect, useRef, useState } from "react";
+import Avatar from "react-avatar";
+import {
+  FaArrowLeft,
+  FaCheck,
+  FaCheckDouble,
+  FaPaperclip,
+  FaPaperPlane,
+} from "react-icons/fa";
+import { Button, Col, Container, Input, Row } from "reactstrap";
 
-const API_URL = 'http://192.168.0.106:4000/api/v1/webHooks/getMessages'; // Your API for messages
-const GET_MESSAGES_BY_USER_API = 'http://192.168.0.106:4000/api/v1/webHooks/getMessagesByUser';
+const API_URL = "http://192.168.0.106:4000/api/v1/webHooks/getMessages";
+const GET_MESSAGES_BY_USER_API ="http://192.168.0.106:4000/api/v1/webHooks/getMessagesByUser";
 const GET_RECENT_MESSAGE_API = "http://192.168.0.106:4000/api/v1/webHooks/recentMessages";
-const SEND_MESSAGE_API = 'http://192.168.0.106:4000/api/v1/messages/send';
-const GET_MESSAGES_BY_CONTACT_API = "http://192.168.0.106:4000/api/v1/messages/getMessagesByContact"
+const SEND_MESSAGE_API = "http://192.168.0.106:4000/api/v1/messages/send";
+const GET_MESSAGES_BY_CONTACT_API ="http://192.168.0.106:4000/api/v1/messages/getMessagesByContact";
+const WEBHOOK_API = "http://192.168.0.106:4000/api/v1/messages/handleWebHook";
 
+const MessageStatus = ({ status }) => {
+  if (!status) return null;
+
+  switch (status?.toLowerCase()) {
+    case "sent":
+      return <FaCheck style={{ fontSize: "12px", color: "#a5a5a5" }} />;
+    case "delivered":
+      return <FaCheckDouble style={{ fontSize: "12px", color: "#a5a5a5" }} />;
+    case "read":
+      return <FaCheckDouble style={{ fontSize: "12px", color: "#34B7F1" }} />;
+    default:
+      return <FaCheck style={{ fontSize: "12px", color: "#a5a5a5" }} />;
+  }
+};
 
 const WhatsAppChats = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedContact, setSelectedContact] = useState(null); // Newly added state for selected contact
-  const [selectedContactMessages, setSelectedContactMessages] = useState([]); 
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [selectedContactMessages, setSelectedContactMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
   const [showUserList, setShowUserList] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const [loading, setLoading] = useState(true);
-  const [userChats, setUserChats] = useState([]); // All users and their messages
-  const [selectedUserMessages, setSelectedUserMessages] = useState([]); // Messages of selected user
+  const [userChats, setUserChats] = useState([]);
+  const [selectedUserMessages, setSelectedUserMessages] = useState([]);
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
-
-  // Fetch all users and their messages on component load
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const response = await axios.get(API_URL); // Fetch all messages
-        if (response.data.success) {
-          setUserChats(response.data.messages); // Set all users and their messages to state
-          setLoading(false);
-        } else {
-          console.error("Error fetching messages:", response.data.message);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error fetching data from backend:', error);
-        setLoading(false);
-      }
-    };
-
-    fetchMessages();
-  }, []);
-
-  useEffect(() => {
-    if (selectedUser) {
-      const fetchMessagesForUser = async () => {
-        try {
-          const response = await axios.get(GET_MESSAGES_BY_USER_API, {
-            params: {
-              senderWaId: selectedUser.senderWaId // Pass the senderWaId as query param
-            }
-          });
-          if (response.data.success) {
-            setSelectedUserMessages(response.data.messages); // Set messages of the selected user
-          } else {
-            console.error("Error fetching messages for selected user:", response.data.message);
-          }
-        } catch (error) {
-          console.error('Error fetching messages for selected user:', error);
-        }
-      };
-
-      fetchMessagesForUser();
-    }
-  }, [selectedUser]);
-
-  useEffect(() => {
-    const fetchMessagesForContact = async () => {
-      try {
-        if (selectedContact) {
-          const response = await axios.get(GET_MESSAGES_BY_CONTACT_API, {
-            params: { contactNumber: selectedUser.contactNumber } // Pass contact number here
-          });
-          if (response.data.success) {
-            setSelectedContact(response.data.messages); 
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching messages for contact:", error);
-      }
-    };
-  
-    fetchMessagesForContact(); 
-  }, [selectedContact]); 
-  
+  const [recentMessages, setRecentMessages] = useState({});
 
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobileView(mobile);
-      if (mobile) {
-        setShowUserList(true);
+      setIsMobileView(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await axios.get(API_URL);
+        if (response.data.success) {
+          const uniqueUsers = Array.from(
+            new Map(
+              response.data.messages.map((user) => [user.senderWaId, user])
+            ).values()
+          );
+          setUserChats(uniqueUsers);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setLoading(false);
+      }
+    };
+    
+
+    const fetchRecentMessages = async () => {
+      try {
+        const senderWaId = selectedUser?.senderWaId || 'defaultSenderWaId'; 
+        
+        const response = await axios.get(GET_RECENT_MESSAGE_API, {
+          params: {
+            senderWaId: senderWaId, 
+          }
+        });
+    
+        if (response.data.success) {
+          const messageMap = {};
+          const recentMessage = response.data.data; 
+          if (recentMessage) {
+            messageMap[recentMessage.senderWaId] = {
+              messageBody: recentMessage.messageBody,
+              timestamp: recentMessage.timestamp || recentMessage.sentTimestamp,
+              status: recentMessage.status,
+            };
+          }
+          setRecentMessages(messageMap);
+        } else {
+          console.log('Error:', response.data.message); 
+        }
+      } catch (error) {
+        console.error("Error fetching recent messages:", error);
+      }
+    };
+    
+    fetchMessages();
+    fetchRecentMessages();
+    
+    const messageInterval = setInterval(fetchMessages, 5000);
+
+    return () => {
+      clearInterval(messageInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchMessagesForUser = async () => {
+      if (selectedUser) {
+        try {
+          const response = await axios.get(GET_MESSAGES_BY_USER_API, {
+            params: { senderWaId: selectedUser.senderWaId },
+          });
+          if (response.data.success) {
+            setSelectedUserMessages(response.data.messages);
+          }
+        } catch (error) {
+          console.error("Error:", error);
+        }
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    fetchMessagesForUser();
+    const interval = setInterval(fetchMessagesForUser, 5000);
+    return () => clearInterval(interval);
+  }, [selectedUser]);
 
-  const handleUserSelect = (user) => {
-    setSelectedUser(user);
-    setSelectedContact(user); // Set selected user as the contact to fetch messages
-    if (isMobileView) {
-      setShowUserList(false);
+  const fetchMessagesForContact = async () => {
+    try {
+      if (selectedContact && selectedUser) {
+        const contactNumber =
+          selectedUser.contactNumber || selectedUser.senderWaId;
+        const response = await axios.get(GET_MESSAGES_BY_CONTACT_API, {
+          params: { contactNumber },
+        });
+
+        if (response.data.success) {
+          const messages = response.data.data;
+          setSelectedContactMessages(messages);
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setSelectedContactMessages([]);
     }
   };
-  
+
+  useEffect(() => {
+    fetchMessagesForContact();
+    const interval = setInterval(fetchMessagesForContact, 5000);
+    return () => clearInterval(interval);
+  }, [selectedContact]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [selectedContactMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   const handleSendMessage = async () => {
@@ -129,308 +183,353 @@ const WhatsAppChats = () => {
         to: selectedUser.senderWaId,
         body: message,
       };
-  
+
       try {
         const response = await axios.post(SEND_MESSAGE_API, newMessage);
         if (response.data.success) {
-          const updatedMessage = {
-            id: Date.now(),
-            sender: 'me',
+          const sentMessage = {
             messageBody: message,
-            timestamp: Date.now() / 1000,
+            timestamp: Math.floor(Date.now() / 1000),
+            from: "me",
+            status: "sent",
+            messageId: response.data.messageId,
           };
-          setSelectedUserMessages(prev => [...prev, updatedMessage]);
-          setUserChats(prev => 
-            prev.map(user => 
-              user.senderWaId === selectedUser.senderWaId 
-                ? { ...user, recentMessage: message } 
-                : user
-            )
-          );
+
+          setSelectedContactMessages((prev) => [...prev, sentMessage]);
           setMessage("");
-        } else {
-          console.error("Error response from API:", response.data);
-          alert("Failed to send message.");
+          scrollToBottom();
+          fetchMessagesForContact();
         }
       } catch (error) {
-        console.error("Error while sending message:", error);
-        alert("An error occurred.");
+        console.error("Error:", error);
+        alert("Failed to send message.");
       }
     }
   };
-  useEffect(() => {
-    const fetchRecentMessages = async () => {
-      try {
-        const updatedUsers = await Promise.all(
-          userChats.map(async (user) => {
-            // Check if recent messages have already been fetched
-            if (user.recentMessageFetched) {
-              return user; // Skip fetching if already fetched
-            }
-  
-            try {
-              const response = await axios.get(GET_RECENT_MESSAGE_API, {
-                params: { senderWaId: user.senderWaId },
-              });
-  
-              return {
-                ...user,
-                recentMessage: response.data.success
-                  ? response.data.data?.messageBody || "No messages yet"
-                  : "Error fetching message",
-                recentMessageFetched: true, // Mark recent message as fetched
-              };
-            } catch (err) {
-              console.error(`Error fetching recent message for ${user.senderWaId}:`, err);
-              return { ...user, recentMessage: "Error fetching message", recentMessageFetched: true };
-            }
-          })
-        );
-  
-        setUserChats(updatedUsers); // Update state
-      } catch (error) {
-        console.error("Error in fetching recent messages:", error);
-      }
-    };
-  
-    if (userChats.length > 0) fetchRecentMessages(); // Trigger only when users are loaded
-  }, [userChats]);
-  
-  
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage();
-    }
-  };
 
-  const handleMessageChange = (e) => {
-    const inputValue = e.target.value;
-    setMessage(inputValue);
-    setIsTyping(inputValue.trim().length > 0);
-  };
+  const renderMessage = (message, index) => {
+    const isFromCurrentUser =
+      message.from === "me" || message.to === selectedUser?.senderWaId;
 
-  const filteredUsers = userChats.filter(user => 
-    user.senderName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const uniqueUsers = Array.from(
-    new Map(filteredUsers.map(user => [user.senderWaId, user])).values()
-  );
-
-  // Display messages for the selected user
-  const filteredMessages = selectedUserMessages.filter((msg) =>
-    msg.messageBody.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp * 1000); // Convert from Unix timestamp (seconds)
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  // Render User List
-const renderUserList = () => (
-  <Col
-    xs="12"
-    md="4"
-    style={{
-      backgroundColor: '#f0f4f8',
-      height: 'calc(100vh - 100px)',
-      display: isMobileView && !showUserList ? 'none' : 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      borderRight: '1px solid #e0e0e0',
-      padding: '10px',
-    }}
-  >
-    <div
-      style={{
-        overflowY: 'auto',
-        flexGrow: 1,
-      }}
-    >
-      {/* Ensure only unique users are shown */}
-      {uniqueUsers.map(user => (
+    return (
+      <div
+        key={index}
+        style={{
+          display: "flex",
+          justifyContent: isFromCurrentUser ? "flex-end" : "flex-start",
+          marginBottom: "10px",
+          width: "100%",
+        }}
+      >
         <div
-          key={user.senderWaId}
-          onClick={() => handleUserSelect(user)}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '10px',
-            borderRadius: '10px',
-            marginBottom: '10px',
-            backgroundColor: selectedUser?.senderWaId === user.senderWaId ? '#E0F7FA' : 'transparent',
-            color: selectedUser?.senderWaId === user.senderWaId ? '#00796B' : '#000',
-            cursor: 'pointer',
-            boxShadow: selectedUser?.senderWaId === user.senderWaId ? '0 4px 8px rgba(0, 120, 212, 0.2)' : 'none',
-            transition: 'background-color 0.3s ease',
+            maxWidth: "70%",
+            padding: "10px",
+            backgroundColor: isFromCurrentUser ? "#00796B" : "#e9ecef",
+            borderRadius: "10px",
+            color: isFromCurrentUser ? "#fff" : "#000",
+            fontSize: "14px",
+            position: "relative",
           }}
         >
-          <Avatar
-            name={user.senderName}
-            size="40"
-            round={true}
-            style={{ marginRight: '10px' }}
-          />
-          <div>
-            <h6
-              style={{
-                margin: 0,
-                fontWeight: 'bold',
-                fontSize: '14px',
-                color: selectedUser?.senderWaId === user.senderWaId ? '#00796B' : '#000',
-              }}
-            >
-              {user.senderName}
-            </h6>
-            {/* Recent Message Display */}
-            <small className="text-muted" style={{ fontSize: '12px' }}>
-              {user.recentMessage || 'No messages yet'}
-            </small>
+          {message.messageBody}
+          <div
+            style={{
+              fontSize: "12px",
+              color: isFromCurrentUser ? "#e0e0e0" : "#6c757d",
+              textAlign: "right",
+              marginTop: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: "4px",
+            }}
+          >
+            <span>
+              {formatTime(message.timestamp || message.sentTimestamp)}
+            </span>
+            {isFromCurrentUser && <MessageStatus status={message.status} />}
           </div>
         </div>
-      ))}
-    </div>
-  </Col>
-);
+      </div>
+    );
+  };
 
-
-  const renderChatWindow = () => (
-    <Col 
-      xs="12" 
-      md="8" 
-      style={{ 
-        height: 'calc(100vh - 100px)', 
-        display: isMobileView && showUserList ? 'none' : 'flex', 
-        flexDirection: 'column', 
-        justifyContent: 'flex-end', 
-        overflow: 'hidden',
-        backgroundColor: selectedUser ? '#f4f8fb' : '#fff', // White background
+  const renderUserList = () => (
+    <Col
+      xs="12"
+      md="4"
+      style={{
+        backgroundColor: "#f0f4f8",
+        height: "calc(100vh - 100px)",
+        display: isMobileView && !showUserList ? "none" : "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        borderRight: "1px solid #e0e0e0",
+        padding: "10px",
       }}
     >
-      <div 
-        style={{ 
-          padding: '15px', 
-          backgroundColor: selectedUser ? '#00796B' : '#f0f4f8', // Header color based on selected user
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderRadius: '10px 10px 0 0',
-        }}
-      >
-        {/* Title with selected user name */}
-        {selectedUser ? (
-          <h5 style={{ margin: 0, display: 'flex', alignItems: 'center', color: '#fff' }}>
-            <Avatar name={selectedUser.senderName} size="30" round={true} style={{ marginRight: '10px' }} />
-            {selectedUser.senderName}
-          </h5>
-        ) : (
-          <h5 style={{ margin: 0, color: '#ddd' }}>Select a user</h5>
-        )}
-        <Button onClick={() => setShowUserList(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#fff' }}>
-          <FaArrowLeft />
-        </Button>
+      <div style={{ padding: "10px 0" }}>
+        <Input
+          type="text"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            borderRadius: "20px",
+            backgroundColor: "#fff",
+            border: "1px solid #e0e0e0",
+            padding: "8px 15px",
+          }}
+        />
       </div>
+      <div style={{ overflowY: "auto", flexGrow: 1 }}>
+        {userChats
+          .filter((user) =>
+            user.senderName.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+          .map((user) => {
+            const recentMessage = recentMessages[user.senderWaId];
 
-      <div 
-        style={{ 
-          flexGrow: 1, 
-          padding: '20px', 
-          overflowY: 'auto',
-          marginTop: '20px'
-        }}
-      >
-        {/* Display messages */}
-        {filteredMessages.map((message, index) => (
-          <div 
-            key={index}
-            style={{
-              display: 'flex',
-              justifyContent: message.sender === 'me' ? 'flex-end' : 'flex-start',
-              marginBottom: '10px',
-            }}
-          >
-            <div 
-              style={{
-                maxWidth: '70%',
-                padding: '10px',
-                backgroundColor: message.sender === 'me' ? '#00796B' : '#e9ecef',
-                borderRadius: '10px',
-                color: message.sender === 'me' ? '#fff' : '#000',
-                fontSize: '14px'
-              }}
-            >
-              {message.messageBody}
-              <div 
+            return (
+              <div
+                key={user.senderWaId}
+                onClick={() => {
+                  setSelectedUser(user);
+                  setSelectedContact(user.contactNumber || user.senderWaId);
+                  if (isMobileView) setShowUserList(false);
+                }}
                 style={{
-                  display: 'flex',
-                  justifyContent: message.sender === 'me' ? 'flex-end' : 'flex-start',
-                  fontSize: '12px',
-                  color: '#6c757d'
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "10px",
+                  borderRadius: "10px",
+                  marginBottom: "10px",
+                  backgroundColor:
+                    selectedUser?.senderWaId === user.senderWaId
+                      ? "#E0F7FA"
+                      : "transparent",
+                  cursor: "pointer",
+                  transition: "background-color 0.3s ease",
                 }}
               >
-                <span>{formatTime(message.timestamp)}</span>
+                <Avatar
+                  name={user.senderName}
+                  size="40"
+                  round={true}
+                  style={{ marginRight: "10px" }}
+                />
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <h6
+                    style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}
+                  >
+                    {user.senderName}
+                  </h6>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "12px",
+                      color: "#666",
+                    }}
+                  >
+                    <span
+                      style={{
+                        flex: 1,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {recentMessage
+                        ? recentMessage.messageBody
+                        : "No messages yet"}
+                    </span>
+                    {recentMessage && (
+                      <>
+                        <span style={{ flexShrink: 0, marginLeft: "8px" }}>
+                          {formatTime(recentMessage.timestamp)}
+                        </span>
+                        <MessageStatus status={recentMessage.status} />
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div style={{ padding: '10px', borderTop: '1px solid #e0e0e0' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <Button
-            style={{ background: '#f1f1f1', border: 'none', marginRight: '10px' }}
-            onClick={() => setShowAttachmentOptions(!showAttachmentOptions)}
-          >
-            <FaPaperclip />
-          </Button>
-
-          <Input
-            type="text"
-            value={message}
-            onChange={handleMessageChange}
-            onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
-            style={{
-              borderRadius: '20px',
-              height: '40px',
-              fontSize: '14px',
-              paddingLeft: '15px',
-              flexGrow: 1,
-              marginRight: '10px'
-            }}
-          />
-
-          <Button 
-            style={{
-              backgroundColor: '#00796B', 
-              borderRadius: '50%', 
-              padding: '10px', 
-              border: 'none'
-            }}
-            onClick={handleSendMessage}
-          >
-            <FaPaperPlane color="#fff" />
-          </Button>
-        </div>
+            );
+          })}
       </div>
     </Col>
   );
 
+  const renderChatWindow = () => (
+    <Col
+      xs="12"
+      md="8"
+      style={{
+        height: "calc(100vh - 100px)",
+        display: isMobileView && showUserList ? "none" : "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        backgroundColor: selectedUser ? "#f4f8fb" : "#fff",
+      }}
+    >
+      <div
+        style={{
+          padding: "15px",
+          backgroundColor: selectedUser ? "#00796B" : "#f0f4f8",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderRadius: "10px 10px 0 0",
+        }}
+      >
+        {selectedUser ? (
+          <h5
+            style={{
+              margin: 0,
+              display: "flex",
+              alignItems: "center",
+              color: "#fff",
+            }}
+          >
+            <Avatar
+              name={selectedUser.senderName}
+              size="30"
+              round={true}
+              style={{ marginRight: "10px" }}
+            />
+            {selectedUser.senderName}
+          </h5>
+        ) : (
+          <h5 style={{ margin: 0, color: "#ddd" }}>Select a user</h5>
+        )}
+        {isMobileView && (
+          <Button
+            onClick={() => setShowUserList(true)}
+            style={{
+              backgroundColor: "transparent",
+              border: "none",
+              color: "#fff",
+            }}
+          >
+            <FaArrowLeft />
+          </Button>
+        )}
+      </div>
+
+      <div
+        style={{
+          flexGrow: 1,
+          padding: "20px",
+          overflowY: "auto",
+          marginTop: "20px",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {(() => {
+          const allMessages = [
+            ...selectedUserMessages.map((msg) => ({
+              ...msg,
+              timestamp: msg.timestamp || msg.sentTimestamp,
+              isFromCurrentUser: false,
+            })),
+            ...selectedContactMessages.map((msg) => ({
+              ...msg,
+              timestamp: msg.timestamp || msg.sentTimestamp,
+              isFromCurrentUser:
+                msg.from === "me" || msg.to === selectedUser?.senderWaId,
+            })),
+          ].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+          return allMessages.map((message, index) =>
+            renderMessage(message, index)
+          );
+        })()}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {selectedUser && (
+        <div style={{ padding: "10px", borderTop: "1px solid #e0e0e0" }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <Button
+              style={{
+                background: "#f1f1f1",
+                border: "none",
+                marginRight: "10px",
+              }}
+              onClick={() => setShowAttachmentOptions(!showAttachmentOptions)}
+            >
+              <FaPaperclip />
+            </Button>
+
+            <Input
+              type="text"
+              value={message}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                setIsTyping(e.target.value.trim().length > 0);
+              }}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") handleSendMessage();
+              }}
+              placeholder="Type a message..."
+              style={{
+                borderRadius: "20px",
+                height: "40px",
+                fontSize: "14px",
+                paddingLeft: "15px",
+                flexGrow: 1,
+                marginRight: "10px",
+              }}
+            />
+
+            <Button
+              style={{
+                backgroundColor: "#00796B",
+                borderRadius: "50%",
+                padding: "10px",
+                border: "none",
+              }}
+              onClick={handleSendMessage}
+              disabled={!message.trim()}
+            >
+              <FaPaperPlane color="#fff" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </Col>
+  );
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <div>
       <Header />
-      <Container fluid style={{ marginTop: '20px' }}>
+      <Container fluid style={{ marginTop: "20px" }}>
         <Row>
           {renderUserList()}
           {renderChatWindow()}
         </Row>
       </Container>
     </div>
-
-    
   );
 };
 

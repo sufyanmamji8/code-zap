@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import Header from 'components/Headers/Header';
 import { Button } from 'reactstrap';
+import { useNavigate } from 'react-router-dom';
 
 const Settings = () => {
   // Manage the active state for each accordion item
   const [activeAccordion, setActiveAccordion] = useState(1);
+  const [phoneId, setPhoneId] = useState('');
+  const [accountId, setAccountId] = useState('');
+  const navigate = useNavigate();
 
   // Handle accordion toggle
   const toggleAccordion = (index) => {
@@ -12,6 +16,16 @@ const Settings = () => {
       setActiveAccordion(null); // Collapse if already open
     } else {
       setActiveAccordion(index); // Expand the clicked accordion item
+    }
+  };
+
+  // Handle form submission for Account ID and Phone number ID
+  const handleSubmit = () => {
+    if (phoneId && accountId) {
+      // If both fields are filled, navigate to the chat page
+      navigate('/admin/chats'); // Change '/chat' to your actual route for the chat page
+    } else {
+      alert('Please fill in both fields.');
     }
   };
 
@@ -71,8 +85,7 @@ const Settings = () => {
           </div>
           {activeAccordion === 3 && (
             <div className="accordion-body">
-              <div className="center-text">
-              </div>
+              <div className="center-text"></div>
               <div className="input-container">
                 <div className="form-group">
                   <label htmlFor="phoneId" className="input-label">Phone number ID</label>
@@ -80,6 +93,8 @@ const Settings = () => {
                     type="text"
                     id="phoneId"
                     className="input-field"
+                    value={phoneId}
+                    onChange={(e) => setPhoneId(e.target.value)}
                     placeholder=""
                   />
                 </div>
@@ -89,10 +104,14 @@ const Settings = () => {
                     type="text"
                     id="accountId"
                     className="input-field"
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
                     placeholder=""
                   />
                 </div>
-                <Button className="submit-button">Submit</Button>
+                <Button className="submit-button" onClick={handleSubmit}>
+                  Submit
+                </Button>
               </div>
             </div>
           )}
