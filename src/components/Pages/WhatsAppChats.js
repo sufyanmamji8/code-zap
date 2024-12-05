@@ -75,47 +75,43 @@ const WhatsAppChats = () => {
         setLoading(false);
       }
     };
-    
-
+  
+    fetchMessages(); // Ensures the fetch happens on mount
+  }, []);
+  
+  useEffect(() => {
     const fetchRecentMessages = async () => {
       try {
-        const senderWaId = selectedUser?.senderWaId || 'defaultSenderWaId'; 
+        const messageMap = {}; // To store recent messages for all users
         
-        const response = await axios.get(GET_RECENT_MESSAGE_API, {
-          params: {
-            senderWaId: senderWaId, 
+        for (const user of userChats) {
+          const response = await axios.get(GET_RECENT_MESSAGE_API, {
+            params: { senderWaId: user.senderWaId },
+          });
+  
+          if (response.data.success) {
+            const recentMessage = response.data.data;
+            if (recentMessage) {
+              messageMap[user.senderWaId] = {
+                messageBody: recentMessage.messageBody,
+                timestamp: recentMessage.timestamp || recentMessage.sentTimestamp,
+                status: recentMessage.status,
+              };
+            }
           }
-        });
-    
-        if (response.data.success) {
-          const messageMap = {};
-          const recentMessage = response.data.data; 
-          if (recentMessage) {
-            messageMap[recentMessage.senderWaId] = {
-              messageBody: recentMessage.messageBody,
-              timestamp: recentMessage.timestamp || recentMessage.sentTimestamp,
-              status: recentMessage.status,
-            };
-          }
-          setRecentMessages(messageMap);
-        } else {
-          console.log('Error:', response.data.message); 
         }
+        setRecentMessages(messageMap); // Update recent messages state
       } catch (error) {
         console.error("Error fetching recent messages:", error);
       }
     };
-    
-    fetchMessages();
+  
     fetchRecentMessages();
-    
-    const messageInterval = setInterval(fetchMessages, 5000);
-
-    return () => {
-      clearInterval(messageInterval);
-    };
-  }, []);
-
+  
+    const messageInterval = setInterval(fetchRecentMessages, 5000);
+    return () => clearInterval(messageInterval);
+  }, [userChats]); // Re-run whenever userChats changes
+  
   useEffect(() => {
     const fetchMessagesForUser = async () => {
       if (selectedUser) {
@@ -131,11 +127,12 @@ const WhatsAppChats = () => {
         }
       }
     };
-
+  
     fetchMessagesForUser();
     const interval = setInterval(fetchMessagesForUser, 5000);
     return () => clearInterval(interval);
   }, [selectedUser]);
+  
 
   const fetchMessagesForContact = async () => {
     try {
@@ -290,7 +287,7 @@ const WhatsAppChats = () => {
           )
           .map((user) => {
             const recentMessage = recentMessages[user.senderWaId];
-
+  
             return (
               <div
                 key={user.senderWaId}
@@ -327,33 +324,14 @@ const WhatsAppChats = () => {
                   </h6>
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
                       fontSize: "12px",
                       color: "#666",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
-                    <span
-                      style={{
-                        flex: 1,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {recentMessage
-                        ? recentMessage.messageBody
-                        : "No messages yet"}
-                    </span>
-                    {recentMessage && (
-                      <>
-                        <span style={{ flexShrink: 0, marginLeft: "8px" }}>
-                          {formatTime(recentMessage.timestamp)}
-                        </span>
-                        <MessageStatus status={recentMessage.status} />
-                      </>
-                    )}
+                    {recentMessage ? recentMessage.messageBody : "No messages yet"}
                   </div>
                 </div>
               </div>
@@ -362,7 +340,8 @@ const WhatsAppChats = () => {
       </div>
     </Col>
   );
-
+  
+  
   const renderChatWindow = () => (
     <Col
       xs="12"

@@ -25,6 +25,20 @@ var routes = [
     layout: "/admin",
   },
   {
+    path: "/login",
+    name: "Login",
+    icon: "ni ni-key-25 text-gray",
+    component: <Login />,
+    layout: "/auth",
+  },
+  {
+    path: "/register",
+    name: "Register",
+    icon: "ni ni-circle-08 text-gray",
+    component: <Register />,
+    layout: "/auth",
+  },
+  {
     path: "/whatsapp",
     name: "Whatsapp",
     icon: "ni ni-chat-round text-gray",
@@ -45,20 +59,7 @@ var routes = [
     component: <Campaign />,
     layout: "/admin",
   },
-  {
-    path: "/login",
-    name: "Login",
-    icon: "ni ni-key-25 text-gray",
-    component: <Login />,
-    layout: "/auth",
-  },
-  {
-    path: "/register",
-    name: "Register",
-    icon: "ni ni-circle-08 text-gray",
-    component: <Register />,
-    layout: "/auth",
-  },
+  
   {
     path: "/getCompanyById/:id",
     name: "GetCompanyById",
