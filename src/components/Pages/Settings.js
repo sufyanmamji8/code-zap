@@ -4,26 +4,22 @@ import { Button } from 'reactstrap';
 import { useNavigate } from 'react-router-dom';
 
 const Settings = () => {
-  // Manage the active state for each accordion item
   const [activeAccordion, setActiveAccordion] = useState(1);
   const [phoneId, setPhoneId] = useState('');
   const [accountId, setAccountId] = useState('');
   const navigate = useNavigate();
 
-  // Handle accordion toggle
   const toggleAccordion = (index) => {
     if (activeAccordion === index) {
-      setActiveAccordion(null); // Collapse if already open
+      setActiveAccordion(null);
     } else {
-      setActiveAccordion(index); // Expand the clicked accordion item
+      setActiveAccordion(index);
     }
   };
 
-  // Handle form submission for Account ID and Phone number ID
   const handleSubmit = () => {
     if (phoneId && accountId) {
-      // If both fields are filled, navigate to the chat page
-      navigate('/admin/chats'); // Change '/chat' to your actual route for the chat page
+      navigate('/admin/chats');
     } else {
       alert('Please fill in both fields.');
     }
@@ -39,51 +35,15 @@ const Settings = () => {
 
       {/* Accordion Section */}
       <div className="accordion-container">
-        {/* Accordion Item #1 */}
+        {/* Accordion Item #1: Get your Account ID and Phone number ID */}
         <div className="accordion-item">
           <div className="accordion-header" onClick={() => toggleAccordion(1)}>
             <h5 className={`accordion-button ${activeAccordion === 1 ? 'active' : ''}`}>
-              Create developer account and a new Facebook app
+              Get your Account ID and Phone number ID
             </h5>
             <span className={`arrow-icon ${activeAccordion === 1 ? 'rotate' : ''}`}>&#9660;</span>
           </div>
           {activeAccordion === 1 && (
-            <div className="accordion-body">
-              <strong>1.</strong> Create a Developer account and a new Facebook app as described here <br />
-              <strong>2.</strong> Once you have your Facebook app created, in the dashboard of the app, locate the WhatsApp product and click Setup <br />
-              <strong>3.</strong> Then go to WhatsApp > Configuration and enter the following info:
-              Callback URL: <br />
-              <strong>4.</strong> Click on Webhook fields -> Manage and select the Messages <br />
-            </div>
-          )}
-        </div>
-
-        {/* Accordion Item #2 (unchanged) */}
-        <div className="accordion-item">
-          <div className="accordion-header" onClick={() => toggleAccordion(2)}>
-            <h5 className={`accordion-button ${activeAccordion === 2 ? 'active' : ''}`}>
-              Get your permanent access token
-            </h5>
-            <span className={`arrow-icon ${activeAccordion === 2 ? 'rotate' : ''}`}>&#9660;</span>
-          </div>
-          {activeAccordion === 2 && (
-            <div className="form-content">
-              <div className="center-text">Enter Your Access Token Here.</div>
-              <input type="text" className="access-field" placeholder="" />
-              <Button className="save-button">Save Access Token</Button>
-            </div>
-          )}
-        </div>
-
-        {/* Accordion Item #3 (updated as requested) */}
-        <div className="accordion-item">
-          <div className="accordion-header" onClick={() => toggleAccordion(3)}>
-            <h5 className={`accordion-button ${activeAccordion === 3 ? 'active' : ''}`}>
-              Get your Account ID and Phone number ID
-            </h5>
-            <span className={`arrow-icon ${activeAccordion === 3 ? 'rotate' : ''}`}>&#9660;</span>
-          </div>
-          {activeAccordion === 3 && (
             <div className="accordion-body">
               <div className="center-text"></div>
               <div className="input-container">
@@ -116,6 +76,39 @@ const Settings = () => {
             </div>
           )}
         </div>
+
+        {/* Accordion Item #2: Call Back URL */}
+        <div className="accordion-item">
+          <div className="accordion-header" onClick={() => toggleAccordion(2)}>
+            <h5 className={`accordion-button ${activeAccordion === 2 ? 'active' : ''}`}>
+              Call Back URL
+            </h5>
+            <span className={`arrow-icon ${activeAccordion === 2 ? 'rotate' : ''}`}>&#9660;</span>
+          </div>
+          {activeAccordion === 2 && (
+            <div className="form-content">
+              <input type="text" className="access-field" placeholder="Enter your Callback URL" />
+              <Button className="save-button">Submit</Button>
+            </div>
+          )}
+        </div>
+
+        {/* Accordion Item #3: Get your permanent access token */}
+        <div className="accordion-item">
+          <div className="accordion-header" onClick={() => toggleAccordion(3)}>
+            <h5 className={`accordion-button ${activeAccordion === 3 ? 'active' : ''}`}>
+              Get your permanent access token
+            </h5>
+            <span className={`arrow-icon ${activeAccordion === 3 ? 'rotate' : ''}`}>&#9660;</span>
+          </div>
+          {activeAccordion === 3 && (
+            <div className="form-content">
+              <div className="center-text">Enter Your Access Token Here.</div>
+              <input type="text" className="access-field" placeholder="" />
+              <Button className="save-button">Save Access Token</Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Inline CSS */}
@@ -134,8 +127,10 @@ const Settings = () => {
         }
 
         .accordion-container {
-          margin-left: 20px;
-          width: 50%; /* Adjust width of the accordion container */
+          width: 80%;
+          max-width: 100%;
+          margin: 0 auto;
+          padding: 20px;
         }
 
         .accordion-item {
@@ -199,21 +194,13 @@ const Settings = () => {
           display: flex;
           flex-direction: column;
           align-items: center;
-          width: 100%; /* Full width of the accordion */
+          width: 100%;
         }
 
         .center-text {
           text-align: center;
           font-size: 16px;
           margin-bottom: 10px;
-        }
-
-        .subtext {
-          text-align: center;
-          margin-top: 10px;
-          font-size: 14px;
-          margin-left: 50px;
-          margin-right: 50px;
         }
 
         .input-container {
@@ -244,7 +231,7 @@ const Settings = () => {
 
         .submit-button {
           margin-top: 20px;
-          width: 60%; /* Width of the submit button */
+          width: 60%;
           padding: 10px;
           background-color: #007bff;
           color: white;
@@ -257,22 +244,22 @@ const Settings = () => {
           background-color: #0056b3;
         }
 
-        .save-button{
-        margin-bottom: 20px;
-        margin-top: 20px;
-        background-color: #007bff;
+        .save-button {
+          margin-bottom: 20px;
+          margin-top: 20px;
+          background-color: #007bff;
           color: white;
-           border-radius: 8px;
+          border-radius: 8px;
           cursor: pointer;
           transition: background-color 0.3s ease;
         }
-          .access-field{
+
+        .access-field {
           padding: 10px;
           width: 70%;
           border-radius: 8px;
           border: 1px solid #ccc;
-          
-          }
+        }
       `}</style>
     </div>
   );

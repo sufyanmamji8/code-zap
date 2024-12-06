@@ -28,12 +28,10 @@ const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Handle input field change
   const ChangeEventHandler = (e) => {
     setInput({ ...input, [e.target.name]: e.target.value });
   };
 
-  // Submit handler for the login form
 const submitHandler = async (e) => {
   e.preventDefault();
 
@@ -45,25 +43,21 @@ const submitHandler = async (e) => {
       withCredentials: true,
     });
 
-    console.log('API Response:', res); // Check API response in console
+    console.log('API Response:', res); 
 
     if (res.data.success) {
-      // Save token in localStorage
       localStorage.setItem("token", res.data.token);
       
-      // Dispatch user data to Redux store
 
-      // Show success message
       toast.success(res.data.message);
       
-      // Redirect to the dashboard
       navigate("/dashboard");
     } else {
-      toast.error(res.data.message || "Login failed. Please try again.");
+      toast.success(res.data.message || "Login failed. Please try again.");
     }
   } catch (error) {
     console.error('Error during login:', error); // Log error in console
-    toast.error("An error occurred. Please try again later.");
+    toast.error("Invalid Crendtials.");
   }
 };
 

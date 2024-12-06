@@ -34,7 +34,7 @@ const WhatsAppAccountList = () => {
         if (res.data && res.data.success && Array.isArray(res.data.data)) {
           setWhatsappAccounts(res.data.data);
         } else {
-          setError("Failed to fetch WhatsApp accounts: Invalid data format.");
+          navigate("/admin/dashboard")
         }
       } else {
         setError("Unexpected response status: " + res.status);

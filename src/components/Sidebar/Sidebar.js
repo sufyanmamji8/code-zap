@@ -16,16 +16,20 @@ import {
   Col,
   Collapse,
 } from "reactstrap";
-import { toast } from "sonner";
 
 const Sidebar = (props) => {
   const [collapseOpen, setCollapseOpen] = useState(false);
-  const [activeWhatsapp, setActiveWhatsapp] = useState(false);
   const [isWhatsAppView, setIsWhatsAppView] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);  // Login status state
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Check login status on mount or based on your app logic
   useEffect(() => {
+    // Simulating the login status check (replace with your actual logic)
+    const userLoggedIn = localStorage.getItem('userLoggedIn') === 'true';  // Replace with actual check
+    setIsLoggedIn(userLoggedIn);
+    
     if (location.state?.whatsAppView) {
       setIsWhatsAppView(true);
       navigate("/admin/chats");
@@ -33,66 +37,22 @@ const Sidebar = (props) => {
   }, [location, navigate]);
 
   const whatsAppRoutes = [
-    {
-      name: "Back to Owner",
-      icon: "ni ni-bold-left",
-      path: "/dashboard",
-      layout: "/admin",
-    },
-    {
-      name: "Stats",
-      icon: "ni ni-chart-bar-32",
-      path: "/stats",
-      layout: "/admin",
-    },
-    {
-      name: "Chats",
-      icon: "ni ni-chat-round",
-      path: "/chats",
-      layout: "/admin",
-    },
-    {
-      name: "Agents",
-      icon: "ni ni-circle-08",
-      path: "/agents",
-      layout: "/admin",
-      dropdown: true,
-      subRoutes: [
-        { name: "List", path: "/agentslist" },
-        { name: "Create Agent", path: "/createagents" },
-      ]
-    },
-    {
-      name: "Contacts",
-      icon: "ni ni-single-02",
-      path: "/contacts",
-      layout: "/admin",
-      dropdown: true,
-      subRoutes: [
-        { name: "List", path: "/contactslist" },
-        { name: "Group", path: "/contactsGroup" },
-        { name: "Fields", path: "/contactsFields" },
-        { name: "Import Fields", path: "/contactsImport" },
-      ]
-    },
-    {
-      name: "Templates",
-      icon: "ni ni-single-copy-04",
-      path: "/templates",
-      layout: "/admin",
-    },
-    {
-      name: "Campaign",
-      icon: "ni ni-notification-70",
-      path: "/campaign",
-      layout: "/admin",
-    },
-    {
-      name: "Settings",
-      icon: "fa fa-cog",
-      path: "/settings",
-      layout: "/admin",
-    },
+    { name: "Back to Owner", icon: "ni ni-bold-left", path: "/dashboard", layout: "/admin" },
+    { name: "Stats", icon: "ni ni-chart-bar-32", path: "/stats", layout: "/admin" },
+    { name: "Chats", icon: "ni ni-chat-round", path: "/chats", layout: "/admin" },
+    { name: "Agents", icon: "ni ni-circle-08", path: "/agents", layout: "/admin", dropdown: true, subRoutes: [
+      { name: "List", path: "/agentslist" },
+      { name: "Create Agent", path: "/createagents" }
+    ]},
+    { name: "Contacts", icon: "ni ni-single-02", path: "/contacts", layout: "/admin", dropdown: true, subRoutes: [
+      { name: "List", path: "/contactslist" },
+      { name: "Group", path: "/contactsGroup" },
+      { name: "Fields", path: "/contactsFields" },
+      { name: "Import Fields", path: "/contactsImport" }
+    ]},
+    { name: "Templates", icon: "ni ni-single-copy-04", path: "/templates", layout: "/admin" },
+    { name: "Campaign", icon: "ni ni-notification-70", path: "/campaign", layout: "/admin" },
+    { name: "Settings", icon: "fa fa-cog", path: "/settings", layout: "/admin" },
   ];
 
   const activeRoute = (routeName) => {
@@ -109,10 +69,34 @@ const Sidebar = (props) => {
 
   const createLinks = (routes) => {
     const currentRoutes = isWhatsAppView ? whatsAppRoutes : routes;
-
+  
     return currentRoutes
       .filter((prop) => prop.showInSidebar !== false)
       .map((prop, key) => {
+        // Check if the user is logged in
+        if (isLoggedIn) {
+          // Skip Login and Register links if user is logged in
+          if (prop.name === "Login" || prop.name === "Register") {
+            return null;
+          }
+        } else {
+          // Show Login and Register links only if user is NOT logged in
+          if (prop.name === "Login" || prop.name === "Register") {
+            return (
+              <NavItem key={key}>
+                <NavLink
+                  to={prop.layout + prop.path}
+                  tag={NavLinkRRD}
+                  onClick={closeCollapse}
+                >
+                  <i className={prop.icon} />
+                  {prop.name}
+                </NavLink>
+              </NavItem>
+            );
+          }
+        }
+  
         // WhatsApp Dropdown
         if (prop.name === "Whatsapp" && !isWhatsAppView) {
           return (
@@ -120,10 +104,7 @@ const Sidebar = (props) => {
               <UncontrolledDropdown nav inNavbar>
                 <DropdownToggle
                   nav
-                  className={`d-flex align-items-center ${activeWhatsapp ? "text-success" : "text-muted"}`}
-                  onClick={() => setActiveWhatsapp(!activeWhatsapp)}
-                  onMouseEnter={() => setActiveWhatsapp(true)}
-                  onMouseLeave={() => setActiveWhatsapp(false)}
+                  className={`d-flex align-items-center`}
                 >
                   <i className={prop.icon} /> {prop.name}
                   <i className="fa fa-caret-down ml-2" />
@@ -140,7 +121,7 @@ const Sidebar = (props) => {
             </NavItem>
           );
         }
-
+  
         // Back to Owner when in WhatsApp view
         if (prop.name === "Back to Owner") {
           return (
@@ -160,7 +141,7 @@ const Sidebar = (props) => {
             </NavItem>
           );
         }
-
+  
         // Other Routes
         if (prop.dropdown) {
           return (
@@ -168,10 +149,7 @@ const Sidebar = (props) => {
               <UncontrolledDropdown nav inNavbar>
                 <DropdownToggle
                   nav
-                  className={`d-flex align-items-center ${activeWhatsapp ? "text-success" : "text-muted"}`}
-                  onClick={() => setActiveWhatsapp(!activeWhatsapp)}
-                  onMouseEnter={() => setActiveWhatsapp(true)}
-                  onMouseLeave={() => setActiveWhatsapp(false)}
+                  className={`d-flex align-items-center`}
                 >
                   <i className={prop.icon} /> {prop.name}
                   <i className="fa fa-caret-down ml-2" />
@@ -187,7 +165,7 @@ const Sidebar = (props) => {
             </NavItem>
           );
         }
-
+  
         return (
           <NavItem key={key}>
             <NavLink
@@ -202,6 +180,7 @@ const Sidebar = (props) => {
         );
       });
   };
+  
 
   const { bgColor, routes, logo } = props;
   let navbarBrandProps;
