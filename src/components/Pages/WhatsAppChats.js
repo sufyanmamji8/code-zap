@@ -48,6 +48,7 @@ const WhatsAppChats = () => {
   const [selectedUserMessages, setSelectedUserMessages] = useState([]);
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
   const [recentMessages, setRecentMessages] = useState({});
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
     const handleResize = () => {
@@ -60,7 +61,11 @@ const WhatsAppChats = () => {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const response = await axios.get(API_URL);
+        const response = await axios.get(API_URL, {
+          headers: {
+            Authorization: `Bearer ${token}`  // Include token in the request headers
+          }
+        });
         if (response.data.success) {
           const uniqueUsers = Array.from(
             new Map(
@@ -87,6 +92,9 @@ const WhatsAppChats = () => {
         for (const user of userChats) {
           const response = await axios.get(GET_RECENT_MESSAGE_API, {
             params: { senderWaId: user.senderWaId },
+            headers: {
+              Authorization: `Bearer ${token}`  // Include token in the request headers
+            }
           });
   
           if (response.data.success) {
@@ -118,6 +126,9 @@ const WhatsAppChats = () => {
         try {
           const response = await axios.get(GET_MESSAGES_BY_USER_API, {
             params: { senderWaId: selectedUser.senderWaId },
+            headers: {
+              Authorization: `Bearer ${token}`  // Include token in the request headers
+            }
           });
           if (response.data.success) {
             setSelectedUserMessages(response.data.messages);
@@ -141,6 +152,9 @@ const WhatsAppChats = () => {
           selectedUser.contactNumber || selectedUser.senderWaId;
         const response = await axios.get(GET_MESSAGES_BY_CONTACT_API, {
           params: { contactNumber },
+          headers: {
+            Authorization: `Bearer ${token}`  // Include token in the request headers
+          }
         });
 
         if (response.data.success) {
@@ -182,7 +196,12 @@ const WhatsAppChats = () => {
       };
 
       try {
-        const response = await axios.post(SEND_MESSAGE_API, newMessage);
+        const response = await axios.post(SEND_MESSAGE_API, newMessage,{
+          headers: {
+            Authorization: `Bearer ${token}`  // Include token in the request headers
+          }
+        });
+        
         if (response.data.success) {
           const sentMessage = {
             messageBody: message,
