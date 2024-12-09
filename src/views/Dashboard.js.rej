@@ -1,0 +1,126 @@
+diff a/src/views/Dashboard.js b/src/views/Dashboard.js	(rejected hunks)
+@@ -3,7 +3,6 @@
+ import Header from "components/Headers/Header.js";
+ import axios from "axios";
+ import { COMPANY_API_ENDPOINT } from "Api/Constant";
+-import { FaPlus } from 'react-icons/fa';
+ import { useNavigate } from "react-router-dom";
+ import { toast } from "sonner";
+ 
+@@ -13,8 +12,6 @@
+   const [error, setError] = useState("");
+   const navigate = useNavigate();
+ 
+- 
+-
+   const fetchWhatsappAccounts = async () => {
+     setLoading(true);
+     setError(""); // Reset error initially
+@@ -40,14 +37,13 @@
+             setWhatsappAccounts(res.data.data);
+           }
+         } else {
++          setError("Unexpected response format.");
+         }
+       } else {
+         setError("Unexpected response status: " + res.status);
+       }
+     } catch (error) {
+-      // Handle network errors (e.g., no response from server or request issues)
+       if (error.response) {
+-        // Check if the error is a 404 or any other specific status code
+         if (error.response.status === 404) {
+           setError("No WhatsApp accounts found.");
+         } else {
+@@ -62,20 +58,24 @@
+       setLoading(false);
+     }
+   };
+-  
+ 
+   useEffect(() => {
+     fetchWhatsappAccounts();
+   }, []);
+ 
+   const handleOpenWhatsApp = () => {
+-    // Navigate to the same route but with state indicating WhatsApp view
+-    toast.success("Successfully login!"); 
+-    navigate('/admin/dashboard', { 
+-      state: { 
+-        whatsAppView: true // This will trigger the sidebar to show WhatsApp options
+-      } 
+-    });
++    const phoneId = localStorage.getItem('phoneId');
++    const accountId = localStorage.getItem('accountId');
++    
++    // Check if configuration is complete
++    if (!phoneId || !accountId) {
++      toast.error("Please complete your WhatsApp configuration first.");
++      navigate('/admin/settings');  // Redirect to Settings page
++    } else {
++      // Configuration is done, navigate to /admin/chats
++      toast.success("Successfully logged in!");
++      navigate('/admin/chats');
++    }
+   };
+ 
+   return (
+@@ -89,8 +89,6 @@
+         WhatsApp Accounts
+       </h2>
+ 
+-      
+-
+       {/* Error Message */}
+       {error && <div className="alert alert-danger text-center">{error}</div>}
+ 
+@@ -106,18 +104,15 @@
+         {whatsappAccounts.length > 0 ? (
+           whatsappAccounts.map((account) => (
+             <Col lg="4" md="6" sm="12" key={account._id} className="mb-4">
+-              <Card 
+-                className="shadow-lg" 
+-                style={{
+-                  borderRadius: "10px", 
+-                  transition: "transform 0.3s ease", 
+-                  overflow: "hidden", 
+-                  height: "300px",
+-                  display: "flex", 
+-                  flexDirection: "column", 
+-                  justifyContent: "space-between"
+-                }}
+-              >
++              <Card className="shadow-lg" style={{
++                borderRadius: "10px", 
++                transition: "transform 0.3s ease", 
++                overflow: "hidden", 
++                height: "300px",
++                display: "flex", 
++                flexDirection: "column", 
++                justifyContent: "space-between"
++              }}>
+                 <CardBody>
+                   <CardTitle tag="h5" style={{ fontWeight: "bold", color: "#343a40" }}>
+                     Name: {account.name}
+@@ -133,7 +128,6 @@
+                   </CardText>
+                 </CardBody>
+ 
+-                {/* Modified Open WhatsApp Button */}
+                 <Button
+                   onClick={handleOpenWhatsApp}
+                   color="success"
+@@ -161,13 +155,8 @@
+           </div>
+         )}
+       </Row>
+-
+-     
+     </>
+   );
+ };
+ 
+ export default Dashboard;
+-
+-
+-

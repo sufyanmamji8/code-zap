@@ -48,7 +48,6 @@ const submitHandler = async (e) => {
     if (res.data.success) {
       localStorage.setItem("token", res.data.token);
       
-
       toast.success(res.data.message);
       
       navigate("/dashboard");

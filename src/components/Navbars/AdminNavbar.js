@@ -16,11 +16,12 @@ const AdminNavbar = (props) => {
   const navigate = useNavigate();
 
   // Handle the log out process and show the success toast
-  const handleLogOut = () => {
-    localStorage.removeItem('token');  // Remove token from local storage
-    toast.success("Successfully logged out!");  // Show success toast message
-    navigate('/auth/login');  // Redirect to the login page
-  };
+ const handleLogOut = () => {
+  localStorage.removeItem("token"); // Remove the token from localStorage
+  sessionStorage.removeItem("phoneId"); // Remove configuration data from sessionStorage
+  sessionStorage.removeItem("accountId"); // Remove configuration data from sessionStorage
+  navigate("/login"); // Redirect to login page
+};
 
   return (
     <>
@@ -46,7 +47,7 @@ const AdminNavbar = (props) => {
                   </span>
                   <Media className="ml-2 d-none d-lg-block">
                     <span className="mb-0 text-sm font-weight-bold">
-                     Codovio
+                     CodoZap
                     </span>
                   </Media>
                 </Media>
