@@ -1,279 +1,5 @@
-// import { useState, useEffect } from "react";
-// import { NavLink as NavLinkRRD, Link, useLocation, useNavigate } from "react-router-dom";
-// import { PropTypes } from "prop-types";
-// import {
-//   UncontrolledDropdown,
-//   DropdownToggle,
-//   DropdownMenu,
-//   DropdownItem,
-//   Nav,
-//   NavItem,
-//   NavLink,
-//   NavbarBrand,
-//   Navbar,
-//   Container,
-//   Row,
-//   Col,
-//   Collapse,
-// } from "reactstrap";
-
-// const Sidebar = (props) => {
-//   const [collapseOpen, setCollapseOpen] = useState(false);
-//   const [isWhatsAppView, setIsWhatsAppView] = useState(false);
-//   const [isLoggedIn, setIsLoggedIn] = useState(false);  // Login status state
-//   const location = useLocation();
-//   const navigate = useNavigate();
-
-//   // Check login status on mount or based on your app logic
-//   useEffect(() => {
-//     // Simulating the login status check (replace with your actual logic)
-//     const userLoggedIn = localStorage.getItem('userLoggedIn') === 'true';  // Replace with actual check
-//     setIsLoggedIn(userLoggedIn);
-    
-//     if (location.state?.whatsAppView) {
-//       setIsWhatsAppView(true);
-//       navigate("/admin/chats");
-//     }
-//   }, [location, navigate]);
-
-//   const whatsAppRoutes = [
-//     { name: "Back to Owner", icon: "ni ni-bold-left", path: "/dashboard", layout: "/admin" },
-//     { name: "Stats", icon: "ni ni-chart-bar-32", path: "/stats", layout: "/admin" },
-//     { name: "Chats", icon: "ni ni-chat-round", path: "/chats", layout: "/admin" },
-//     { name: "Agents", icon: "ni ni-circle-08", path: "/agents", layout: "/admin", dropdown: true, subRoutes: [
-//       { name: "List", path: "/agentslist" },
-//       { name: "Create Agent", path: "/createagents" }
-//     ]},
-//     { name: "Contacts", icon: "ni ni-single-02", path: "/contacts", layout: "/admin", dropdown: true, subRoutes: [
-//       { name: "List", path: "/contactslist" },
-//       { name: "Group", path: "/contactsGroup" },
-//       { name: "Fields", path: "/contactsFields" },
-//       { name: "Import Fields", path: "/contactsImport" }
-//     ]},
-//     { name: "Templates", icon: "ni ni-single-copy-04", path: "/templates", layout: "/admin" },
-//     { name: "Campaign", icon: "ni ni-notification-70", path: "/campaign", layout: "/admin" },
-//     { name: "Settings", icon: "fa fa-cog", path: "/settings", layout: "/admin" },
-//   ];
-
-//   const activeRoute = (routeName) => {
-//     return props.location.pathname.indexOf(routeName) > -1 ? "active" : "";
-//   };
-
-//   const toggleCollapse = () => {
-//     setCollapseOpen((data) => !data);
-//   };
-
-//   const closeCollapse = () => {
-//     setCollapseOpen(false);
-//   };
-
-//   const createLinks = (routes) => {
-//     const currentRoutes = isWhatsAppView ? whatsAppRoutes : routes;
-  
-//     return currentRoutes
-//       .filter((prop) => prop.showInSidebar !== false)
-//       .map((prop, key) => {
-//         // Check if the user is logged in
-//         if (isLoggedIn) {
-//           // Skip Login and Register links if user is logged in
-//           if (prop.name === "Login" || prop.name === "Register") {
-//             return null;
-//           }
-//         } else {
-//           // Show Login and Register links only if user is NOT logged in
-//           if (prop.name === "Login" || prop.name === "Register") {
-//             return (
-//               <NavItem key={key}>
-//                 <NavLink
-//                   to={prop.layout + prop.path}
-//                   tag={NavLinkRRD}
-//                   onClick={closeCollapse}
-//                 >
-//                   <i className={prop.icon} />
-//                   {prop.name}
-//                 </NavLink>
-//               </NavItem>
-//             );
-//           }
-//         }
-  
-//         // WhatsApp Dropdown
-//         if (prop.name === "Whatsapp" && !isWhatsAppView) {
-//           return (
-//             <NavItem key={key}>
-//               <UncontrolledDropdown nav inNavbar>
-//                 <DropdownToggle
-//                   nav
-//                   className={`d-flex align-items-center`}
-//                 >
-//                   <i className={prop.icon} /> {prop.name}
-//                   <i className="fa fa-caret-down ml-2" />
-//                 </DropdownToggle>
-//                 <DropdownMenu className="dropdown-menu-arrow" right>
-//                   <DropdownItem to="/admin/whatsapplist" tag={Link}>
-//                     <i className="fa fa-list mr-2" /> List
-//                   </DropdownItem>
-//                   <DropdownItem to="/admin/AddWhatsapp" tag={Link}>
-//                     <i className="fa fa-plus-circle mr-2" /> Add WhatsApp
-//                   </DropdownItem>
-//                 </DropdownMenu>
-//               </UncontrolledDropdown>
-//             </NavItem>
-//           );
-//         }
-  
-//         // Back to Owner when in WhatsApp view
-//         if (prop.name === "Back to Owner") {
-//           return (
-//             <NavItem key={key}>
-//               <NavLink
-//                 to={prop.layout + prop.path}
-//                 tag={NavLinkRRD}
-//                 onClick={() => {
-//                   closeCollapse();
-//                   setIsWhatsAppView(false); // Reset to default view
-//                 }}
-//                 className="text-primary"
-//               >
-//                 <i className={prop.icon} />
-//                 {prop.name}
-//               </NavLink>
-//             </NavItem>
-//           );
-//         }
-  
-//         // Other Routes
-//         if (prop.dropdown) {
-//           return (
-//             <NavItem key={key}>
-//               <UncontrolledDropdown nav inNavbar>
-//                 <DropdownToggle
-//                   nav
-//                   className={`d-flex align-items-center`}
-//                 >
-//                   <i className={prop.icon} /> {prop.name}
-//                   <i className="fa fa-caret-down ml-2" />
-//                 </DropdownToggle>
-//                 <DropdownMenu className="dropdown-menu-arrow" right style={{ position: 'relative' }}>
-//                   {prop.subRoutes.map((subRoute, subKey) => (
-//                     <DropdownItem to={prop.layout + subRoute.path} tag={Link} key={subKey}>
-//                       <i className="fa fa-list mr-2" /> {subRoute.name}
-//                     </DropdownItem>
-//                   ))}
-//                 </DropdownMenu>
-//               </UncontrolledDropdown>
-//             </NavItem>
-//           );
-//         }
-  
-//         return (
-//           <NavItem key={key}>
-//             <NavLink
-//               to={prop.layout + prop.path}
-//               tag={NavLinkRRD}
-//               onClick={closeCollapse}
-//             >
-//               <i className={prop.icon} />
-//               {prop.name}
-//             </NavLink>
-//           </NavItem>
-//         );
-//       });
-//   };
-  
-
-//   const { bgColor, routes, logo } = props;
-//   let navbarBrandProps;
-//   if (logo && logo.innerLink) {
-//     navbarBrandProps = {
-//       to: logo.innerLink,
-//       tag: Link,
-//     };
-//   } else if (logo && logo.outterLink) {
-//     navbarBrandProps = {
-//       href: logo.outterLink,
-//       target: "_blank",
-//     };
-//   }
-
-//   return (
-//     <Navbar
-//       className="navbar-vertical fixed-left navbar-light bg-white"
-//       expand="md"
-//       id="sidenav-main"
-//     >
-//       <Container fluid>
-//         <button
-//           className="navbar-toggler"
-//           type="button"
-//           onClick={toggleCollapse}
-//         >
-//           <span className="navbar-toggler-icon" />
-//         </button>
-
-//         {logo ? (
-//           <NavbarBrand className="pt-0" {...navbarBrandProps}>
-//             <div className="d-flex align-items-center">
-//               <img
-//                 alt={logo.imgAlt}
-//                 className="navbar-brand-img"
-//                 src={require("../../assets/img/brand/free-waba-logo.png")}
-//                 style={{ height: "40px", width: "auto" }}
-//               />
-//               <h2 className="ml-3 mb-0">Codovio</h2>
-//             </div>
-//           </NavbarBrand>
-//         ) : null}
-
-//         <Collapse navbar isOpen={collapseOpen}>
-//           <div className="navbar-collapse-header d-md-none">
-//             <Row>
-//               <Col className="collapse-close" xs="6">
-//                 <button
-//                   className="navbar-toggler"
-//                   type="button"
-//                   onClick={toggleCollapse}
-//                 >
-//                   <span />
-//                   <span />
-//                 </button>
-//               </Col>
-//             </Row>
-//           </div>
-
-//           <Nav navbar>{createLinks(routes)}</Nav>
-//         </Collapse>
-//       </Container>
-//     </Navbar>
-//   );
-// };
-
-// Sidebar.defaultProps = {
-//   routes: [{}],
-// };
-
-// Sidebar.propTypes = {
-//   routes: PropTypes.arrayOf(PropTypes.object),
-//   logo: PropTypes.shape({
-//     innerLink: PropTypes.string,
-//     outterLink: PropTypes.string,
-//     imgSrc: PropTypes.string.isRequired,
-//     imgAlt: PropTypes.string.isRequired,
-//   }),
-// };
-
-// export default Sidebar;
-
-
-
-
-
-// NEW CODE:
-
-
-
 import { useState, useEffect } from "react";
-import { NavLink as NavLinkRRD, Link, useLocation, useNavigate } from "react-router-dom";
+import { NavLink as NavLinkRRD, Link, useLocation, useNavigate, } from "react-router-dom";
 import { PropTypes } from "prop-types";
 import {
   UncontrolledDropdown,
@@ -296,8 +22,8 @@ const Sidebar = (props) => {
   const [isWhatsAppView, setIsWhatsAppView] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-
+const navigate = useNavigate()
+  // Check login status and WhatsApp view on mount or based on app logic
   useEffect(() => {
     const userLoggedIn = localStorage.getItem('userLoggedIn') === 'true';
     setIsLoggedIn(userLoggedIn);
@@ -306,9 +32,9 @@ const Sidebar = (props) => {
     const accountId = sessionStorage.getItem('accountId');
     
     if (phoneId && accountId) {
-      setIsWhatsAppView(true);
+      setIsWhatsAppView(true);  // User is in WhatsApp view
     } else {
-      setIsWhatsAppView(false);
+      setIsWhatsAppView(false);  // Default view
     }
 
     if (location.state?.whatsAppView) {
@@ -361,8 +87,8 @@ const Sidebar = (props) => {
     return currentRoutes
       .filter((prop) => prop.showInSidebar !== false)
       .map((prop, key) => {
-        // Back to Owner handling
-        if (prop.name === "Back to Owner") {
+        // Handle "Back to Owner" only when in WhatsApp view
+        if (prop.name === "Back to Owner" && isWhatsAppView) {
           return (
             <NavItem key={key}>
               <NavLink
@@ -370,10 +96,11 @@ const Sidebar = (props) => {
                 tag={NavLinkRRD}
                 onClick={() => {
                   closeCollapse();
-                  setIsWhatsAppView(false);
-                  sessionStorage.removeItem('phoneId');
-                  sessionStorage.removeItem('accountId');
-                  navigate("/dashboard");
+                  setIsWhatsAppView(false);  // Reset to default view
+                  // Use setTimeout to delay navigation after state update
+                  setTimeout(() => {
+                    navigate("/admin/dashboard");
+                  }, 100); // Small delay to ensure state update before navigation
                 }}
                 className="text-primary"
               >
@@ -383,31 +110,44 @@ const Sidebar = (props) => {
             </NavItem>
           );
         }
-
-        // Login/Register handling based on login state
-        if (isLoggedIn) {
-          if (prop.name === "Login" || prop.name === "Register") return null;
+  
+        // Hide Login/Register links when the user is logged in
+        if (isLoggedIn && (prop.name === "Login" || prop.name === "Register")) return null;
+  
+        // Handle "Whatsapp" dropdown routes when not in WhatsApp view
+        if (prop.name === "Whatsapp" && !isWhatsAppView) {
+          return (
+            <NavItem key={key}>
+              <UncontrolledDropdown nav inNavbar>
+                <DropdownToggle nav className="d-flex align-items-center">
+                  <i className={prop.icon} /> {prop.name}
+                  <i className="fa fa-caret-down ml-2" />
+                </DropdownToggle>
+                <DropdownMenu className="dropdown-menu-arrow" right>
+                  <DropdownItem to="/admin/whatsapplist" tag={Link}>
+                    <i className="fa fa-list mr-2" /> List
+                  </DropdownItem>
+                  <DropdownItem to="/admin/AddWhatsapp" tag={Link}>
+                    <i className="fa fa-plus-circle mr-2" /> Add WhatsApp
+                  </DropdownItem>
+                </DropdownMenu>
+              </UncontrolledDropdown>
+            </NavItem>
+          );
         }
-
-        // Dropdown routes handling
+  
+        // Handle dropdown routes (Contacts, Agents, etc.)
         if (prop.dropdown) {
           return (
             <NavItem key={key}>
               <UncontrolledDropdown nav inNavbar>
-                <DropdownToggle
-                  nav
-                  className="d-flex align-items-center"
-                >
+                <DropdownToggle nav className="d-flex align-items-center">
                   <i className={prop.icon} /> {prop.name}
                   <i className="fa fa-caret-down ml-2" />
                 </DropdownToggle>
-                <DropdownMenu className="dropdown-menu-arrow" right style={{ position: 'relative' }}>
+                <DropdownMenu className="dropdown-menu-arrow" right>
                   {prop.subRoutes.map((subRoute, subKey) => (
-                    <DropdownItem 
-                      to={prop.layout + subRoute.path} 
-                      tag={Link} 
-                      key={subKey}
-                    >
+                    <DropdownItem to={prop.layout + subRoute.path} tag={Link} key={subKey}>
                       <i className="fa fa-list mr-2" /> {subRoute.name}
                     </DropdownItem>
                   ))}
@@ -416,8 +156,8 @@ const Sidebar = (props) => {
             </NavItem>
           );
         }
-
-        // Regular routes
+  
+        // For all other regular routes
         return (
           <NavItem key={key}>
             <NavLink
@@ -466,9 +206,9 @@ const Sidebar = (props) => {
           <NavbarBrand className="pt-0" {...navbarBrandProps}>
             <div className="d-flex align-items-center">
               <img
-                alt={logo.imgAlt || "Logo"}
+                alt={logo.imgAlt}
                 className="navbar-brand-img"
-                src={logo.imgSrc || require("../../assets/img/brand/free-waba-logo.png")}
+                src={require("../../assets/img/brand/free-waba-logo.png")}
                 style={{ height: "40px", width: "auto" }}
               />
               <h2 className="ml-3 mb-0">CodoZap</h2>
@@ -477,16 +217,8 @@ const Sidebar = (props) => {
         ) : null}
 
         <Collapse navbar isOpen={collapseOpen}>
-          <div className="navbar-collapse-header">
+          <div className="navbar-collapse-header d-md-none">
             <Row>
-              <Col className="collapse-brand" xs="6">
-                <Link to="/" onClick={closeCollapse}>
-                  <img
-                    alt="..."
-                    src={logo?.imgSrc || require("../../assets/img/brand/free-waba-logo.png")}
-                  />
-                </Link>
-              </Col>
               <Col className="collapse-close" xs="6">
                 <button
                   className="navbar-toggler"
@@ -508,11 +240,7 @@ const Sidebar = (props) => {
 };
 
 Sidebar.defaultProps = {
-  routes: [],
-  logo: {
-    imgSrc: require("../../assets/img/brand/free-waba-logo.png"),
-    imgAlt: "CodoZap Logo"
-  }
+  routes: [{}],
 };
 
 Sidebar.propTypes = {
@@ -520,9 +248,15 @@ Sidebar.propTypes = {
   logo: PropTypes.shape({
     innerLink: PropTypes.string,
     outterLink: PropTypes.string,
-    imgSrc: PropTypes.string,
-    imgAlt: PropTypes.string,
+    imgSrc: PropTypes.string.isRequired,
+    imgAlt: PropTypes.string.isRequired,
   }),
 };
 
 export default Sidebar;
+
+
+
+
+
+

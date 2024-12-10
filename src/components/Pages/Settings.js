@@ -22,70 +22,67 @@ const Settings = () => {
   };
 
   // New method to save configuration in sessionStorage
-  const handleSaveConfiguration = () => {
-    if (phoneId && accountId) {
-      // Store configuration data in sessionStorage
-      sessionStorage.setItem("phoneId", phoneId);
-      sessionStorage.setItem("accountId", accountId);
+  // New method to save configuration in sessionStorage
+const handleSaveConfiguration = () => {
+  if (phoneId && accountId) {
+    // Store configuration data in sessionStorage
+    sessionStorage.setItem("phoneId", phoneId);
+    sessionStorage.setItem("accountId", accountId);
 
-      toast.success("Configuration saved successfully!");
-      navigate("/admin/chats"); // Redirect to chats page
-    } else {
-      toast.error("Please complete your configuration.");
-    }
-  };
+    toast.success("Configuration saved successfully!");
+    navigate("/admin/chats"); // Redirect to chats page
+  } else {
+    toast.error("Please complete your configuration.");
+  }
+};
 
-  const handleSubmit = async () => {
-    if (phoneId && accountId && callbackUrl && accessToken) {
-      try {
-        // Get the token from local storage
-        const token = localStorage.getItem('token');
-  
-        if (!token) {
-          alert('Authorization token is missing. Please log in again.');
-          return;
-        }
-  
-        // Make the API call to the backend to save the configuration
-        const response = await axios.post(
-          'http://192.168.0.106:4000/api/v1/configuration/save-configuration',
-          {
-            phoneNumberId: phoneId,
-            whatsappBusinessAccountId: accountId,
-            callbackUrl: callbackUrl,
-            accessToken: accessToken,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`  // Include token in the request headers
-            }
+// Updated handleSubmit function with sessionStorage logic
+const handleSubmit = async () => {
+  if (phoneId && accountId && callbackUrl && accessToken) {
+    try {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        alert('Authorization token is missing. Please log in again.');
+        return;
+      }
+
+      const response = await axios.post(
+        'http://192.168.0.106:4000/api/v1/configuration/save-configuration',
+        {
+          phoneNumberId: phoneId,
+          whatsappBusinessAccountId: accountId,
+          callbackUrl: callbackUrl,
+          accessToken: accessToken,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
           }
-        );
-  
-        if (response.data.success) {
-          // Save configuration in localStorage after success
-          localStorage.setItem('phoneNumberId', phoneId);
-          localStorage.setItem('whatsappBusinessAccountId', accountId);
-          localStorage.setItem('callbackUrl', callbackUrl);
-          localStorage.setItem('accessToken', accessToken);
-
-          // Also save in sessionStorage after success
-          sessionStorage.setItem("phoneId", phoneId);
-          sessionStorage.setItem("accountId", accountId);
-
-          // Redirect to the chats page if configuration is saved successfully
-          navigate('/admin/chats');
-        } else {
-          alert('Configuration failed. Please try again.');
         }
-      } catch (error) {
-        console.error('Error saving configuration:', error);
+      );
+
+      if (response.data.success) {
+        // Save configuration in sessionStorage after success
+        sessionStorage.setItem("phoneId", phoneId);
+        sessionStorage.setItem("accountId", accountId);
+        sessionStorage.setItem("callbackUrl", callbackUrl);
+        sessionStorage.setItem("accessToken", accessToken);
+
+        // Redirect to the chats page if configuration is saved successfully
+        navigate('/admin/chats');
+      } else {
         alert('Configuration failed. Please try again.');
       }
-    } else {
-      alert('Please fill in all fields.');
+    } catch (error) {
+      console.error('Error saving configuration:', error);
+      alert('Configuration failed. Please try again.');
     }
-  };
+  } else {
+    toast.error('Please fill in all fields.');
+  }
+};
+
 
   return (
     <div>
