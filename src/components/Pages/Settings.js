@@ -113,7 +113,7 @@ const handleSubmit = async () => {
                     className="input-field"
                     value={phoneId}
                     onChange={(e) => setPhoneId(e.target.value)}
-                    placeholder="Enter Phone number ID"
+                    placeholder=""
                   />
                 </div>
                 <div className="form-group">
@@ -124,12 +124,12 @@ const handleSubmit = async () => {
                     className="input-field"
                     value={accountId}
                     onChange={(e) => setAccountId(e.target.value)}
-                    placeholder="Enter WhatsApp Account ID"
+                    placeholder=""
                   />
                 </div>
-                <Button className="submit-button" onClick={handleSaveConfiguration}>
+                {/* <Button className="submit-button" onClick={handleSaveConfiguration}>
                   Submit
-                </Button>
+                </Button> */}
               </div>
             </div>
           )}
@@ -152,9 +152,9 @@ const handleSubmit = async () => {
                 value={callbackUrl}
                 onChange={(e) => setCallbackUrl(e.target.value)}
               />
-              <Button className="save-button" onClick={handleSubmit}>
+              {/* <Button className="save-button" onClick={handleSubmit}>
                 Submit
-              </Button>
+              </Button> */}
             </div>
           )}
         </div>
@@ -168,7 +168,7 @@ const handleSubmit = async () => {
             <span className={`arrow-icon ${activeAccordion === 3 ? 'rotate' : ''}`}>&#9660;</span>
           </div>
           {activeAccordion === 3 && (
-            <div className="form-content">
+            <div className="form-content ">
               <div className="center-text">Enter Your Access Token Here.</div>
               <input
                 type="text"
@@ -177,8 +177,8 @@ const handleSubmit = async () => {
                 value={accessToken}
                 onChange={(e) => setAccessToken(e.target.value)}
               />
-              <Button className="save-button" onClick={handleSubmit}>
-                Save Access Token
+              <Button className="save-button mb-3" onClick={handleSubmit}>
+                Save Configuration
               </Button>
             </div>
           )}

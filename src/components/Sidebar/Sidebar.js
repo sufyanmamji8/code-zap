@@ -15,18 +15,35 @@ import {
   Row,
   Col,
   Collapse,
+  Media,
 } from "reactstrap";
+import { toast } from "sonner";
+
+
 
 const Sidebar = (props) => {
   const [collapseOpen, setCollapseOpen] = useState(false);
   const [isWhatsAppView, setIsWhatsAppView] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
-const navigate = useNavigate()
+  const navigate = useNavigate();
+  
+  // Handle the log out process and show the success toast
+  const handleLogOut = () => {
+    localStorage.removeItem("token"); // Remove the token from localStorage
+    sessionStorage.removeItem("phoneId"); // Remove configuration data from sessionStorage
+    sessionStorage.removeItem("accountId"); // Remove configuration data from sessionStorage
+    navigate("/auth/login"); // Redirect to login page
+  toast.success("Logout Sucessfully")
+
+  };
+
+
   // Check login status and WhatsApp view on mount or based on app logic
   useEffect(() => {
-    const userLoggedIn = localStorage.getItem('userLoggedIn') === 'true';
-    setIsLoggedIn(userLoggedIn);
+    // Check login status using token
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
 
     const phoneId = sessionStorage.getItem('phoneId');
     const accountId = sessionStorage.getItem('accountId');
@@ -39,7 +56,7 @@ const navigate = useNavigate()
 
     if (location.state?.whatsAppView) {
       setIsWhatsAppView(true);
-      navigate("/admin/chats");
+      
     }
   }, [location, navigate]);
 
@@ -80,12 +97,23 @@ const navigate = useNavigate()
   const closeCollapse = () => {
     setCollapseOpen(false);
   };
+ 
+
+
 
   const createLinks = (routes) => {
     const currentRoutes = isWhatsAppView ? whatsAppRoutes : routes;
   
     return currentRoutes
-      .filter((prop) => prop.showInSidebar !== false)
+      .filter((prop) => {
+        // Hide Login/Register links when the user is logged in
+        if (isLoggedIn && (prop.name === "Login" || prop.name === "Register")) {
+          return false;
+        }
+        
+        // Filter out routes marked as not to be shown in sidebar
+        return prop.showInSidebar !== false;
+      })
       .map((prop, key) => {
         // Handle "Back to Owner" only when in WhatsApp view
         if (prop.name === "Back to Owner" && isWhatsAppView) {
@@ -110,9 +138,6 @@ const navigate = useNavigate()
             </NavItem>
           );
         }
-  
-        // Hide Login/Register links when the user is logged in
-        if (isLoggedIn && (prop.name === "Login" || prop.name === "Register")) return null;
   
         // Handle "Whatsapp" dropdown routes when not in WhatsApp view
         if (prop.name === "Whatsapp" && !isWhatsAppView) {
@@ -205,6 +230,7 @@ const navigate = useNavigate()
         {logo ? (
           <NavbarBrand className="pt-0" {...navbarBrandProps}>
             <div className="d-flex align-items-center">
+              <div className="d-flex align-items-center side-responsive">
               <img
                 alt={logo.imgAlt}
                 className="navbar-brand-img"
@@ -212,6 +238,40 @@ const navigate = useNavigate()
                 style={{ height: "40px", width: "auto" }}
               />
               <h2 className="ml-3 mb-0">CodoZap</h2>
+              </div>
+              <Nav className="align-items-center  d-md-flex" navbar>
+            <UncontrolledDropdown nav>
+              <DropdownToggle className="pr-0" nav>
+                <Media className="align-items-center">
+                  <span className="avatar-responsive avatar avatar-sm rounded-circle">
+                    <img
+                      alt="..."
+                      src={require("../../assets/img/theme/team-2-800x800.jpg")}
+                    />
+                  </span>
+                  {/* <Media className="ml-2  d-lg-block">
+                    <span className="mb-0 text-sm font-weight-bold">
+                     CodoZap
+                    </span>
+                  </Media> */}
+                </Media>
+              </DropdownToggle>
+              <DropdownMenu className="dropdown-menu-arrow arow-responsive" right>
+                <DropdownItem className="noti-title" header tag="div">
+                  <h6 className="text-overflow m-0">Welcome!</h6>
+                </DropdownItem>
+                <DropdownItem to="/admin/user-profile" tag={Link}>
+                  <i className="ni ni-single-02" />
+                  <span>My profile</span>
+                </DropdownItem>
+                <DropdownItem divider />
+                <DropdownItem onClick={handleLogOut}>
+                  <i className="ni ni-user-run" />
+                  <span>Logout</span>
+                </DropdownItem>
+              </DropdownMenu>
+            </UncontrolledDropdown>
+          </Nav>
             </div>
           </NavbarBrand>
         ) : null}
@@ -254,9 +314,3 @@ Sidebar.propTypes = {
 };
 
 export default Sidebar;
-
-
-
-
-
-

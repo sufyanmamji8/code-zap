@@ -17,25 +17,26 @@ const AdminNavbar = (props) => {
 
   // Handle the log out process and show the success toast
  const handleLogOut = () => {
-  localStorage.removeItem("token"); // Remove the token from localStorage
+  localStorage.removeItem("token"); 
   sessionStorage.removeItem("phoneId"); // Remove configuration data from sessionStorage
   sessionStorage.removeItem("accountId"); // Remove configuration data from sessionStorage
-  navigate("/login"); // Redirect to login page
+  navigate("/auth/login"); // Redirect to login page
+  toast.success("Logout Sucessfully")
 };
 
   return (
     <>
     
-      <Navbar className="navbar-top navbar-dark" expand="md" id="navbar-main">
+      <Navbar className="navbar-top navbar-respons navbar-dark" expand="md" id="navbar-main">
         <Container fluid>
           <Link
-            className="h4 mb-0 text-white text-uppercase d-none d-lg-inline-block"
+            className="h4 mb-0 text-white text-uppercase  d-lg-inline-block"
             to="/"
           >
             {props.brandText}
           </Link>
 
-          <Nav className="align-items-center d-none d-md-flex" navbar>
+          <Nav className="align-items-center  d-md-flex" navbar>
             <UncontrolledDropdown nav>
               <DropdownToggle className="pr-0" nav>
                 <Media className="align-items-center">
@@ -45,11 +46,11 @@ const AdminNavbar = (props) => {
                       src={require("../../assets/img/theme/team-2-800x800.jpg")}
                     />
                   </span>
-                  <Media className="ml-2 d-none d-lg-block">
+                  {/* <Media className="ml-2  d-lg-block">
                     <span className="mb-0 text-sm font-weight-bold">
                      CodoZap
                     </span>
-                  </Media>
+                  </Media> */}
                 </Media>
               </DropdownToggle>
               <DropdownMenu className="dropdown-menu-arrow" right>
