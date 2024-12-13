@@ -9,14 +9,16 @@ import {
   FaPaperclip,
   FaPaperPlane,
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { Button, Col, Container, Input, Row } from "reactstrap";
+import { toast } from "sonner";
 
-const API_URL = "http://192.168.0.106:4000/api/v1/webHooks/getMessages";
-const GET_MESSAGES_BY_USER_API ="http://192.168.0.106:4000/api/v1/webHooks/getMessagesByUser";
-const GET_RECENT_MESSAGE_API = "http://192.168.0.106:4000/api/v1/webHooks/recentMessages";
-const SEND_MESSAGE_API = "http://192.168.0.106:4000/api/v1/messages/send";
-const GET_MESSAGES_BY_CONTACT_API ="http://192.168.0.106:4000/api/v1/messages/getMessagesByContact";
-const WEBHOOK_API = "http://192.168.0.106:4000/api/v1/messages/handleWebHook";
+const API_URL = "http://192.168.43.249:4000/api/v1/webHooks/getMessages";
+const GET_MESSAGES_BY_USER_API ="http://192.168.43.249:4000/api/v1/webHooks/getMessagesByUser";
+const GET_RECENT_MESSAGE_API = "http://192.168.43.249:4000/api/v1/webHooks/recentMessages";
+const SEND_MESSAGE_API = "http://192.168.43.249:4000/api/v1/messages/send";
+const GET_MESSAGES_BY_CONTACT_API ="http://192.168.43.249:4000/api/v1/messages/getMessagesByContact";
+const WEBHOOK_API = "http://192.168.43.249:4000/api/v1/messages/handleWebHook";
 
 const MessageStatus = ({ status }) => {
   if (!status) return null;
@@ -49,6 +51,7 @@ const WhatsAppChats = () => {
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
   const [recentMessages, setRecentMessages] = useState({});
   const token = localStorage.getItem('token');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleResize = () => {
@@ -218,7 +221,8 @@ const WhatsAppChats = () => {
         }
       } catch (error) {
         console.error("Error:", error);
-        alert("Failed to send message.");
+        toast.error("Configuration is invalid.");
+        navigate("/admin/settings")
       }
     }
   };

@@ -47,6 +47,7 @@ const submitHandler = async (e) => {
 
     if (res.data.success) {
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("fullName", res.data.user.fullname);
       
       toast.success(res.data.message);
       
@@ -144,7 +145,8 @@ const submitHandler = async (e) => {
             <a
               className="text-light"
               href="#pablo"
-              onClick={(e) => e.preventDefault()}
+              onClick={(e) => e.preventDefault(navigate("/auth/register"))}
+              
             >
               <small>Create new account</small>
             </a>

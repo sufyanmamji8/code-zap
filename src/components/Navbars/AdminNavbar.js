@@ -19,7 +19,9 @@ const AdminNavbar = (props) => {
  const handleLogOut = () => {
   localStorage.removeItem("token"); 
   sessionStorage.removeItem("phoneId"); // Remove configuration data from sessionStorage
-  sessionStorage.removeItem("accountId"); // Remove configuration data from sessionStorage
+  sessionStorage.removeItem("accountId");
+  sessionStorage.removeItem("accessToken"); 
+  sessionStorage.removeItem("callbackUrl");  // Remove configuration data from sessionStorage
   navigate("/auth/login"); // Redirect to login page
   toast.success("Logout Sucessfully")
 };

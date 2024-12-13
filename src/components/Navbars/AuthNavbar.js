@@ -1,5 +1,5 @@
 
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import {
   UncontrolledCollapse,
@@ -13,18 +13,28 @@ import {
   Col,
 } from "reactstrap";
 
+
+
+
 const AdminNavbar = () => {
+
+  const location = useLocation();
+
   return (
     <>
       <Navbar className="navbar-top navbar-horizontal navbar-dark" expand="md">
         <Container className="px-4">
-          <NavbarBrand to="/" tag={Link}>
+          <NavbarBrand
+          
+          
+          
+          >
             <img
               alt="..."
               src={require("../../assets/img/brand/free-waba-logo.png")}
             />
             <span className="ml-3 mb-0 font-weight-bold" style={{ color: "white" }}>
-                Free Waba
+                CodoZap
               </span> 
           </NavbarBrand>
           <button className="navbar-toggler" id="navbar-collapse-main">
@@ -34,12 +44,12 @@ const AdminNavbar = () => {
             <div className="navbar-collapse-header d-md-none">
               <Row>
                 <Col className="collapse-brand" xs="6">
-                  <Link to="/">
+                  
                     <img
                       alt="..."
                       src={require("../../assets/img/brand/free-waba-logo.png")}
                     />
-                  </Link>
+                 
                 </Col>
                 <Col className="collapse-close" xs="6">
                   <button className="navbar-toggler" id="navbar-collapse-main">
@@ -51,16 +61,14 @@ const AdminNavbar = () => {
             </div>
             <Nav className="ml-auto" navbar>
               
-              <NavItem>
-                <NavLink
-                  className="nav-link-icon"
-                  to="/auth/register"
-                  tag={Link}
-                >
-                  <i className="ni ni-circle-08" />
-                  <span className="nav-link-inner--text">Register</span>
-                </NavLink>
-              </NavItem>
+            <NavItem>
+      <NavLink className="nav-link-icon" tag={Link} to={location.pathname === "/auth/login" ? "/auth/register" : "/auth/login"}>
+        <i className="ni ni-circle-08" />
+        <span className="nav-link-inner--text">
+          {location.pathname === "/auth/login" ? "Register" : "Login"}
+        </span>
+      </NavLink>
+    </NavItem>
               
              
             </Nav>

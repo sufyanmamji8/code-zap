@@ -48,7 +48,7 @@ const handleSubmit = async () => {
       }
 
       const response = await axios.post(
-        'http://192.168.0.106:4000/api/v1/configuration/save-configuration',
+        'http://192.168.43.249:4000/api/v1/configuration/save-configuration',
         {
           phoneNumberId: phoneId,
           whatsappBusinessAccountId: accountId,
@@ -63,20 +63,29 @@ const handleSubmit = async () => {
       );
 
       if (response.data.success) {
-        // Save configuration in sessionStorage after success
+        // Save configuration in sessionStorage
         sessionStorage.setItem("phoneId", phoneId);
         sessionStorage.setItem("accountId", accountId);
         sessionStorage.setItem("callbackUrl", callbackUrl);
         sessionStorage.setItem("accessToken", accessToken);
 
-        // Redirect to the chats page if configuration is saved successfully
-        navigate('/admin/chats');
+        // Set WhatsApp view state BEFORE navigation - This is what we were missing!
+        localStorage.setItem(`${token}_isWhatsAppView`, 'true');
+        
+        // Navigate with state
+        navigate('/admin/chats', { 
+          state: { 
+            whatsAppView: true 
+          } 
+        });
+
+        toast.success("Configuration saved successfully!");
       } else {
-        alert('Configuration failed. Please try again.');
+        toast.error('Configuration failed. Please try again.');
       }
     } catch (error) {
       console.error('Error saving configuration:', error);
-      alert('Configuration failed. Please try again.');
+      toast.error('Configuration failed. Please try again.');
     }
   } else {
     toast.error('Please fill in all fields.');
