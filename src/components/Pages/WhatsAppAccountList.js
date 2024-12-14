@@ -1,5 +1,19 @@
+
 import React, { useState, useEffect } from "react";
-import { Button, Card, CardBody, CardTitle, CardText, Row, Col, Spinner } from "reactstrap";
+import { 
+  Button, 
+  Card, 
+  CardBody, 
+  CardTitle, 
+  CardText, 
+  Row, 
+  Col, 
+  Spinner,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter
+} from "reactstrap";
 import Header from "components/Headers/Header.js";
 import axios from "axios";
 import { COMPANY_API_ENDPOINT } from "Api/Constant";
@@ -10,6 +24,8 @@ const WhatsAppAccountList = () => {
   const [whatsappAccounts, setWhatsappAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState(null);
   const navigate = useNavigate();
 
   // Fetch WhatsApp Accounts
@@ -58,27 +74,39 @@ const WhatsAppAccountList = () => {
     navigate(`/admin/getCompanyById/${id}`);
   };
 
-  // Handle Delete
-  const handleDelete = async (id) => {
-    {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.delete(`${COMPANY_API_ENDPOINT}/deleteCompany/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  // Open Delete Confirmation Modal
+  const openDeleteModal = (company) => {
+    setCompanyToDelete(company);
+    setDeleteModal(true);
+  };
 
-        if (res.status === 200) {
-          toast.success('Account deleted successfully!')
-          fetchWhatsappAccounts();
-        } else {
+  // Close Delete Confirmation Modal
+  const closeDeleteModal = () => {
+    setCompanyToDelete(null);
+    setDeleteModal(false);
+  };
+
+  // Handle Delete
+  const handleDelete = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.delete(`${COMPANY_API_ENDPOINT}/deleteCompany/${companyToDelete._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 200) {
+        toast.success('Account deleted successfully!')
+        fetchWhatsappAccounts();
+      } else {
         toast.error('Failed to delete account. Please try again.')
-        }
-      } catch (error) {
-        console.error("Error deleting account:", error);
-        toast.error('An error occurred while deleting the account.')
       }
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast.error('An error occurred while deleting the account.')
+    } finally {
+      closeDeleteModal();
     }
   };
 
@@ -103,6 +131,22 @@ const WhatsAppAccountList = () => {
       {/* Error Message */}
       {error && <div className="alert alert-danger text-center">{error}</div>}
 
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={deleteModal} toggle={closeDeleteModal}>
+        <ModalHeader toggle={closeDeleteModal}>Confirm Delete</ModalHeader>
+        <ModalBody>
+          Are you sure you want to delete this company: <strong>{companyToDelete?.name}</strong>?
+        </ModalBody>
+        <ModalFooter>
+          <Button color="danger" onClick={handleDelete}>
+            Yes, Delete
+          </Button>{' '}
+          <Button color="secondary" onClick={closeDeleteModal}>
+            No, Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
+
       {/* WhatsApp Accounts as Cards */}
       <Row className="mx-auto">
         {whatsappAccounts.length > 0 ? (
@@ -114,7 +158,7 @@ const WhatsAppAccountList = () => {
                   borderRadius: "10px",
                   transition: "transform 0.3s ease",
                   overflow: "hidden",
-                  height: "300px", // Ensures all cards are the same height
+                  height: "300px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between"
@@ -134,7 +178,7 @@ const WhatsAppAccountList = () => {
                     style={{
                       color: "#6c757d",
                       fontStyle: "italic",
-                       fontSize:'12px'
+                      fontSize:'12px'
                     }}
                   >
                     Created At: {new Date(account.createdAt).toLocaleString()}
@@ -163,7 +207,7 @@ const WhatsAppAccountList = () => {
                   </Button>
                   <Button
                     color="link"
-                    onClick={() => handleDelete(account._id)}
+                    onClick={() => openDeleteModal(account)}
                     style={{ color: "#dc3545", fontSize: "18px" }}
                   >
                     <i className="fas fa-trash-alt"></i> Delete
