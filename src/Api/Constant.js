@@ -1,3 +1,3 @@
-export const USER_API_ENDPOINT = 'http://192.168.43.249:4000/api/v1/user';
-export const COMPANY_API_ENDPOINT = 'http://192.168.43.249:4000/api/v1/company';
+export const USER_API_ENDPOINT = 'http://192.168.0.108:4000/api/v1/user';
+export const COMPANY_API_ENDPOINT = 'http://192.168.0.108:4000/api/v1/company';
 

@@ -48,7 +48,7 @@ const handleSubmit = async () => {
       }
 
       const response = await axios.post(
-        'http://192.168.43.249:4000/api/v1/configuration/save-configuration',
+        'http://192.168.0.108:4000/api/v1/configuration/save-configuration',
         {
           phoneNumberId: phoneId,
           whatsappBusinessAccountId: accountId,
