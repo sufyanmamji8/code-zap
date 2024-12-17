@@ -121,6 +121,7 @@ const Sidebar = (props) => {
   const handleBackToOwner = () => {
     const token = localStorage.getItem('token');
     
+    
     // Remove WhatsApp view state
     if (token) {
       localStorage.removeItem(`${token}_isWhatsAppView`);
@@ -159,7 +160,7 @@ const Sidebar = (props) => {
                 tag={NavLinkRRD}
                 onClick={handleBackToOwner}
                 className="text-primary"
-              >
+                        >
                 <i className={prop.icon} />
                 {prop.name}
               </NavLink>
