@@ -643,7 +643,7 @@ const WhatsAppChats = () => {
       try {
         await Promise.all([
           fetchMessages(),
-          fetchContacts()
+          // fetchContacts()
         ]);
         setLoading(false);
       } catch (error) {
@@ -674,19 +674,19 @@ const WhatsAppChats = () => {
   };
 
   // Fetch Contacts
-  const fetchContacts = async () => {
-    try {
-      const response = await axios.get(GET_CONTACTS_API, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.data.success) {
-        setContacts(response.data.contacts);
-      }
-    } catch (error) {
-      console.error("Error fetching contacts:", error);
-      toast.error("Failed to load contacts");
-    }
-  };
+  // const fetchContacts = async () => {
+  //   try {
+  //     const response = await axios.get(GET_CONTACTS_API, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     if (response.data.success) {
+  //       setContacts(response.data.contacts);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching contacts:", error);
+  //     toast.error("Failed to load contacts");
+  //   }
+  // };
 
   // Recent Messages Polling
   useEffect(() => {
@@ -840,7 +840,7 @@ const WhatsAppChats = () => {
       
       if (response.data.success) {
         toast.success("Contact created successfully");
-        await fetchContacts();
+        // await fetchContacts();
         toggleModal();
       } else {
         toast.error(response.data.message || "Error creating contact");
