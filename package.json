@@ -74,7 +74,8 @@
     "redux-persist": "^6.0.0",
     "sass": "1.69.5",
     "socket.io-client": "^4.8.1",
-    "sonner": "^1.7.0"
+    "sonner": "^1.7.0",
+    "styled-components": "^6.1.13"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
