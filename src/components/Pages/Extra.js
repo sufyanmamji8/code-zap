@@ -3,6 +3,7 @@ import { FaArrowLeft, FaPaperclip, FaPaperPlane } from "react-icons/fa";
 import { Button, Col, Container, Input, Row, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import axios from "axios";
 import Header from "components/Headers/Header";
+import io from 'socket.io-client';
 
 const countryList = [
   { code: '92', country: 'Pakistan', flag: '🇵🇰' },
@@ -15,6 +16,7 @@ const countryList = [
 
 const WhatsAppChats = () => {
   const [messages, setMessages] = useState([]);
+  const [contacts, setContacts] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
@@ -22,17 +24,90 @@ const WhatsAppChats = () => {
   const [isNewChatModal, setIsNewChatModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const chatEndRef = useRef(null);
+  const [socket, setSocket] = useState(null);
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
+  const chatEndRef = useRef(null);
 
   const isMobileView = window.innerWidth <= 768;
   const token = localStorage.getItem('token');
 
   useEffect(() => {
+    const newSocket = io('http://192.168.0.107:25483');
+    setSocket(newSocket);
+
+    newSocket.on('new_message', (messageData) => {
+      setMessages(prev => {
+        const exists = prev.some(msg => msg.messageId === messageData.messageId);
+        if (!exists) {
+          const newMsg = {
+            ...messageData,
+            senderName: messageData.senderName || "Unknown",
+            currentStatusTimestamp: messageData.currentStatusTimestamp || Date.now().toString(),
+          };
+          return [...prev, newMsg];
+        }
+        return prev;
+      });
+
+      // Update contacts with new message
+      setContacts(prev => {
+        const userNumber = messageData.from === "923030307660" ? messageData.to : messageData.from;
+        const existingContact = prev.find(contact => contact.phoneNumber === userNumber);
+        
+        if (!existingContact) {
+          const newContact = {
+            phoneNumber: userNumber,
+            lastMessage: messageData.messageBody,
+            timestamp: messageData.currentStatusTimestamp,
+            flag: countryList.find(c => userNumber.startsWith(c.code))?.flag || '🌐'
+          };
+          return [...prev, newContact];
+        }
+        return prev;
+      });
+    });
+
+    newSocket.on('message_status_update', (updatedMessage) => {
+      setMessages(prev => prev.map(msg => 
+        msg.messageId === updatedMessage.messageId ? {
+          ...msg,
+          status: updatedMessage.status,
+          currentStatusTimestamp: updatedMessage.currentStatusTimestamp,
+          ...(updatedMessage.status === 'sent' && { sentTimestamp: updatedMessage.currentStatusTimestamp }),
+          ...(updatedMessage.status === 'delivered' && { deliveredTimestamp: updatedMessage.currentStatusTimestamp }),
+          ...(updatedMessage.status === 'read' && { readTimestamp: updatedMessage.currentStatusTimestamp }),
+          ...(updatedMessage.status === 'failed' && { 
+            failedTimestamp: updatedMessage.currentStatusTimestamp,
+            failureReason: updatedMessage.failureReason 
+          })
+        } : msg
+      ));
+    });
+
+    newSocket.on('message_sent', (messageData) => {
+      setMessages(prev => prev.map(msg => 
+        msg.messageId === messageData.messageId ? {
+          ...msg,
+          ...messageData,
+          status: 'sent',
+          sentTimestamp: messageData.sentTimestamp,
+          currentStatusTimestamp: messageData.currentStatusTimestamp
+        } : msg
+      ));
+    });
+
     fetchMessages();
     const interval = setInterval(fetchMessages, 30000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      newSocket.disconnect();
+    };
   }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const fetchMessages = async () => {
     try {
@@ -41,7 +116,7 @@ const WhatsAppChats = () => {
         'http://192.168.0.107:25483/api/v1/messages/getMessages',
         {
           businessId: "102953305799075",
-          lastTimestamp: null
+          lastTimestamp: lastMessageTimestamp
         },
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -49,7 +124,19 @@ const WhatsAppChats = () => {
       );
       
       if (response.data.success) {
-        setMessages(response.data.data);
+        setMessages(prevMessages => {
+          const newMessages = [...prevMessages];
+          response.data.data.forEach(newMsg => {
+            const index = newMessages.findIndex(msg => msg.messageId === newMsg.messageId);
+            if (index === -1) {
+              newMessages.push(newMsg);
+            } else {
+              newMessages[index] = newMsg;
+            }
+          });
+          return newMessages;
+        });
+
         if (response.data.data.length) {
           const latestTimestamp = Math.max(
             ...response.data.data.map(msg => parseInt(msg.currentStatusTimestamp))
@@ -62,19 +149,6 @@ const WhatsAppChats = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const startNewChat = () => {
-    const fullNumber = selectedCountry.code + phoneNumber;
-    const newUser = {
-      phoneNumber: fullNumber,
-      lastMessage: "",
-      timestamp: (Date.now() / 1000).toString(),
-      flag: selectedCountry.flag
-    };
-    setSelectedUser(newUser);
-    setPhoneNumber("");
-    setIsNewChatModal(false);
   };
 
   const sendMessage = async () => {
@@ -110,13 +184,7 @@ const WhatsAppChats = () => {
       );
 
       if (response.data.success) {
-        setMessages(prev => prev.map(msg => 
-          msg.messageId === tempId ? {
-            ...msg,
-            messageId: response.data.data.messages[0].id,
-            status: "sent"
-          } : msg
-        ));
+        console.log("Message sent successfully:", response.data);
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -124,35 +192,73 @@ const WhatsAppChats = () => {
     }
   };
 
+  const uniqueUsers = React.useMemo(() => {
+    const users = new Map();
+    
+    contacts.forEach(contact => {
+      users.set(contact.phoneNumber, {
+        ...contact,
+        lastMessage: "",
+        lastMessageStatus: "",
+        timestamp: Date.now().toString()
+      });
+    });
+    
+    messages.forEach(msg => {
+      const userNumber = msg.from === "923030307660" ? msg.to : msg.from;
+      const existingUser = users.get(userNumber);
+      
+      const messageTimestamp = parseInt(msg.currentStatusTimestamp);
+      if (!existingUser || messageTimestamp > parseInt(existingUser.timestamp)) {
+        users.set(userNumber, {
+          phoneNumber: userNumber,
+          lastMessage: msg.messageBody,
+          lastMessageStatus: msg.status || "delivered",
+          timestamp: msg.currentStatusTimestamp,
+          flag: countryList.find(c => userNumber.startsWith(c.code))?.flag || '🌐'
+        });
+      }
+    });
+    
+    return Array.from(users.values())
+      .sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp));
+  }, [messages, contacts]);
+
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const uniqueUsers = React.useMemo(() => {
-    const users = new Map();
-    const receivedMessages = messages.filter(msg => 
-      msg.from !== "923030307660"
-    );
-    
-    receivedMessages.forEach(msg => {
-      const number = msg.from;
-      if (!users.has(number)) {
-        users.set(number, {
-          phoneNumber: number,
-          lastMessage: msg.messageBody,
-          timestamp: msg.currentStatusTimestamp,
-          flag: countryList.find(c => number && number.startsWith(c.code))?.flag || ''
-        });
-      }
-    });
-    return Array.from(users.values());
-  }, [messages]);
+  const startNewChat = () => {
+    const fullNumber = selectedCountry.code + phoneNumber;
+    const newUser = {
+      phoneNumber: fullNumber,
+      lastMessage: "",
+      timestamp: (Date.now() / 1000).toString(),
+      flag: selectedCountry.flag
+    };
+    setContacts(prev => [...prev, newUser]);
+    setSelectedUser(newUser);
+    setPhoneNumber("");
+    setIsNewChatModal(false);
+  };
 
-  const filteredUsers = uniqueUsers.filter(user =>
-    user.phoneNumber && searchTerm 
-      ? user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
-      : true
-  );
+  const renderMessageStatus = (message) => {
+    if (message.from === "923030307660") {
+      switch (message.status) {
+        case "read":
+          return <span style={{ color: "#53bdeb" }}>✓✓</span>;
+        case "delivered":
+          return "✓✓";
+        case "sent":
+          return "✓";
+        case "sending":
+          return "⌛";
+        default:
+          return "";
+      }
+    }
+    return null;
+  };
 
   const renderNewChatModal = () => (
     <Modal isOpen={isNewChatModal} toggle={() => setIsNewChatModal(false)}>
@@ -257,58 +363,68 @@ const WhatsAppChats = () => {
       </div>
 
       <div style={{ overflowY: "auto", flexGrow: 1 }}>
-        {filteredUsers.map((user) => (
-          <div
-            key={user.phoneNumber}
-            onClick={() => setSelectedUser(user)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              padding: "10px",
-              borderRadius: "10px",
-              backgroundColor: selectedUser?.phoneNumber === user.phoneNumber ? "#e8e8e8" : "transparent",
-              cursor: "pointer",
-              transition: "background-color 0.3s ease",
-              marginBottom: "5px",
-            }}
-          >
-            <div style={{ 
-              width: "40px", 
-              height: "40px", 
-              borderRadius: "50%", 
-              backgroundColor: "#e0e0e0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: "10px",
-              fontSize: "20px"
-            }}>
-              {user.flag}
-            </div>
-            <div style={{ flex: 1, overflow: "hidden" }}>
-              <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
-                {user.phoneNumber}
-              </h6>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    whiteSpace: "nowrap",
+        {uniqueUsers
+          .filter(user => user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+          .map((user) => (
+            <div
+              key={user.phoneNumber}
+              onClick={() => setSelectedUser(user)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "10px",
+                borderRadius: "10px",
+                backgroundColor: selectedUser?.phoneNumber === user.phoneNumber ? "#e8e8e8" : "transparent",
+                cursor: "pointer",
+                transition: "background-color 0.3s ease",
+                marginBottom: "5px",
+              }}
+            >
+              <div style={{ 
+                width: "40px", 
+                height: "40px", 
+                borderRadius: "50%", 
+                backgroundColor: "#e0e0e0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: "10px",
+                fontSize: "20px"
+              }}>
+                {user.flag}
+              </div>
+              <div style={{ flex: 1, overflow: "hidden" }}>
+                <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
+                  {user.phoneNumber}
+                </h6>
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "space-between",
+                  fontSize: "12px",
+                  color: "#667781"
+                }}>
+                  <div style={{ 
+                    display: "flex",
+                    alignItems: "center",
+                    maxWidth: "70%",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
-                    maxWidth: "70%",
-                  }}
-                >
-                  {user.lastMessage}
-                </div>
-                <div style={{ fontSize: "11px", color: "#888" }}>
-                  {new Date(parseInt(user.timestamp) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    whiteSpace: "nowrap"
+                  }}>
+                    {renderMessageStatus({
+                      from: "923030307660",
+                      status: user.lastMessageStatus
+                    })}
+                    <span style={{ marginLeft: "4px" }}>{user.lastMessage}</span>
+                  </div>
+                  <span style={{ fontSize: "11px" }}>
+                    {formatMessageTime(user.timestamp)}
+                  </span>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </Col>
   );
@@ -412,17 +528,24 @@ const WhatsAppChats = () => {
                       backgroundColor: message.from === selectedUser.phoneNumber ? "#fff" : "#dcf8c6",
                       borderRadius: "7.5px",
                       boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
-                      marginBottom: "2px",
                     }}
                   >
-                    <div style={{ fontSize: "14px", color: "#303030", marginRight: "15px" }}>
+                    <div style={{ fontSize: "14px", marginRight: "45px" }}>
                       {message.messageBody}
                     </div>
-                    <div style={{ fontSize: "11px", color: "#667781", textAlign: "right" }}>
-                      {new Date(parseInt(message.currentStatusTimestamp) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div style={{ 
+                      fontSize: "11px", 
+                      color: "#667781", 
+                      position: "absolute",
+                      right: "8px",
+                      bottom: "6px",
+                      display: "flex",
+                      alignItems: "center"
+                    }}>
+                      {formatMessageTime(message.currentStatusTimestamp)}
                       {message.from !== selectedUser.phoneNumber && (
-                        <span style={{ marginLeft: "5px" }}>
-                          {message.status === "delivered" ? "✓✓" : "✓"}
+                        <span style={{ marginLeft: "4px" }}>
+                          {renderMessageStatus(message)}
                         </span>
                       )}
                     </div>
@@ -476,6 +599,7 @@ const WhatsAppChats = () => {
 
                 <Button
                   onClick={sendMessage}
+                  disabled={!newMessage.trim()}
                   style={{
                     backgroundColor: "#00a884",
                     borderRadius: "50%",
@@ -507,6 +631,11 @@ const WhatsAppChats = () => {
       </Col>
     );
   };
+
+  // Filter users based on search term
+  const filteredUsers = uniqueUsers.filter(user =>
+    user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div style={{ 
@@ -573,28 +702,6 @@ const formatMessageTime = (timestamp) => {
       day: 'numeric' 
     });
   }
-};
-
-const groupMessagesByDate = (messages) => {
-  const groups = {};
-  messages.forEach(message => {
-    const date = new Date(parseInt(message.currentStatusTimestamp) * 1000)
-      .toLocaleDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(message);
-  });
-  return groups;
-};
-
-const getCountryFlag = (phoneNumber) => {
-  for (const country of countryList) {
-    if (phoneNumber.startsWith(country.code)) {
-      return country.flag;
-    }
-  }
-  return '🌐';
 };
 
 export default WhatsAppChats;
