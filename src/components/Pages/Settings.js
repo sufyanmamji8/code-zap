@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Header from 'components/Headers/Header';
 import { Button } from 'reactstrap';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';  // Axios to make API calls
+import axios from 'axios';  
 import { toast } from 'sonner';
 
 const Settings = () => {
@@ -21,22 +21,18 @@ const Settings = () => {
     }
   };
 
-  // New method to save configuration in sessionStorage
-  // New method to save configuration in sessionStorage
 const handleSaveConfiguration = () => {
   if (phoneId && accountId) {
-    // Store configuration data in sessionStorage
     sessionStorage.setItem("phoneId", phoneId);
     sessionStorage.setItem("accountId", accountId);
 
     toast.success("Configuration saved successfully!");
-    navigate("/admin/chats"); // Redirect to chats page
+    navigate("/admin/chats"); 
   } else {
     toast.error("Please complete your configuration.");
   }
 };
 
-// Updated handleSubmit function with sessionStorage logic
 const handleSubmit = async () => {
   if (phoneId && accountId && callbackUrl && accessToken) {
     try {
@@ -63,16 +59,13 @@ const handleSubmit = async () => {
       );
 
       if (response.data.success) {
-        // Save configuration in sessionStorage
         sessionStorage.setItem("phoneId", phoneId);
         sessionStorage.setItem("accountId", accountId);
         sessionStorage.setItem("callbackUrl", callbackUrl);
         sessionStorage.setItem("accessToken", accessToken);
 
-        // Set WhatsApp view state BEFORE navigation - This is what we were missing!
         localStorage.setItem(`${token}_isWhatsAppView`, 'true');
         
-        // Navigate with state
         navigate('/admin/chats', { 
           state: { 
             whatsAppView: true 
