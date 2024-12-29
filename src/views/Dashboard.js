@@ -7,7 +7,7 @@ import { COMPANY_API_ENDPOINT } from "Api/Constant";
 import { FaPlus } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-
+    
 const Dashboard = () => {
   const [whatsappAccounts, setWhatsappAccounts] = useState([]);
   const [loading, setLoading] = useState(false);

@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaArrowLeft, FaPaperclip, FaPaperPlane } from "react-icons/fa";
+import { FaArrowLeft, FaPaperclip, FaPaperPlane, FaCheck, FaCheckDouble, FaClock, FaExclamationTriangle } from "react-icons/fa";
 import { Button, Col, Container, Input, Row, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import axios from "axios";
+import io from "socket.io-client";
 import Header from "components/Headers/Header";
-import io from 'socket.io-client';
+
+const SOCKET_URL = "http://192.168.100.8:25483";
+const API_BASE_URL = "http://192.168.100.8:25483/api/v1";
+const BUSINESS_ID = "102953305799075";
 
 const countryList = [
   { code: '92', country: 'Pakistan', flag: '🇵🇰' },
@@ -16,7 +20,11 @@ const countryList = [
 
 const WhatsAppChats = () => {
   const [messages, setMessages] = useState([]);
-  const [contacts, setContacts] = useState([]);
+  const [socket, setSocket] = useState(null);
+  const [contacts, setContacts] = useState(() => {
+    const savedContacts = localStorage.getItem('whatsappContacts');
+    return savedContacts ? JSON.parse(savedContacts) : [];
+  });
   const [newMessage, setNewMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
@@ -24,125 +32,106 @@ const WhatsAppChats = () => {
   const [isNewChatModal, setIsNewChatModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [socket, setSocket] = useState(null);
-  const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
   const chatEndRef = useRef(null);
-
-  const isMobileView = window.innerWidth <= 768;
   const token = localStorage.getItem('token');
+  const isMobileView = window.innerWidth <= 768;
 
+  // Socket Connection Setup
   useEffect(() => {
-    const newSocket = io('http://192.168.0.107:25483');
+    const newSocket = io(SOCKET_URL, {
+      transports: ["websocket"],
+      withCredentials: true,
+    });
+
+    newSocket.on("connect", () => {
+      console.log("Connected to socket server");
+      newSocket.emit('join_business', BUSINESS_ID);
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+    });
+
     setSocket(newSocket);
 
-    newSocket.on('new_message', (messageData) => {
-      setMessages(prev => {
-        const exists = prev.some(msg => msg.messageId === messageData.messageId);
-        if (!exists) {
-          const newMsg = {
-            ...messageData,
-            senderName: messageData.senderName || "Unknown",
-            currentStatusTimestamp: messageData.currentStatusTimestamp || Date.now().toString(),
-          };
-          return [...prev, newMsg];
-        }
-        return prev;
-      });
-
-      // Update contacts with new message
-      setContacts(prev => {
-        const userNumber = messageData.from === "923030307660" ? messageData.to : messageData.from;
-        const existingContact = prev.find(contact => contact.phoneNumber === userNumber);
-        
-        if (!existingContact) {
-          const newContact = {
-            phoneNumber: userNumber,
-            lastMessage: messageData.messageBody,
-            timestamp: messageData.currentStatusTimestamp,
-            flag: countryList.find(c => userNumber.startsWith(c.code))?.flag || '🌐'
-          };
-          return [...prev, newContact];
-        }
-        return prev;
-      });
-    });
-
-    newSocket.on('message_status_update', (updatedMessage) => {
-      setMessages(prev => prev.map(msg => 
-        msg.messageId === updatedMessage.messageId ? {
-          ...msg,
-          status: updatedMessage.status,
-          currentStatusTimestamp: updatedMessage.currentStatusTimestamp,
-          ...(updatedMessage.status === 'sent' && { sentTimestamp: updatedMessage.currentStatusTimestamp }),
-          ...(updatedMessage.status === 'delivered' && { deliveredTimestamp: updatedMessage.currentStatusTimestamp }),
-          ...(updatedMessage.status === 'read' && { readTimestamp: updatedMessage.currentStatusTimestamp }),
-          ...(updatedMessage.status === 'failed' && { 
-            failedTimestamp: updatedMessage.currentStatusTimestamp,
-            failureReason: updatedMessage.failureReason 
-          })
-        } : msg
-      ));
-    });
-
-    newSocket.on('message_sent', (messageData) => {
-      setMessages(prev => prev.map(msg => 
-        msg.messageId === messageData.messageId ? {
-          ...msg,
-          ...messageData,
-          status: 'sent',
-          sentTimestamp: messageData.sentTimestamp,
-          currentStatusTimestamp: messageData.currentStatusTimestamp
-        } : msg
-      ));
-    });
-
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 30000);
-
     return () => {
-      clearInterval(interval);
-      newSocket.disconnect();
+      if (newSocket) newSocket.disconnect();
     };
   }, []);
 
+  // Socket Event Handlers
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!socket) return;
 
-  const fetchMessages = async () => {
+    const handleNewMessage = (messageData) => {
+      setMessages(prevMessages => {
+        if (prevMessages.some(msg => msg.messageId === messageData.messageId)) {
+          return prevMessages;
+        }
+        const newMessages = [...prevMessages, messageData];
+        updateContactsWithMessage(messageData);
+        scrollToBottom();
+        return newMessages;
+      });
+    };
+
+    const handleMessageSent = (messageData) => {
+      setMessages(prevMessages => {
+        const messageIndex = prevMessages.findIndex(msg => msg.messageId === messageData.messageId);
+        if (messageIndex === -1) {
+          return [...prevMessages, messageData];
+        }
+        const updatedMessages = [...prevMessages];
+        updatedMessages[messageIndex] = { ...updatedMessages[messageIndex], ...messageData };
+        return updatedMessages;
+      });
+      updateContactsWithMessage(messageData);
+    };
+
+    const handleStatusUpdate = (updatedMessage) => {
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.messageId === updatedMessage.messageId
+            ? { ...msg, ...updatedMessage }
+            : msg
+        )
+      );
+      updateContactsWithMessage(updatedMessage);
+    };
+
+    socket.on("new_message", handleNewMessage);
+    socket.on("message_sent", handleMessageSent);
+    socket.on("message_status_update", handleStatusUpdate);
+
+    return () => {
+      socket.off("new_message", handleNewMessage);
+      socket.off("message_sent", handleMessageSent);
+      socket.off("message_status_update", handleStatusUpdate);
+    };
+  }, [socket]);
+
+  // Save contacts to localStorage
+  useEffect(() => {
+    localStorage.setItem('whatsappContacts', JSON.stringify(contacts));
+  }, [contacts]);
+
+  // Initial Messages Fetch
+  useEffect(() => {
+    fetchInitialMessages();
+  }, []);
+
+  const fetchInitialMessages = async () => {
     try {
       setLoading(true);
       const response = await axios.post(
-        'http://192.168.0.107:25483/api/v1/messages/getMessages',
-        {
-          businessId: "102953305799075",
-          lastTimestamp: lastMessageTimestamp
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        `${API_BASE_URL}/messages/getMessages`,
+        { businessId: BUSINESS_ID },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       
       if (response.data.success) {
-        setMessages(prevMessages => {
-          const newMessages = [...prevMessages];
-          response.data.data.forEach(newMsg => {
-            const index = newMessages.findIndex(msg => msg.messageId === newMsg.messageId);
-            if (index === -1) {
-              newMessages.push(newMsg);
-            } else {
-              newMessages[index] = newMsg;
-            }
-          });
-          return newMessages;
-        });
-
-        if (response.data.data.length) {
-          const latestTimestamp = Math.max(
-            ...response.data.data.map(msg => parseInt(msg.currentStatusTimestamp))
-          );
-          setLastMessageTimestamp(latestTimestamp);
-        }
+        setMessages(response.data.data);
+        response.data.data.forEach(msg => updateContactsWithMessage(msg));
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -151,20 +140,45 @@ const WhatsAppChats = () => {
     }
   };
 
+  const updateContactsWithMessage = (message) => {
+    const userNumber = message.from === "923030307660" ? message.to : message.from;
+    
+    setContacts(prevContacts => {
+      const contactIndex = prevContacts.findIndex(c => c.phoneNumber === userNumber);
+      const country = countryList.find(c => userNumber.startsWith(c.code));
+      
+      const updatedContact = {
+        phoneNumber: userNumber,
+        lastMessage: message.messageBody,
+        timestamp: message.currentStatusTimestamp,
+        flag: country?.flag || '🌐'
+      };
+
+      if (contactIndex === -1) {
+        return [...prevContacts, updatedContact];
+      }
+
+      const newContacts = [...prevContacts];
+      if (parseInt(message.currentStatusTimestamp) > parseInt(prevContacts[contactIndex].timestamp)) {
+        newContacts[contactIndex] = updatedContact;
+      }
+      return newContacts;
+    });
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedUser) return;
 
     const tempId = Date.now().toString();
     const tempMessage = {
       messageId: tempId,
-      businessId: "102953305799075",
+      businessId: BUSINESS_ID,
       from: "923030307660",
       to: selectedUser.phoneNumber,
       messageBody: newMessage,
       type: "text",
       status: "sending",
-      currentStatusTimestamp: (Date.now() / 1000).toString(),
-      sentTimestamp: (Date.now() / 1000).toString()
+      currentStatusTimestamp: (Date.now() / 1000).toString()
     };
 
     setMessages(prev => [...prev, tempMessage]);
@@ -172,8 +186,8 @@ const WhatsAppChats = () => {
     scrollToBottom();
 
     try {
-      const response = await axios.post(
-        'http://192.168.0.107:25483/api/v1/messages/send',
+      await axios.post(
+        `${API_BASE_URL}/messages/send`,
         {
           to: selectedUser.phoneNumber,
           body: newMessage
@@ -182,101 +196,75 @@ const WhatsAppChats = () => {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-
-      if (response.data.success) {
-        console.log("Message sent successfully:", response.data);
-      }
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages(prev => prev.filter(msg => msg.messageId !== tempId));
+      setMessages(prev => prev.map(msg =>
+        msg.messageId === tempId ? { ...msg, status: "failed" } : msg
+      ));
     }
   };
 
-  const uniqueUsers = React.useMemo(() => {
-    const users = new Map();
+  const startNewChat = () => {
+    const fullNumber = selectedCountry.code + phoneNumber;
+    const existingContact = contacts.find(c => c.phoneNumber === fullNumber);
     
-    contacts.forEach(contact => {
-      users.set(contact.phoneNumber, {
-        ...contact,
+    if (!existingContact) {
+      const newUser = {
+        phoneNumber: fullNumber,
         lastMessage: "",
-        lastMessageStatus: "",
-        timestamp: Date.now().toString()
-      });
-    });
+        timestamp: (Date.now() / 1000).toString(),
+        flag: selectedCountry.flag
+      };
+      setContacts(prev => [...prev, newUser]);
+      setSelectedUser(newUser);
+    } else {
+      setSelectedUser(existingContact);
+    }
     
-    messages.forEach(msg => {
-      const userNumber = msg.from === "923030307660" ? msg.to : msg.from;
-      const existingUser = users.get(userNumber);
-      
-      const messageTimestamp = parseInt(msg.currentStatusTimestamp);
-      if (!existingUser || messageTimestamp > parseInt(existingUser.timestamp)) {
-        users.set(userNumber, {
-          phoneNumber: userNumber,
-          lastMessage: msg.messageBody,
-          lastMessageStatus: msg.status || "delivered",
-          timestamp: msg.currentStatusTimestamp,
-          flag: countryList.find(c => userNumber.startsWith(c.code))?.flag || '🌐'
-        });
-      }
-    });
-    
-    return Array.from(users.values())
-      .sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp));
-  }, [messages, contacts]);
+    setPhoneNumber("");
+    setIsNewChatModal(false);
+  };
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const startNewChat = () => {
-    const fullNumber = selectedCountry.code + phoneNumber;
-    const newUser = {
-      phoneNumber: fullNumber,
-      lastMessage: "",
-      timestamp: (Date.now() / 1000).toString(),
-      flag: selectedCountry.flag
-    };
-    setContacts(prev => [...prev, newUser]);
-    setSelectedUser(newUser);
-    setPhoneNumber("");
-    setIsNewChatModal(false);
-  };
-
-  const renderMessageStatus = (message) => {
-    if (message.from === "923030307660") {
-      switch (message.status) {
-        case "read":
-          return <span style={{ color: "#53bdeb" }}>✓✓</span>;
-        case "delivered":
-          return "✓✓";
-        case "sent":
-          return "✓";
-        case "sending":
-          return "⌛";
-        default:
-          return "";
-      }
+  const MessageStatusIcon = ({ status }) => {
+    switch(status?.toLowerCase()) {
+      case 'sent':
+        return <FaCheck size={12} color="#667781" />;
+      case 'delivered':
+        return <FaCheckDouble size={12} color="#667781" />;
+      case 'read':
+        return <FaCheckDouble size={12} color="#53bdeb" />;
+      case 'failed':
+        return <FaExclamationTriangle size={12} color="#ef5350" />;
+      case 'sending':
+        return <FaClock size={12} color="#667781" />;
+      default:
+        return <FaCheck size={12} color="#667781" />;
     }
-    return null;
   };
 
+  const filteredUsers = contacts
+    .filter(user => user.phoneNumber && searchTerm 
+      ? user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
+      : true)
+    .sort((a, b) => parseInt(b.timestamp || '0') - parseInt(a.timestamp || '0'));
+
+  // Component render methods
   const renderNewChatModal = () => (
     <Modal isOpen={isNewChatModal} toggle={() => setIsNewChatModal(false)}>
       <ModalHeader toggle={() => setIsNewChatModal(false)}>New Chat</ModalHeader>
       <ModalBody>
-        <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+        <div className="flex gap-2 mb-4">
           <select
             value={selectedCountry.code}
             onChange={(e) => {
               const country = countryList.find(c => c.code === e.target.value);
               setSelectedCountry(country);
             }}
-            style={{
-              padding: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ddd",
-              width: "120px"
-            }}
+            className="p-2 rounded border border-gray-300 w-32"
           >
             {countryList.map(country => (
               <option key={country.code} value={country.code}>
@@ -290,7 +278,7 @@ const WhatsAppChats = () => {
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
             placeholder="Phone number"
-            style={{ flex: 1 }}
+            className="flex-1"
           />
         </div>
       </ModalBody>
@@ -302,7 +290,7 @@ const WhatsAppChats = () => {
           color="primary"
           onClick={startNewChat}
           disabled={!phoneNumber.length}
-          style={{ backgroundColor: "#00a884", border: "none" }}
+          className="bg-green-600 border-0"
         >
           Start Chat
         </Button>
@@ -314,117 +302,52 @@ const WhatsAppChats = () => {
     <Col
       xs="12"
       md="4"
-      style={{
-        backgroundColor: "#f0f4f8",
-        height: "calc(100vh - 100px)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        borderRight: "1px solid #e0e0e0",
-        padding: "10px",
-      }}
+      className="bg-gray-50 h-screen-minus-header border-r border-gray-200 p-4"
     >
-      <div style={{ 
-        padding: "10px 0",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: "10px"
-      }}>
+      <div className="flex justify-between items-center gap-2 p-2">
         <Button
           onClick={() => setIsNewChatModal(true)}
-          style={{
-            backgroundColor: "#00a884",
-            border: "none",
-            borderRadius: "50%",
-            width: "40px",
-            height: "40px",
-            padding: "0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          className="bg-green-600 rounded-full w-10 h-10 flex items-center justify-center border-0"
         >
-          <i className="fas fa-plus" style={{ color: "#fff" }}></i>
+          <i className="fas fa-plus text-white"></i>
         </Button>
         <Input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search users..."
-          style={{
-            borderRadius: "20px",
-            backgroundColor: "#fff",
-            border: "1px solid #e0e0e0",
-            padding: "8px 15px",
-            flex: 1,
-          }}
+          className="rounded-full bg-white border border-gray-200 px-4 py-2 flex-1"
         />
       </div>
 
-      <div style={{ overflowY: "auto", flexGrow: 1 }}>
-        {uniqueUsers
-          .filter(user => user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map((user) => (
-            <div
-              key={user.phoneNumber}
-              onClick={() => setSelectedUser(user)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "10px",
-                borderRadius: "10px",
-                backgroundColor: selectedUser?.phoneNumber === user.phoneNumber ? "#e8e8e8" : "transparent",
-                cursor: "pointer",
-                transition: "background-color 0.3s ease",
-                marginBottom: "5px",
-              }}
-            >
-              <div style={{ 
-                width: "40px", 
-                height: "40px", 
-                borderRadius: "50%", 
-                backgroundColor: "#e0e0e0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: "10px",
-                fontSize: "20px"
-              }}>
-                {user.flag}
-              </div>
-              <div style={{ flex: 1, overflow: "hidden" }}>
-                <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
-                  {user.phoneNumber}
-                </h6>
-                <div style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "space-between",
-                  fontSize: "12px",
-                  color: "#667781"
-                }}>
-                  <div style={{ 
-                    display: "flex",
-                    alignItems: "center",
-                    maxWidth: "70%",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap"
-                  }}>
-                    {renderMessageStatus({
-                      from: "923030307660",
-                      status: user.lastMessageStatus
-                    })}
-                    <span style={{ marginLeft: "4px" }}>{user.lastMessage}</span>
-                  </div>
-                  <span style={{ fontSize: "11px" }}>
-                    {formatMessageTime(user.timestamp)}
-                  </span>
+      <div className="overflow-y-auto flex-1">
+        {filteredUsers.map((user) => (
+          <div
+            key={user.phoneNumber}
+            onClick={() => setSelectedUser(user)}
+            className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors mb-1 ${
+              selectedUser?.phoneNumber === user.phoneNumber ? 'bg-gray-200' : 'hover:bg-gray-100'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-xl">
+              {user.flag}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <h6 className="m-0 font-bold text-sm">{user.phoneNumber}</h6>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600 truncate max-w-[70%]">
+                  {user.lastMessage}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {new Date(parseInt(user.timestamp) * 1000).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
                 </div>
               </div>
             </div>
-          ))}
+          </div>
+        ))}
       </div>
     </Col>
   );
@@ -439,50 +362,13 @@ const WhatsAppChats = () => {
       <Col
         xs="12"
         md="8"
-        style={{
-          height: "calc(100vh - 100px)",
-          display: "flex",
-          flexDirection: "column",
-          backgroundColor: "#f4f8fb",
-          position: "relative",
-          overflow: "hidden",
-        }}
+        className="h-screen-minus-header flex flex-col bg-gray-50 relative overflow-hidden"
       >
         {selectedUser ? (
           <>
-            <div
-              style={{
-                padding: "15px",
-                backgroundColor: "#00796B",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderRadius: "10px 10px 0 0",
-                position: "sticky",
-                top: 0,
-                zIndex: 1,
-              }}
-            >
-              <h5
-                style={{
-                  margin: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  color: "#fff",
-                }}
-              >
-                <div style={{ 
-                  width: "30px", 
-                  height: "30px", 
-                  borderRadius: "50%", 
-                  backgroundColor: "#e0e0e0",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: "10px",
-                  fontSize: "16px"
-                }}>
+            <div className="p-4 bg-green-800 text-white flex items-center justify-between rounded-t-lg sticky top-0 z-10">
+              <h5 className="m-0 flex items-center text-white">
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-base">
                   {selectedUser.flag}
                 </div>
                 {selectedUser.phoneNumber}
@@ -490,63 +376,34 @@ const WhatsAppChats = () => {
               {isMobileView && (
                 <Button
                   onClick={() => setSelectedUser(null)}
-                  style={{
-                    backgroundColor: "transparent",
-                    border: "none",
-                    color: "#fff",
-                  }}
+                  className="bg-transparent border-0 text-white"
                 >
                   <FaArrowLeft />
                 </Button>
               )}
             </div>
 
-            <div
-              style={{
-                flex: 1,
-                padding: "20px",
-                overflowY: "auto",
-                backgroundColor: "#efeae2",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-              }}
-            >
+            <div className="flex-1 p-5 overflow-y-auto bg-chat-pattern">
               {chatMessages.map((message) => (
                 <div
                   key={message.messageId}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: message.from === selectedUser.phoneNumber ? "flex-start" : "flex-end",
-                    marginBottom: "10px",
-                  }}
+                  className={`flex flex-col ${
+                    message.from === selectedUser.phoneNumber ? 'items-start' : 'items-end'
+                  } mb-3`}
                 >
-                  <div
-                    style={{
-                      position: "relative",
-                      maxWidth: "70%",
-                      padding: "8px 12px",
-                      backgroundColor: message.from === selectedUser.phoneNumber ? "#fff" : "#dcf8c6",
-                      borderRadius: "7.5px",
-                      boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
-                    }}
-                  >
-                    <div style={{ fontSize: "14px", marginRight: "45px" }}>
+                  <div className={`relative max-w-[70%] p-3 rounded-lg shadow-sm ${
+                    message.from === selectedUser.phoneNumber ? 'bg-white' : 'bg-green-100'
+                  }`}>
+                    <div className="text-sm text-gray-800 mr-4">
                       {message.messageBody}
                     </div>
-                    <div style={{ 
-                      fontSize: "11px", 
-                      color: "#667781", 
-                      position: "absolute",
-                      right: "8px",
-                      bottom: "6px",
-                      display: "flex",
-                      alignItems: "center"
-                    }}>
-                      {formatMessageTime(message.currentStatusTimestamp)}
+                    <div className="text-xs text-gray-500 text-right flex items-center justify-end gap-1">
+                    {new Date(parseInt(message.currentStatusTimestamp) * 1000).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
                       {message.from !== selectedUser.phoneNumber && (
-                        <span style={{ marginLeft: "4px" }}>
-                          {renderMessageStatus(message)}
-                        </span>
+                        <MessageStatusIcon status={message.status} />
                       )}
                     </div>
                   </div>
@@ -555,28 +412,12 @@ const WhatsAppChats = () => {
               <div ref={chatEndRef} />
             </div>
 
-            <div 
-              style={{ 
-                padding: "10px", 
-                backgroundColor: "#f0f0f0",
-                borderTop: "1px solid #e0e0e0" 
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="p-3 bg-gray-100 border-t border-gray-200">
+              <div className="flex items-center gap-2">
                 <Button
-                  style={{
-                    background: "#fff",
-                    border: "none",
-                    borderRadius: "50%",
-                    width: "40px",
-                    height: "40px",
-                    padding: "0",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  className="bg-white border-0 rounded-full w-10 h-10 flex items-center justify-center"
                 >
-                  <FaPaperclip size={20} color="#54656f" />
+                  <FaPaperclip size={20} className="text-gray-600" />
                 </Button>
 
                 <Input
@@ -585,46 +426,20 @@ const WhatsAppChats = () => {
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Type a message..."
-                  style={{
-                    borderRadius: "20px",
-                    height: "40px",
-                    fontSize: "14px",
-                    paddingLeft: "15px",
-                    paddingRight: "15px",
-                    flexGrow: 1,
-                    border: "1px solid #e0e0e0",
-                    backgroundColor: "#fff",
-                  }}
+                  className="rounded-full h-10 text-sm px-4 flex-grow border border-gray-200 bg-white"
                 />
 
                 <Button
                   onClick={sendMessage}
-                  disabled={!newMessage.trim()}
-                  style={{
-                    backgroundColor: "#00a884",
-                    borderRadius: "50%",
-                    width: "40px",
-                    height: "40px",
-                    padding: "0",
-                    border: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  className="bg-green-600 rounded-full w-10 h-10 flex items-center justify-center border-0"
                 >
-                  <FaPaperPlane size={20} color="#fff" />
+                  <FaPaperPlane size={20} className="text-white" />
                 </Button>
               </div>
             </div>
           </>
         ) : (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100%",
-            color: "#666"
-          }}>
+          <div className="flex items-center justify-center h-full text-gray-500">
             Select a chat to start messaging
           </div>
         )}
@@ -632,51 +447,24 @@ const WhatsAppChats = () => {
     );
   };
 
-  // Filter users based on search term
-  const filteredUsers = uniqueUsers.filter(user =>
-    user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
-    <div style={{ 
-      height: "100vh", 
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      position: "relative",
-    }}>
+    <div className="h-screen flex flex-col overflow-hidden relative">
       <div>
         <Header />
       </div>
       {renderNewChatModal()}
       <Container 
         fluid 
-        style={{ 
-          flex: 1,
-          padding: "20px 15px 0 15px",
-          minHeight: 0,
-          zIndex: 1,
-        }}
+        className="flex-1 pt-5 px-4 min-h-0 z-10"
       >
-        <Row style={{ height: "100%" }}>
+        <Row className="h-full">
           {(!selectedUser || !isMobileView) && renderUserList()}
           {(selectedUser || !isMobileView) && renderChatWindow()}
         </Row>
       </Container>
 
       {loading && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(255, 255, 255, 0.7)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000
-        }}>
+        <div className="fixed inset-0 bg-white/70 flex items-center justify-center z-50">
           <div>Loading...</div>
         </div>
       )}
@@ -684,24 +472,18 @@ const WhatsAppChats = () => {
   );
 };
 
-const formatMessageTime = (timestamp) => {
-  const date = new Date(parseInt(timestamp) * 1000);
-  const now = new Date();
-  const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } else if (diffDays === 1) {
-    return 'Yesterday';
-  } else if (diffDays < 7) {
-    return date.toLocaleDateString([], { weekday: 'long' });
-  } else {
-    return date.toLocaleDateString([], { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+// Add custom styles to the document head
+const style = document.createElement('style');
+style.textContent = `
+  .h-screen-minus-header {
+    height: calc(100vh - 100px);
   }
-};
+  
+  .bg-chat-pattern {
+    background-color: #efeae2;
+    background-image: url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E");
+  }
+`;
+document.head.appendChild(style);
 
 export default WhatsAppChats;

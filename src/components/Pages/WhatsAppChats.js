@@ -1,2216 +1,9 @@
-// import React, { useState, useEffect, useRef } from "react";
-// import Header from "components/Headers/Header";
-// import { FaArrowLeft, FaPaperclip, FaPaperPlane, FaCheck, FaCheckDouble, FaCircle, FaExclamationCircle, FaClock } from "react-icons/fa";
-// import { Button, Col, Container, Input, Row, Modal, ModalHeader, ModalBody, ModalFooter, FormGroup, Label } from "reactstrap";
-// import axios from "axios";
-// import { toast } from "sonner";
-
-// const BUSINESS_PHONE = '923030307660';
-// const baseURL = 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages';
-// const token = localStorage.getItem('token');
-
-// const countryList = [
-//   { code: '92', country: 'Pakistan', flag: '🇵🇰' },
-//   { code: '91', country: 'India', flag: '🇮🇳' },
-//   { code: '971', country: 'UAE', flag: '🇦🇪' },
-//   { code: '1', country: 'USA', flag: '🇺🇸' },
-//   { code: '44', country: 'UK', flag: '🇬🇧' },
-//   { code: '966', country: 'Saudi Arabia', flag: '🇸🇦' },
-// ];
-
-// const AddContactModal = ({ onAddContact }) => {
-//   const [modal, setModal] = useState(false);
-//   const [phoneNumber, setPhoneNumber] = useState('');
-//   const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
-//   // const [failureReason, setFailureReason] = useState(null);
-  
-//   const toggle = () => setModal(!modal);
-  
-//   const handleSubmit = () => {
-//     if (phoneNumber) {
-//       const fullNumber = selectedCountry.code + phoneNumber;
-//       onAddContact(fullNumber);
-//       setPhoneNumber('');
-//       toggle();
-//     }
-//   };
-
-//   return (
-//     <div>
-//       <Button
-//         style={{
-//           borderRadius: '50%',
-//           backgroundColor: '#00a884',
-//           color: 'white',
-//           border: 'none',
-//           width: '40px',
-//           height: '40px',
-//           display: 'flex',
-//           alignItems: 'center',
-//           justifyContent: 'center',
-//           boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-//         }}
-//         onClick={toggle}
-//       >
-//         {/* <Plus size={24} color="red" /> */}
-//         +
-//       </Button>
-
-//       <Modal isOpen={modal} toggle={toggle} style={{ marginTop: '80px' }}>
-//         <div style={{ backgroundColor: '#f8f9fa' }}>
-//           <ModalHeader toggle={toggle} style={{ borderBottom: '1px solid #dee2e6', backgroundColor: '#00a884', color: 'white' }}>
-//             Add New Contact
-//           </ModalHeader>
-//           <ModalBody style={{ padding: '24px' }}>
-//             <FormGroup className="mb-4">
-//               <Label style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Select Country</Label>
-//               <div style={{ position: 'relative' }}>
-//                 <select
-//                   style={{
-//                     width: '100%',
-//                     padding: '10px',
-//                     border: '1px solid #dee2e6',
-//                     borderRadius: '8px',
-//                     backgroundColor: 'white',
-//                   }}
-//                   value={selectedCountry.code}
-//                   onChange={(e) => {
-//                     const country = countryList.find(c => c.code === e.target.value);
-//                     setSelectedCountry(country);
-//                   }}
-//                 >
-//                   {countryList.map((country) => (
-//                     <option key={country.code} value={country.code}>
-//                       {country.flag} {country.country} (+{country.code})
-//                     </option>
-//                   ))}
-//                 </select>
-//               </div>
-//             </FormGroup>
-
-//             <FormGroup>
-//               <Label style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Phone Number</Label>
-//               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-//                 <div style={{
-//                   backgroundColor: '#f1f3f4',
-//                   padding: '10px',
-//                   borderRadius: '8px',
-//                   border: '1px solid #dee2e6'
-//                 }}>
-//                   {selectedCountry.flag} +{selectedCountry.code}
-//                 </div>
-//                 <Input
-//                   type="tel"
-//                   value={phoneNumber}
-//                   onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-//                   style={{
-//                     flexGrow: 1,
-//                     padding: '10px',
-//                     border: '1px solid #dee2e6',
-//                     borderRadius: '8px',
-//                   }}
-//                   placeholder="Enter phone number"
-//                 />
-//               </div>
-//             </FormGroup>
-//           </ModalBody>
-//           <ModalFooter style={{ borderTop: '1px solid #dee2e6', padding: '16px' }}>
-//             <Button
-//               style={{
-//                 backgroundColor: '#e9ecef',
-//                 color: '#495057',
-//                 border: 'none',
-//                 marginRight: '8px',
-//               }}
-//               onClick={toggle}
-//             >
-//               Cancel
-//             </Button>
-//             <Button
-//               style={{
-//                 backgroundColor: '#00a884',
-//                 border: 'none',
-//               }}
-//               onClick={handleSubmit}
-//               disabled={!phoneNumber}
-//             >
-//               Add Contact
-//             </Button>
-//           </ModalFooter>
-//         </div>
-//       </Modal>
-//     </div>
-//   );
-// };
-
-// const WhatsAppChats = () => {
-//   const [selectedUser, setSelectedUser] = useState(null);
-//   const [searchTerm, setSearchTerm] = useState("");
-//   const [messages, setMessages] = useState([]);
-//   const [newMessage, setNewMessage] = useState('');
-//   const [loading, setLoading] = useState(false);
-//   const [chats, setChats] = useState([]);
-//   const [error, setError] = useState(null);
-//   const [isTyping, setIsTyping] = useState(false);
-//   const [pendingMessages, setPendingMessages] = useState(new Set());
-
-
-//   const isMobileView = window.innerWidth <= 768;
-//   const messagesEndRef = useRef(null);
-//   const typingTimeoutRef = useRef(null);
-
-//   useEffect(() => {
-//     fetchMessages();
-//     const interval = setInterval(fetchMessages, 10000);
-//     return () => clearInterval(interval);
-//   }, []);
-
-//   useEffect(() => {
-//     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-//   }, [messages]);
-
-  
-  
-
-
-//   const getStatusIcon = (status) => {
-//     // First check if failed
-//     if (status === 'failed') {
-//       return <FaExclamationCircle style={{ color: '#E53935', marginLeft: '5px' }} />;
-//     }
-  
-//     // Then check if pending
-//     if (status === 'pending') {
-//       return <FaClock size={12} color="#667781" />;
-//     }
-  
-//     // Only proceed to other statuses if not failed or pending
-//     switch(status) {
-//       case 'sent':
-//         return <FaCheck size={12} />;
-//       case 'delivered':
-//         return <FaCheckDouble size={12} />;
-//       case 'read':
-//         return <FaCheckDouble size={12} color="#34B7F1" />;
-//       default:
-//         return <FaClock size={12} color="#667781" />;
-//     }
-//   };
-
-//   const formatMessageTime = (timestamp) => {
-//     const date = new Date(timestamp * 1000);
-//     const now = new Date();
-//     const isToday = date.toDateString() === now.toDateString();
-//     const isYesterday = new Date(now - 86400000).toDateString() === date.toDateString();
-
-//     if (isToday) {
-//       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-//     } else if (isYesterday) {
-//       return 'Yesterday ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-//     } else {
-//       return date.toLocaleDateString([], { 
-//         month: 'short', 
-//         day: 'numeric' 
-//       }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-//     }
-//   };
-
-//   const fetchMessages = async () => {
-//     try {
-//       setLoading(true);
-//       const response = await axios.get('https://codozap-e04e12b02929.herokuapp.com/test');
-//       const parser = new DOMParser();
-//       const doc = parser.parseFromString(response.data, 'text/html');
-//       const scriptContent = doc.querySelector('script');
-      
-//       if (scriptContent) {
-//         const chatDataMatch = scriptContent.textContent.match(/const chatData = (.*?);/);
-//         if (chatDataMatch) {
-//           const chatData = JSON.parse(chatDataMatch[1]);
-          
-//           const allMessages = [];
-//           Object.entries(chatData).forEach(([chatId, msgs]) => {
-//             msgs.forEach(msg => allMessages.push({ ...msg, chatId }));
-//           });
-          
-//           setMessages(allMessages);
-          
-//           const groupedChats = allMessages.reduce((acc, msg) => {
-//             const chatId = msg.from === BUSINESS_PHONE ? msg.to : msg.from;
-//             if (!acc[chatId]) acc[chatId] = [];
-//             acc[chatId].push(msg);
-//             return acc;
-//           }, {});
-          
-//           const sortedChats = Object.entries(groupedChats).sort((a, b) => {
-//             const lastMsgA = a[1][a[1].length - 1].currentStatusTimestamp;
-//             const lastMsgB = b[1][b[1].length - 1].currentStatusTimestamp;
-//             return lastMsgB - lastMsgA;
-//           });
-          
-//           setChats(sortedChats);
-//         }
-//       }
-//     } catch (err) {
-//       setError('Failed to fetch messages: ' + (err.response?.status || err.message));
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-  // const sendMessage = async (e) => {
-  //   e.preventDefault();
-  //   if (!newMessage.trim() || !selectedUser) return;
-  
-  //   const tempMessageId = Date.now().toString();
-  //   const newMsg = {
-  //     messageId: tempMessageId,
-  //     from: BUSINESS_PHONE,
-  //     to: selectedUser.id,
-  //     messageBody: newMessage,
-  //     currentStatusTimestamp: Math.floor(Date.now() / 1000),
-  //     status: 'pending'  // Initially FaClock
-  //   };
-  
-  //   // Add message with clock icon
-  //   setMessages(prev => [...prev, newMsg]);
-  //   setNewMessage('');
-  
-  //   try {
-  //     const response = await axios.post(`${baseURL}/send`, {
-  //       to: selectedUser.id,
-  //       body: newMessage,
-  //     }, {
-        // headers: { Authorization: `Bearer ${token}` }
-  //     });
-  
-  //     // For failed case - directly go to error icon
-  //     if (response.data.status === 'failed') {
-  //       setMessages(prev => prev.map(msg =>
-  //         msg.messageId === tempMessageId 
-  //           ? { ...msg, status: 'failed' }
-  //           : msg
-  //       ));
-  //       toast.error(`Message failed: ${response.data.failureReason || "Unknown error"}`);
-  //       return; // Stop here for failed messages
-  //     }
-  
-  //     // Only update other statuses if message didn't fail
-  //     if (response.data.status !== 'failed') {
-  //       await fetchMessages();
-  //     }
-  
-  //   } catch (err) {
-  //     // Direct transition to error icon on failure
-  //     setMessages(prev => prev.map(msg =>
-  //       msg.messageId === tempMessageId 
-  //         ? { ...msg, status: 'failed' }
-  //         : msg
-  //     ));
-  //     toast.error('Failed to send message: ' + (err.response?.status || err.message));
-  //   }
-  // };
-  
-
-//   const handleAddContact = (newNumber) => {
-//     setChats(prev => {
-//       if (!prev.find(([chatId]) => chatId === newNumber)) {
-//         return [[newNumber, []], ...prev];
-//       }
-//       return prev;
-//     });
-//   };
-
-//   const scrollToBottom = () => {
-//     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-//   };
-
-//   const filteredUsers = chats.filter(([chatId]) =>
-//     chatId.toLowerCase().includes(searchTerm.toLowerCase())
-//   );
-
-//   const renderUserList = () => (
-//     <Col
-//       xs="12"
-//       md="4"
-//       style={{
-//         backgroundColor: "#f0f4f8",
-//         height: "calc(100vh - 100px)",
-//         display: selectedUser && isMobileView ? "none" : "flex",
-//         flexDirection: "column",
-//         overflow: "hidden",
-//         borderRight: "1px solid #e0e0e0",
-//         padding: "10px",
-//       }}
-//     >
-//       <div style={{ 
-//         padding: "10px 0",
-//         display: "flex",
-//         justifyContent: "space-between",
-//         alignItems: "center",
-//         gap: "10px"
-//       }}>
-//         <Input
-//           type="text"
-//           placeholder="Search users..."
-//           value={searchTerm}
-//           onChange={(e) => setSearchTerm(e.target.value)}
-//           style={{
-//             borderRadius: "20px",
-//             backgroundColor: "#fff",
-//             border: "1px solid #e0e0e0",
-//             padding: "8px 15px",
-//             flex: 1,
-//           }}
-//         />
-//         <AddContactModal onAddContact={handleAddContact} />
-//       </div>
-
-//       <div style={{ overflowY: "auto", flexGrow: 1 }}>
-//         {filteredUsers.map(([chatId, chatMessages]) => {
-//           const lastMessage = chatMessages[chatMessages.length - 1];
-//           const country = countryList.find(c => chatId.startsWith(c.code));
-          
-//           return (
-//             <div
-//               key={chatId}
-//               onClick={() => {
-//                 setSelectedUser({ id: chatId });
-//                 scrollToBottom();
-//               }}
-//               style={{
-//                 display: "flex",
-//                 alignItems: "center",
-//                 padding: "10px",
-//                 borderRadius: "10px",
-//                 backgroundColor: selectedUser?.id === chatId ? "#e3e3e3" : "transparent",
-//                 cursor: "pointer",
-//                 transition: "background-color 0.3s ease",
-//                 marginBottom: "5px",
-//               }}
-//             >
-//               <div style={{ 
-//                 width: "40px", 
-//                 height: "40px", 
-//                 borderRadius: "50%", 
-//                 backgroundColor: "#e0e0e0",
-//                 display: "flex",
-//                 alignItems: "center",
-//                 justifyContent: "center",
-//                 marginRight: "10px",
-//                 fontSize: "20px"
-//               }}>
-//                 {country ? country.flag : '👤'}
-//               </div>
-//               <div style={{ flex: 1, overflow: "hidden" }}>
-//                 <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
-//                   {chatId}
-//                 </h6>
-//                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-//                   <div
-//                     style={{
-//                       fontSize: "12px",
-//                       color: "#666",
-//                       whiteSpace: "nowrap",
-//                       overflow: "hidden",
-//                       textOverflow: "ellipsis",
-//                       maxWidth: "70%",
-//                     }}
-//                   >
-//                     {lastMessage?.messageBody || "No messages"}
-//                   </div>
-//                   <div style={{ fontSize: "11px", color: "#888" }}>
-//                     {lastMessage && formatMessageTime(lastMessage.currentStatusTimestamp)}
-//                   </div>
-//                 </div>
-//               </div>
-//             </div>
-//           );
-//         })}
-//         {filteredUsers.length === 0 && (
-//           <p style={{ textAlign: "center", color: "#888" }}>No users found</p>
-//         )}
-//       </div>
-//     </Col>
-//   );
-
-//   const renderChatWindow = () => (
-//     <Col
-//       xs="12"
-//       md="8"
-//       style={{
-//         height: "calc(100vh - 100px)",
-//         display: selectedUser ? "flex" : isMobileView ? "none" : "flex",
-//         flexDirection: "column",
-//         backgroundColor: "#f4f8fb",
-//         position: "relative",
-//         overflow: "hidden",
-//       }}
-//     >
-//       <div
-//         style={{
-//           padding: "15px",
-//           backgroundColor: "#00796B",
-//           color: "#fff",
-//           display: "flex",
-//           alignItems: "center",
-//          justifyContent: "space-between",
-//           borderRadius: "10px 10px 0 0",
-//           position: "sticky",
-//           top: 0,
-//           zIndex: 1,
-//         }}
-//       >
-//         <h5
-//           style={{
-//             margin: 0,
-//             display: "flex",
-//             alignItems: "center",
-//             color: "#fff",
-//           }}
-//         >
-//           <div style={{ 
-//             width: "30px", 
-//             height: "30px", 
-//             borderRadius: "50%", 
-//             backgroundColor: "#e0e0e0",
-//             display: "flex",
-//             alignItems: "center",
-//             justifyContent: "center",
-//             marginRight: "10px",
-//             fontSize: "16px"
-//           }}>
-//             {countryList.find(c => selectedUser?.id?.startsWith(c.code))?.flag || '👤'}
-//           </div>
-//           {selectedUser?.id || "No User"}
-//         </h5>
-//         {isMobileView && (
-//           <Button
-//             style={{
-//               backgroundColor: "transparent",
-//               border: "none",
-//               color: "#fff",
-//             }}
-//             onClick={() => setSelectedUser(null)}
-//           >
-//             <FaArrowLeft />
-//           </Button>
-//         )}
-//       </div>
-
-//       <div
-//         style={{
-//           flex: 1,
-//           padding: "20px",
-//           overflowY: "auto",
-//           backgroundColor: "#efeae2",
-//           backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-//         }}
-//       >
-//         {messages
-//           .filter(msg => msg.from === selectedUser?.id || msg.to === selectedUser?.id)
-//           .map((message, index, filteredMessages) => {
-//             const showDateHeader = index === 0 || 
-//               new Date(message.currentStatusTimestamp * 1000).toDateString() !== 
-//               new Date(filteredMessages[index - 1].currentStatusTimestamp * 1000).toDateString();
-
-//             return (
-//               <React.Fragment key={message.messageId}>
-//                 {showDateHeader && (
-//                   <div
-//                     style={{
-//                       textAlign: "center",
-//                       margin: "10px 0",
-//                       position: "relative",
-//                     }}
-//                   >
-//                     <span
-//                       style={{
-//                         backgroundColor: "rgba(225, 245, 254, 0.92)",
-//                         padding: "4px 12px",
-//                         borderRadius: "8px",
-//                         fontSize: "12px",
-//                         color: "#666",
-//                         boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
-//                       }}
-//                     >
-//                       {new Date(message.currentStatusTimestamp * 1000).toLocaleDateString([], {
-//                         weekday: 'long',
-//                         year: 'numeric',
-//                         month: 'long',
-//                         day: 'numeric'
-//                       })}
-//                     </span>
-//                   </div>
-//                 )}
-//                 <div
-//                   style={{
-//                     display: "flex",
-//                     flexDirection: "column",
-//                     alignItems: message.from === BUSINESS_PHONE ? "flex-end" : "flex-start",
-//                     marginBottom: "10px",
-//                   }}
-//                 >
-//                   <div
-//                     style={{
-//                       position: "relative",
-//                       maxWidth: "70%",
-//                       padding: "8px 12px",
-//                       backgroundColor: message.from === BUSINESS_PHONE ? "#dcf8c6" : "#fff",
-//                       borderRadius: "7.5px",
-//                       boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
-//                       marginBottom: "2px",
-//                     }}
-//                   >
-//                     <div 
-//                       style={{ 
-//                         fontSize: "14px",
-//                         color: "#303030",
-//                         marginRight: message.from === BUSINESS_PHONE ? "15px" : "0",
-//                       }}
-//                     >
-//                       {message.messageBody}
-//                     </div>
-//                     <div
-//                       style={{
-//                         display: "flex",
-//                         alignItems: "center",
-//                         justifyContent: "flex-end",
-//                         gap: "4px",
-//                         marginTop: "4px",
-//                         minHeight: "15px",
-//                       }}
-//                     >
-//                       <span style={{ 
-//                         fontSize: "11px", 
-//                         color: "#667781",
-//                       }}>
-//                         {formatMessageTime(message.currentStatusTimestamp)}
-//                       </span>
-//                       {message.from === BUSINESS_PHONE && (
-//                         <span style={{ 
-//                           marginLeft: "4px",
-//                           display: "flex",
-//                           alignItems: "center",
-//                           color: message.status === 'read' ? "#34B7F1" : "#667781"
-//                         }}>
-//                           {getStatusIcon(message.status)}
-
-//                         </span>
-//                       )}
-//                     </div>
-//                   </div>
-//                 </div>
-//               </React.Fragment>
-//             );
-//           })}
-//         <div ref={messagesEndRef} />
-//       </div>
-
-//       <div 
-//         style={{ 
-//           padding: "10px", 
-//           backgroundColor: "#f0f0f0",
-//           borderTop: "1px solid #e0e0e0" 
-//         }}
-//       >
-//         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-//           <Button
-//             style={{
-//               background: "#fff",
-//               border: "none",
-//               borderRadius: "50%",
-//               width: "40px",
-//               height: "40px",
-//               padding: "0",
-//               display: "flex",
-//               alignItems: "center",
-//               justifyContent: "center",
-//             }}
-//           >
-//             <FaPaperclip size={20} color="#54656f" />
-//           </Button>
-
-//           <Input
-//             type="text"
-//             value={newMessage}
-//             onChange={(e) => {
-//               setNewMessage(e.target.value);
-//               setIsTyping(true);
-//               if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-//               typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 1000);
-//             }}
-//             onKeyPress={(e) => {
-//               if (e.key === 'Enter' && !e.shiftKey) {
-//                 e.preventDefault();
-//                 sendMessage(e);
-//               }
-//             }}
-//             placeholder="Type a message..."
-//             style={{
-//               borderRadius: "20px",
-//               height: "40px",
-//               fontSize: "14px",
-//               paddingLeft: "15px",
-//               paddingRight: "15px",
-//               flexGrow: 1,
-//               border: "1px solid #e0e0e0",
-//               backgroundColor: "#fff",
-//             }}
-//           />
-
-//           <Button
-//             style={{
-//               backgroundColor: "#00a884",
-//               borderRadius: "50%",
-//               width: "40px",
-//               height: "40px",
-//               padding: "0",
-//               border: "none",
-//               display: "flex",
-//               alignItems: "center",
-//               justifyContent: "center",
-//             }}
-//             onClick={sendMessage}
-//             disabled={loading || !newMessage.trim()}
-//           >
-//             <FaPaperPlane size={20} color="#fff" />
-//           </Button>
-//         </div>
-//       </div>
-//     </Col>
-//   );
-
-//   return (
-//     <div style={{ 
-//       height: "100vh", 
-//       backgroundColor: "",
-//       display: "flex",
-//       flexDirection: "column",
-//       overflow: "hidden",
-//       position: "relative",
-//     }}>
-//      <div style={{
-//         position: "relative",
-//         zIndex: 1000  // Added higher z-index for the header container
-//       }}></div>
-//       <Header  />
-//       <Container 
-//         fluid 
-//         style={{ 
-//           flex: 1,
-//           padding: "20px 15px 0 15px",
-//           minHeight: 0,
-//           zIndex: 1,
-//         }}
-//       >
-//         <Row style={{ height: "100%" }}>
-//           {renderUserList()}
-//           {renderChatWindow()}
-//         </Row>
-//       </Container>
-//       {error && (
-//         <div 
-//           style={{ 
-//             padding: "10px",
-//             backgroundColor: "#f0f0f0",
-//             borderTop: "1px solid #e0e0e0",
-//             position: "sticky",
-//             bottom: 0,
-//             zIndex: 1,
-//           }}
-//         >
-//           {error}
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default WhatsAppChats;
-
-
-
-
-
-
-
-
-
-// import React from "react";
-// import { FaArrowLeft, FaPaperclip, FaPaperPlane } from "react-icons/fa";
-// import { Button, Col, Container, Input, Row } from "reactstrap";
-// import Header from "components/Headers/Header";
-
-// const countryList = [
-//   { code: '92', country: 'Pakistan', flag: '🇵🇰' },
-//   { code: '91', country: 'India', flag: '🇮🇳' },
-//   { code: '971', country: 'UAE', flag: '🇦🇪' },
-//   { code: '1', country: 'USA', flag: '🇺🇸' },
-//   { code: '44', country: 'UK', flag: '🇬🇧' },
-//   { code: '966', country: 'Saudi Arabia', flag: '🇸🇦' },
-// ];
-
-// const WhatsAppChats = () => {
-//   const isMobileView = window.innerWidth <= 768;
-
-//   const renderUserList = () => (
-//     <Col
-//       xs="12"
-//       md="4"
-//       style={{
-//         backgroundColor: "#f0f4f8",
-//         height: "calc(100vh - 100px)",
-//         display: "flex",
-//         flexDirection: "column",
-//         overflow: "hidden",
-//         borderRight: "1px solid #e0e0e0",
-//         padding: "10px",
-//       }}
-//     >
-//       <div style={{ 
-//         padding: "10px 0",
-//         display: "flex",
-//         justifyContent: "space-between",
-//         alignItems: "center",
-//         gap: "10px"
-//       }}>
-//         <Input
-//           type="text"
-//           placeholder="Search users..."
-//           style={{
-//             borderRadius: "20px",
-//             backgroundColor: "#fff",
-//             border: "1px solid #e0e0e0",
-//             padding: "8px 15px",
-//             flex: 1,
-//           }}
-//         />
-//         <Button
-//           style={{
-//             borderRadius: '50%',
-//             backgroundColor: '#00a884',
-//             color: 'white',
-//             border: 'none',
-//             width: '40px',
-//             height: '40px',
-//             display: 'flex',
-//             alignItems: 'center',
-//             justifyContent: 'center',
-//             boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-//           }}
-//         >
-//           +
-//         </Button>
-//       </div>
-
-//       <div style={{ overflowY: "auto", flexGrow: 1 }}>
-//         {/* Sample User Item */}
-//         <div
-//           style={{
-//             display: "flex",
-//             alignItems: "center",
-//             padding: "10px",
-//             borderRadius: "10px",
-//             backgroundColor: "transparent",
-//             cursor: "pointer",
-//             transition: "background-color 0.3s ease",
-//             marginBottom: "5px",
-//           }}
-//         >
-//           <div style={{ 
-//             width: "40px", 
-//             height: "40px", 
-//             borderRadius: "50%", 
-//             backgroundColor: "#e0e0e0",
-//             display: "flex",
-//             alignItems: "center",
-//             justifyContent: "center",
-//             marginRight: "10px",
-//             fontSize: "20px"
-//           }}>
-//             🇵🇰
-//           </div>
-//           <div style={{ flex: 1, overflow: "hidden" }}>
-//             <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
-//               +923012345678
-//             </h6>
-//             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-//               <div
-//                 style={{
-//                   fontSize: "12px",
-//                   color: "#666",
-//                   whiteSpace: "nowrap",
-//                   overflow: "hidden",
-//                   textOverflow: "ellipsis",
-//                   maxWidth: "70%",
-//                 }}
-//               >
-//                 Sample message
-//               </div>
-//               <div style={{ fontSize: "11px", color: "#888" }}>
-//                 12:30 PM
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </Col>
-//   );
-
-//   const renderChatWindow = () => (
-//     <Col
-//       xs="12"
-//       md="8"
-//       style={{
-//         height: "calc(100vh - 100px)",
-//         display: "flex",
-//         flexDirection: "column",
-//         backgroundColor: "#f4f8fb",
-//         position: "relative",
-//         overflow: "hidden",
-//       }}
-//     >
-//       <div
-//         style={{
-//           padding: "15px",
-//           backgroundColor: "#00796B",
-//           color: "#fff",
-//           display: "flex",
-//           alignItems: "center",
-//           justifyContent: "space-between",
-//           borderRadius: "10px 10px 0 0",
-//           position: "sticky",
-//           top: 0,
-//           zIndex: 1,
-//         }}
-//       >
-//         <h5
-//           style={{
-//             margin: 0,
-//             display: "flex",
-//             alignItems: "center",
-//             color: "#fff",
-//           }}
-//         >
-//           <div style={{ 
-//             width: "30px", 
-//             height: "30px", 
-//             borderRadius: "50%", 
-//             backgroundColor: "#e0e0e0",
-//             display: "flex",
-//             alignItems: "center",
-//             justifyContent: "center",
-//             marginRight: "10px",
-//             fontSize: "16px"
-//           }}>
-//             🇵🇰
-//           </div>
-//           +923012345678
-//         </h5>
-//         {isMobileView && (
-//           <Button
-//             style={{
-//               backgroundColor: "transparent",
-//               border: "none",
-//               color: "#fff",
-//             }}
-//           >
-//             <FaArrowLeft />
-//           </Button>
-//         )}
-//       </div>
-
-//       <div
-//         style={{
-//           flex: 1,
-//           padding: "20px",
-//           overflowY: "auto",
-//           backgroundColor: "#efeae2",
-//           backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-//         }}
-//       >
-//         {/* Sample Message */}
-//         <div
-//           style={{
-//             display: "flex",
-//             flexDirection: "column",
-//             alignItems: "flex-end",
-//             marginBottom: "10px",
-//           }}
-//         >
-//           <div
-//             style={{
-//               position: "relative",
-//               maxWidth: "70%",
-//               padding: "8px 12px",
-//               backgroundColor: "#dcf8c6",
-//               borderRadius: "7.5px",
-//               boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
-//               marginBottom: "2px",
-//             }}
-//           >
-//             <div style={{ fontSize: "14px", color: "#303030", marginRight: "15px" }}>
-//               Sample message
-//             </div>
-//             <div style={{ fontSize: "11px", color: "#667781", textAlign: "right" }}>
-//               12:30 PM
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-
-//       <div 
-//         style={{ 
-//           padding: "10px", 
-//           backgroundColor: "#f0f0f0",
-//           borderTop: "1px solid #e0e0e0" 
-//         }}
-//       >
-//         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-//           <Button
-//             style={{
-//               background: "#fff",
-//               border: "none",
-//               borderRadius: "50%",
-//               width: "40px",
-//               height: "40px",
-//               padding: "0",
-//               display: "flex",
-//               alignItems: "center",
-//               justifyContent: "center",
-//             }}
-//           >
-//             <FaPaperclip size={20} color="#54656f" />
-//           </Button>
-
-//           <Input
-//             type="text"
-//             placeholder="Type a message..."
-//             style={{
-//               borderRadius: "20px",
-//               height: "40px",
-//               fontSize: "14px",
-//               paddingLeft: "15px",
-//               paddingRight: "15px",
-//               flexGrow: 1,
-//               border: "1px solid #e0e0e0",
-//               backgroundColor: "#fff",
-//             }}
-//           />
-
-//           <Button
-//             style={{
-//               backgroundColor: "#00a884",
-//               borderRadius: "50%",
-//               width: "40px",
-//               height: "40px",
-//               padding: "0",
-//               border: "none",
-//               display: "flex",
-//               alignItems: "center",
-//               justifyContent: "center",
-//             }}
-//           >
-//             <FaPaperPlane size={20} color="#fff" />
-//           </Button>
-//         </div>
-//       </div>
-//     </Col>
-//   );
-
-//   return (
-//     <div style={{ 
-//       height: "100vh", 
-//       display: "flex",
-//       flexDirection: "column",
-//       overflow: "hidden",
-//       position: "relative",
-//     }}>
-//       <div style={{
-        
-//       }}>
-//         <Header />
-//       </div>
-//       <Container 
-//         fluid 
-//         style={{ 
-//           flex: 1,
-//           padding: "20px 15px 0 15px",
-//           minHeight: 0,
-//           zIndex: 1,
-//         }}
-//       >
-//         <Row style={{ height: "100%" }}>
-//           {renderUserList()}
-//           {renderChatWindow()}
-//         </Row>
-//       </Container>
-//     </div>
-//   );
-// };
-
-// export default WhatsAppChats;
-
-
-
-
-
-
-
-
-
-// import React, { useState, useEffect, useRef } from "react";
-// import { FaArrowLeft, FaPaperclip, FaPaperPlane } from "react-icons/fa";
-// import { Button, Col, Container, Input, Row } from "reactstrap";
-// import axios from "axios";
-// import Header from "components/Headers/Header";
-
-// const countryList = [
-//   { code: '92', country: 'Pakistan', flag: '🇵🇰' },
-//   { code: '91', country: 'India', flag: '🇮🇳' },
-//   { code: '971', country: 'UAE', flag: '🇦🇪' },
-//   { code: '1', country: 'USA', flag: '🇺🇸' },
-//   { code: '44', country: 'UK', flag: '🇬🇧' },
-//   { code: '966', country: 'Saudi Arabia', flag: '🇸🇦' },
-// ];
-
-// const WhatsAppChats = () => {
-//   const [messages, setMessages] = useState([]);
-//   const [newMessage, setNewMessage] = useState("");
-//   const [searchTerm, setSearchTerm] = useState("");
-//   const [selectedUser, setSelectedUser] = useState(null);
-//   const [loading, setLoading] = useState(false);
-//   const chatEndRef = useRef(null);
-//   const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
-
-//   const isMobileView = window.innerWidth <= 768;
-//   const token = localStorage.getItem('token');
-
-//   useEffect(() => {
-//     fetchMessages();
-//     const interval = setInterval(fetchMessages, 30000);
-//     return () => clearInterval(interval);
-//   }, []);
-
-//   const fetchMessages = async () => {
-//     try {
-//       setLoading(true);
-//       const response = await axios.post(
-//         'http://192.168.0.107:25483/api/v1/messages/getMessages',
-//         {
-//           businessId: "102953305799075",
-//           lastTimestamp: null
-//         },
-//         {
-//           headers: { Authorization: `Bearer ${token}` }
-//         }
-//       );
-      
-//       if (response.data.success) {
-//         setMessages(response.data.data);
-//         if (response.data.data.length) {
-//           const latestTimestamp = Math.max(
-//             ...response.data.data.map(msg => parseInt(msg.currentStatusTimestamp))
-//           );
-//           setLastMessageTimestamp(latestTimestamp);
-//         }
-//       }
-//     } catch (error) {
-//       console.error("Error fetching messages:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const sendMessage = async () => {
-//     if (!newMessage.trim() || !selectedUser) return;
-
-//     const tempId = Date.now().toString();
-//     const tempMessage = {
-//       messageId: tempId,
-//       businessId: "102953305799075",
-//       from: "923030307660",
-//       to: selectedUser.phoneNumber,
-//       messageBody: newMessage,
-//       type: "text",
-//       status: "sending",
-//       currentStatusTimestamp: (Date.now() / 1000).toString(),
-//       sentTimestamp: (Date.now() / 1000).toString()
-//     };
-
-//     setMessages(prev => [...prev, tempMessage]);
-//     setNewMessage("");
-//     scrollToBottom();
-
-//     try {
-//       const response = await axios.post(
-//         'http://192.168.0.107:25483/api/v1/messages/send',
-//         {
-//           to: selectedUser.phoneNumber,
-//           body: newMessage
-//         },
-//         {
-//           headers: { Authorization: `Bearer ${token}` }
-//         }
-//       );
-
-//       if (response.data.success) {
-//         setMessages(prev => prev.map(msg => 
-//           msg.messageId === tempId ? {
-//             ...msg,
-//             messageId: response.data.data.messages[0].id,
-//             status: "sent"
-//           } : msg
-//         ));
-//       }
-//     } catch (error) {
-//       console.error("Error sending message:", error);
-//       setMessages(prev => prev.filter(msg => msg.messageId !== tempId));
-//     }
-//   };
-
-//   const scrollToBottom = () => {
-//     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-//   };
-
-//   const uniqueUsers = React.useMemo(() => {
-//     const users = new Map();
-//     const receivedMessages = messages.filter(msg => 
-//       msg.from !== "923030307660"
-//     );
-    
-//     receivedMessages.forEach(msg => {
-//       const number = msg.from;
-//       if (!users.has(number)) {
-//         users.set(number, {
-//           phoneNumber: number,
-//           lastMessage: msg.messageBody,
-//           timestamp: msg.currentStatusTimestamp,
-//           flag: countryList.find(c => number && number.startsWith(c.code))?.flag || ''
-//         });
-//       }
-//     });
-//     return Array.from(users.values());
-//   }, [messages]);
-
-//   const filteredUsers = uniqueUsers.filter(user =>
-//     user.phoneNumber && searchTerm 
-//       ? user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
-//       : true
-//   );
-
-//   const renderUserList = () => (
-//     <Col
-//       xs="12"
-//       md="4"
-//       style={{
-//         backgroundColor: "#f0f4f8",
-//         height: "calc(100vh - 100px)",
-//         display: "flex",
-//         flexDirection: "column",
-//         overflow: "hidden",
-//         borderRight: "1px solid #e0e0e0",
-//         padding: "10px",
-//       }}
-//     >
-//       <div style={{ 
-//         padding: "10px 0",
-//         display: "flex",
-//         justifyContent: "space-between",
-//         alignItems: "center",
-//         gap: "10px"
-//       }}>
-//         <Input
-//           type="text"
-//           value={searchTerm}
-//           onChange={(e) => setSearchTerm(e.target.value)}
-//           placeholder="Search users..."
-//           style={{
-//             borderRadius: "20px",
-//             backgroundColor: "#fff",
-//             border: "1px solid #e0e0e0",
-//             padding: "8px 15px",
-//             flex: 1,
-//           }}
-//         />
-//       </div>
-
-//       <div style={{ overflowY: "auto", flexGrow: 1 }}>
-//         {filteredUsers.map((user) => (
-//           <div
-//             key={user.phoneNumber}
-//             onClick={() => setSelectedUser(user)}
-//             style={{
-//               display: "flex",
-//               alignItems: "center",
-//               padding: "10px",
-//               borderRadius: "10px",
-//               backgroundColor: selectedUser?.phoneNumber === user.phoneNumber ? "#e8e8e8" : "transparent",
-//               cursor: "pointer",
-//               transition: "background-color 0.3s ease",
-//               marginBottom: "5px",
-//             }}
-//           >
-//             <div style={{ 
-//               width: "40px", 
-//               height: "40px", 
-//               borderRadius: "50%", 
-//               backgroundColor: "#e0e0e0",
-//               display: "flex",
-//               alignItems: "center",
-//               justifyContent: "center",
-//               marginRight: "10px",
-//               fontSize: "20px"
-//             }}>
-//               {user.flag}
-//             </div>
-//             <div style={{ flex: 1, overflow: "hidden" }}>
-//               <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
-//                 {user.phoneNumber}
-//               </h6>
-//               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-//                 <div
-//                   style={{
-//                     fontSize: "12px",
-//                     color: "#666",
-//                     whiteSpace: "nowrap",
-//                     overflow: "hidden",
-//                     textOverflow: "ellipsis",
-//                     maxWidth: "70%",
-//                   }}
-//                 >
-//                   {user.lastMessage}
-//                 </div>
-//                 <div style={{ fontSize: "11px", color: "#888" }}>
-//                   {new Date(parseInt(user.timestamp) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-//         ))}
-//       </div>
-//     </Col>
-//   );
-
-//   const renderChatWindow = () => {
-//     const chatMessages = selectedUser ? 
-//       messages.filter(msg => 
-//         msg.from === selectedUser.phoneNumber || msg.to === selectedUser.phoneNumber
-//       ) : [];
-
-//     return (
-//       <Col
-//         xs="12"
-//         md="8"
-//         style={{
-//           height: "calc(100vh - 100px)",
-//           display: "flex",
-//           flexDirection: "column",
-//           backgroundColor: "#f4f8fb",
-//           position: "relative",
-//           overflow: "hidden",
-//         }}
-//       >
-//         {selectedUser ? (
-//           <>
-//             <div
-//               style={{
-//                 padding: "15px",
-//                 backgroundColor: "#00796B",
-//                 color: "#fff",
-//                 display: "flex",
-//                 alignItems: "center",
-//                 justifyContent: "space-between",
-//                 borderRadius: "10px 10px 0 0",
-//                 position: "sticky",
-//                 top: 0,
-//                 zIndex: 1,
-//               }}
-//             >
-//               <h5
-//                 style={{
-//                   margin: 0,
-//                   display: "flex",
-//                   alignItems: "center",
-//                   color: "#fff",
-//                 }}
-//               >
-//                 <div style={{ 
-//                   width: "30px", 
-//                   height: "30px", 
-//                   borderRadius: "50%", 
-//                   backgroundColor: "#e0e0e0",
-//                   display: "flex",
-//                   alignItems: "center",
-//                   justifyContent: "center",
-//                   marginRight: "10px",
-//                   fontSize: "16px"
-//                 }}>
-//                   {selectedUser.flag}
-//                 </div>
-//                 {selectedUser.phoneNumber}
-//               </h5>
-//               {isMobileView && (
-//                 <Button
-//                   onClick={() => setSelectedUser(null)}
-//                   style={{
-//                     backgroundColor: "transparent",
-//                     border: "none",
-//                     color: "#fff",
-//                   }}
-//                 >
-//                   <FaArrowLeft />
-//                 </Button>
-//               )}
-//             </div>
-
-//             <div
-//               style={{
-//                 flex: 1,
-//                 padding: "20px",
-//                 overflowY: "auto",
-//                 backgroundColor: "#efeae2",
-//                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-//               }}
-//             >
-//               {chatMessages.map((message) => (
-//                 <div
-//                   key={message.messageId}
-//                   style={{
-//                     display: "flex",
-//                     flexDirection: "column",
-//                     alignItems: message.from === selectedUser.phoneNumber ? "flex-start" : "flex-end",
-//                     marginBottom: "10px",
-//                   }}
-//                 >
-//                   <div
-//                     style={{
-//                       position: "relative",
-//                       maxWidth: "70%",
-//                       padding: "8px 12px",
-//                       backgroundColor: message.from === selectedUser.phoneNumber ? "#fff" : "#dcf8c6",
-//                       borderRadius: "7.5px",
-//                       boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
-//                       marginBottom: "2px",
-//                     }}
-//                   >
-//                     <div style={{ fontSize: "14px", color: "#303030", marginRight: "15px" }}>
-//                       {message.messageBody}
-//                     </div>
-//                     <div style={{ fontSize: "11px", color: "#667781", textAlign: "right" }}>
-//                       {new Date(parseInt(message.currentStatusTimestamp) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-//                       {message.from !== selectedUser.phoneNumber && (
-//                         <span style={{ marginLeft: "5px" }}>
-//                           {message.status === "delivered" ? "✓✓" : "✓"}
-//                         </span>
-//                       )}
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//               <div ref={chatEndRef} />
-//             </div>
-
-//             <div 
-//               style={{ 
-//                 padding: "10px", 
-//                 backgroundColor: "#f0f0f0",
-//                 borderTop: "1px solid #e0e0e0" 
-//               }}
-//             >
-//               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-//                 <Button
-//                   style={{
-//                     background: "#fff",
-//                     border: "none",
-//                     borderRadius: "50%",
-//                     width: "40px",
-//                     height: "40px",
-//                     padding: "0",
-//                     display: "flex",
-//                     alignItems: "center",
-//                     justifyContent: "center",
-//                   }}
-//                 >
-//                   <FaPaperclip size={20} color="#54656f" />
-//                 </Button>
-
-//                 <Input
-//                   type="text"
-//                   value={newMessage}
-//                   onChange={(e) => setNewMessage(e.target.value)}
-//                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-//                   placeholder="Type a message..."
-//                   style={{
-//                     borderRadius: "20px",
-//                     height: "40px",
-//                     fontSize: "14px",
-//                     paddingLeft: "15px",
-//                     paddingRight: "15px",
-//                     flexGrow: 1,
-//                     border: "1px solid #e0e0e0",
-//                     backgroundColor: "#fff",
-//                   }}
-//                 />
-
-//                 <Button
-//                   onClick={sendMessage}
-//                   style={{
-//                     backgroundColor: "#00a884",
-//                     borderRadius: "50%",
-//                     width: "40px",
-//                     height: "40px",
-//                     padding: "0",
-//                     border: "none",
-//                     display: "flex",
-//                     alignItems: "center",
-//                     justifyContent: "center",
-//                   }}
-//                 >
-//                   <FaPaperPlane size={20} color="#fff" />
-//                 </Button>
-//               </div>
-//             </div>
-//           </>
-//         ) : (
-//           <div style={{
-//             display: "flex",
-//             alignItems: "center",
-//             justifyContent: "center",
-//             height: "100%",
-//             color: "#666"
-//           }}>
-//             Select a chat to start messaging
-//           </div>
-//         )}
-//       </Col>
-//     );
-//   };
-
-//   return (
-//     <div style={{ 
-//       height: "100vh", 
-//       display: "flex",
-//       flexDirection: "column",
-//       overflow: "hidden",
-//       position: "relative",
-//     }}>
-//       <div>
-//         <Header />
-//       </div>
-//       <Container 
-//         fluid 
-//         style={{ 
-//           flex: 1,
-//           padding: "20px 15px 0 15px",
-//           minHeight: 0,
-//           zIndex: 1,
-//         }}
-//       >
-//         <Row style={{ height: "100%" }}>
-//           {(!selectedUser || !isMobileView) && renderUserList()}
-//           {(selectedUser || !isMobileView) && renderChatWindow()}
-//         </Row>
-//       </Container>
-
-//       {loading && (
-//         <div style={{
-//           position: "fixed",
-//           top: 0,
-//           left: 0,
-//           right: 0,
-//           bottom: 0,
-//           backgroundColor: "rgba(255, 255, 255, 0.7)",
-//           display: "flex",
-//           alignItems: "center",
-//           justifyContent: "center",
-//           zIndex: 1000
-//         }}>
-//           <div>Loading...</div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// // Helper functions
-// const formatMessageTime = (timestamp) => {
-//   const date = new Date(parseInt(timestamp) * 1000);
-//   const now = new Date();
-//   const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-
-//   if (diffDays === 0) {
-//     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-//   } else if (diffDays === 1) {
-//     return 'Yesterday';
-//   } else if (diffDays < 7) {
-//     return date.toLocaleDateString([], { weekday: 'long' });
-//   } else {
-//     return date.toLocaleDateString([], { 
-//       year: 'numeric', 
-//       month: 'short', 
-//       day: 'numeric' 
-//     });
-//   }
-// };
-
-// const groupMessagesByDate = (messages) => {
-//   const groups = {};
-//   messages.forEach(message => {
-//     const date = new Date(parseInt(message.currentStatusTimestamp) * 1000)
-//       .toLocaleDateString();
-//     if (!groups[date]) {
-//       groups[date] = [];
-//     }
-//     groups[date].push(message);
-//   });
-//   return groups;
-// };
-
-// const getCountryFlag = (phoneNumber) => {
-//   for (const country of countryList) {
-//     if (phoneNumber.startsWith(country.code)) {
-//       return country.flag;
-//     }
-//   }
-//   return '🌐';
-// };
-
-// export default WhatsAppChats;
-
-
-
-
-
-
-
-
-
-
-
-// import React, { useState, useEffect, useRef } from "react";
-// import { FaArrowLeft, FaPaperclip, FaPaperPlane } from "react-icons/fa";
-// import { Button, Col, Container, Input, Row, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
-// import axios from "axios";
-// import Header from "components/Headers/Header";
-
-// const countryList = [
-//   { code: '92', country: 'Pakistan', flag: '🇵🇰' },
-//   { code: '91', country: 'India', flag: '🇮🇳' },
-//   { code: '971', country: 'UAE', flag: '🇦🇪' },
-//   { code: '1', country: 'USA', flag: '🇺🇸' },
-//   { code: '44', country: 'UK', flag: '🇬🇧' },
-//   { code: '966', country: 'Saudi Arabia', flag: '🇸🇦' },
-// ];
-
-// const WhatsAppChats = () => {
-//   const [messages, setMessages] = useState([]);
-//   const [contacts, setContacts] = useState([]);
-//   const [newMessage, setNewMessage] = useState("");
-//   const [searchTerm, setSearchTerm] = useState("");
-//   const [selectedUser, setSelectedUser] = useState(null);
-//   const [loading, setLoading] = useState(false);
-//   const [isNewChatModal, setIsNewChatModal] = useState(false);
-//   const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
-//   const [phoneNumber, setPhoneNumber] = useState("");
-//   const chatEndRef = useRef(null);
-//   const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
-
-//   const isMobileView = window.innerWidth <= 768;
-//   const token = localStorage.getItem('token');
-
-//   useEffect(() => {
-//     fetchMessages();
-//     const interval = setInterval(fetchMessages, 30000);
-//     return () => clearInterval(interval);
-//   }, []);
-
-//   const fetchMessages = async () => {
-//     try {
-//       setLoading(true);
-//       const response = await axios.post(
-//         'http://192.168.0.107:25483/api/v1/messages/getMessages',
-//         {
-//           businessId: "102953305799075",
-//           lastTimestamp: null
-//         },
-//         {
-//           headers: { Authorization: `Bearer ${token}` }
-//         }
-//       );
-      
-//       if (response.data.success) {
-//         setMessages(response.data.data);
-//         if (response.data.data.length) {
-//           const latestTimestamp = Math.max(
-//             ...response.data.data.map(msg => parseInt(msg.currentStatusTimestamp))
-//           );
-//           setLastMessageTimestamp(latestTimestamp);
-//         }
-//       }
-//     } catch (error) {
-//       console.error("Error fetching messages:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const startNewChat = () => {
-//     const fullNumber = selectedCountry.code + phoneNumber;
-//     const newUser = {
-//       phoneNumber: fullNumber,
-//       lastMessage: "",
-//       timestamp: (Date.now() / 1000).toString(),
-//       flag: selectedCountry.flag
-//     };
-//     setContacts(prev => [...prev, newUser]); // Add to contacts list
-//     setSelectedUser(newUser);
-//     setPhoneNumber("");
-//     setIsNewChatModal(false);
-//   };
-
-//   const sendMessage = async () => {
-//     if (!newMessage.trim() || !selectedUser) return;
-
-//     const tempId = Date.now().toString();
-//     const tempMessage = {
-//       messageId: tempId,
-//       businessId: "102953305799075",
-//       from: "923030307660",
-//       to: selectedUser.phoneNumber,
-//       messageBody: newMessage,
-//       type: "text",
-//       status: "sending",
-//       currentStatusTimestamp: (Date.now() / 1000).toString(),
-//       sentTimestamp: (Date.now() / 1000).toString()
-//     };
-
-//     setMessages(prev => [...prev, tempMessage]);
-//     setNewMessage("");
-//     scrollToBottom();
-
-//     try {
-//       const response = await axios.post(
-//         'http://192.168.0.107:25483/api/v1/messages/send',
-//         {
-//           to: selectedUser.phoneNumber,
-//           body: newMessage
-//         },
-//         {
-//           headers: { Authorization: `Bearer ${token}` }
-//         }
-//       );
-
-//       if (response.data.success) {
-//         setMessages(prev => prev.map(msg => 
-//           msg.messageId === tempId ? {
-//             ...msg,
-//             messageId: response.data.data.messages[0].id,
-//             status: "sent"
-//           } : msg
-//         ));
-//       }
-//     } catch (error) {
-//       console.error("Error sending message:", error);
-//       setMessages(prev => prev.filter(msg => msg.messageId !== tempId));
-//     }
-//   };
-
-//   const scrollToBottom = () => {
-//     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-//   };
-
-//   const uniqueUsers = React.useMemo(() => {
-//     const users = new Map();
-
-    
-    
-//     // Add contacts first
-//     contacts.forEach(contact => {
-//       users.set(contact.phoneNumber, contact);
-//     });
-    
-//     // Then add users from messages
-//     const receivedMessages = messages.filter(msg => 
-//       msg.from !== "923030307660"
-//     );
-    
-//     receivedMessages.forEach(msg => {
-//       const number = msg.from;
-//       if (!users.has(number)) {
-//         users.set(number, {
-//           phoneNumber: number,
-//           lastMessage: msg.messageBody,
-//           timestamp: msg.currentStatusTimestamp,
-//           flag: countryList.find(c => number && number.startsWith(c.code))?.flag || ''
-//         });
-//       }
-//     });
-    
-//     return Array.from(users.values());
-//   }, [messages, contacts]);
-
-//   const filteredUsers = uniqueUsers.filter(user =>
-//     user.phoneNumber && searchTerm 
-//       ? user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
-//       : true
-//   );
-
-//   const renderNewChatModal = () => (
-//     <Modal isOpen={isNewChatModal} toggle={() => setIsNewChatModal(false)}>
-//       <ModalHeader toggle={() => setIsNewChatModal(false)}>New Chat</ModalHeader>
-//       <ModalBody>
-//         <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-//           <select
-//             value={selectedCountry.code}
-//             onChange={(e) => {
-//               const country = countryList.find(c => c.code === e.target.value);
-//               setSelectedCountry(country);
-//             }}
-//             style={{
-//               padding: "8px",
-//               borderRadius: "4px",
-//               border: "1px solid #ddd",
-//               width: "120px"
-//             }}
-//           >
-//             {countryList.map(country => (
-//               <option key={country.code} value={country.code}>
-//                 {country.flag} +{country.code}
-//               </option>
-//             ))}
-//           </select>
-          
-//           <Input
-//             type="text"
-//             value={phoneNumber}
-//             onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-//             placeholder="Phone number"
-//             style={{ flex: 1 }}
-//           />
-//         </div>
-//       </ModalBody>
-//       <ModalFooter>
-//         <Button color="secondary" onClick={() => setIsNewChatModal(false)}>
-//           Cancel
-//         </Button>
-//         <Button
-//           color="primary"
-//           onClick={startNewChat}
-//           disabled={!phoneNumber.length}
-//           style={{ backgroundColor: "#00a884", border: "none" }}
-//         >
-//           Start Chat
-//         </Button>
-//       </ModalFooter>
-//     </Modal>
-//   );
-
-//   const renderUserList = () => (
-//     <Col
-//       xs="12"
-//       md="4"
-//       style={{
-//         backgroundColor: "#f0f4f8",
-//         height: "calc(100vh - 100px)",
-//         display: "flex",
-//         flexDirection: "column",
-//         overflow: "hidden",
-//         borderRight: "1px solid #e0e0e0",
-//         padding: "10px",
-//       }}
-//     >
-//       <div style={{ 
-//         padding: "10px 0",
-//         display: "flex",
-//         justifyContent: "space-between",
-//         alignItems: "center",
-//         gap: "10px"
-//       }}>
-//         <Button
-//           onClick={() => setIsNewChatModal(true)}
-//           style={{
-//             backgroundColor: "#00a884",
-//             border: "none",
-//             borderRadius: "50%",
-//             width: "40px",
-//             height: "40px",
-//             padding: "0",
-//             display: "flex",
-//             alignItems: "center",
-//             justifyContent: "center",
-//           }}
-//         >
-//           <i className="fas fa-plus" style={{ color: "#fff" }}></i>
-//         </Button>
-//         <Input
-//           type="text"
-//           value={searchTerm}
-//           onChange={(e) => setSearchTerm(e.target.value)}
-//           placeholder="Search users..."
-//           style={{
-//             borderRadius: "20px",
-//             backgroundColor: "#fff",
-//             border: "1px solid #e0e0e0",
-//             padding: "8px 15px",
-//             flex: 1,
-//           }}
-//         />
-//       </div>
-
-//       <div style={{ overflowY: "auto", flexGrow: 1 }}>
-//         {filteredUsers.map((user) => (
-//           <div
-//             key={user.phoneNumber}
-//             onClick={() => setSelectedUser(user)}
-//             style={{
-//               display: "flex",
-//               alignItems: "center",
-//               padding: "10px",
-//               borderRadius: "10px",
-//               backgroundColor: selectedUser?.phoneNumber === user.phoneNumber ? "#e8e8e8" : "transparent",
-//               cursor: "pointer",
-//               transition: "background-color 0.3s ease",
-//               marginBottom: "5px",
-//             }}
-//           >
-//             <div style={{ 
-//               width: "40px", 
-//               height: "40px", 
-//               borderRadius: "50%", 
-//               backgroundColor: "#e0e0e0",
-//               display: "flex",
-//               alignItems: "center",
-//               justifyContent: "center",
-//               marginRight: "10px",
-//               fontSize: "20px"
-//             }}>
-//               {user.flag}
-//             </div>
-//             <div style={{ flex: 1, overflow: "hidden" }}>
-//               <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
-//                 {user.phoneNumber}
-//               </h6>
-//               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-//                 <div
-//                   style={{
-//                     fontSize: "12px",
-//                     color: "#666",
-//                     whiteSpace: "nowrap",
-//                     overflow: "hidden",
-//                     textOverflow: "ellipsis",
-//                     maxWidth: "70%",
-//                   }}
-//                 >
-//                   {user.lastMessage}
-//                 </div>
-//                 <div style={{ fontSize: "11px", color: "#888" }}>
-//                   {new Date(parseInt(user.timestamp) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-//         ))}
-//       </div>
-//     </Col>
-//   );
-
-//   const renderChatWindow = () => {
-//     const chatMessages = selectedUser ? 
-//       messages.filter(msg => 
-//         msg.from === selectedUser.phoneNumber || msg.to === selectedUser.phoneNumber
-//       ) : [];
-
-//     return (
-//       <Col
-//         xs="12"
-//         md="8"
-//         style={{
-//           height: "calc(100vh - 100px)",
-//           display: "flex",
-//           flexDirection: "column",
-//           backgroundColor: "#f4f8fb",
-//           position: "relative",
-//           overflow: "hidden",
-//         }}
-//       >
-//         {selectedUser ? (
-//           <>
-//             <div
-//               style={{
-//                 padding: "15px",
-//                 backgroundColor: "#00796B",
-//                 color: "#fff",
-//                 display: "flex",
-//                 alignItems: "center",
-//                 justifyContent: "space-between",
-//                 borderRadius: "10px 10px 0 0",
-//                 position: "sticky",
-//                 top: 0,
-//                 zIndex: 1,
-//               }}
-//             >
-//               <h5
-//                 style={{
-//                   margin: 0,
-//                   display: "flex",
-//                   alignItems: "center",
-//                   color: "#fff",
-//                 }}
-//               >
-//                 <div style={{ 
-//                   width: "30px", 
-//                   height: "30px", 
-//                   borderRadius: "50%", 
-//                   backgroundColor: "#e0e0e0",
-//                   display: "flex",
-//                   alignItems: "center",
-//                   justifyContent: "center",
-//                   marginRight: "10px",
-//                   fontSize: "16px"
-//                 }}>
-//                   {selectedUser.flag}
-//                 </div>
-//                 {selectedUser.phoneNumber}
-//               </h5>
-//               {isMobileView && (
-//                 <Button
-//                   onClick={() => setSelectedUser(null)}
-//                   style={{
-//                     backgroundColor: "transparent",
-//                     border: "none",
-//                     color: "#fff",
-//                   }}
-//                 >
-//                   <FaArrowLeft />
-//                 </Button>
-//               )}
-//             </div>
-
-//             <div
-//               style={{
-//                 flex: 1,
-//                 padding: "20px",
-//                 overflowY: "auto",
-//                 backgroundColor: "#efeae2",
-//                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-//               }}
-//             >
-//               {chatMessages.map((message) => (
-//                 <div
-//                   key={message.messageId}
-//                   style={{
-//                     display: "flex",
-//                     flexDirection: "column",
-//                     alignItems: message.from === selectedUser.phoneNumber ? "flex-start" : "flex-end",
-//                     marginBottom: "10px",
-//                   }}
-//                 >
-//                   <div
-//                     style={{
-//                       position: "relative",
-//                       maxWidth: "70%",
-//                       padding: "8px 12px",
-//                       backgroundColor: message.from === selectedUser.phoneNumber ? "#fff" : "#dcf8c6",
-//                       borderRadius: "7.5px",
-//                       boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
-//                       marginBottom: "2px",
-//                     }}
-//                   >
-//                     <div style={{ fontSize: "14px", color: "#303030", marginRight: "15px" }}>
-//                       {message.messageBody}
-//                     </div>
-//                     <div style={{ fontSize: "11px", color: "#667781", textAlign: "right" }}>
-//                       {new Date(parseInt(message.currentStatusTimestamp) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-//                       {message.from !== selectedUser.phoneNumber && (
-//                         <span style={{ marginLeft: "5px" }}>
-//                           {message.status === "delivered" ? "✓✓" : "✓"}
-//                         </span>
-//                       )}
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//               <div ref={chatEndRef} />
-//             </div>
-
-//             <div 
-//               style={{ 
-//                 padding: "10px", 
-//                 backgroundColor: "#f0f0f0",
-//                 borderTop: "1px solid #e0e0e0" 
-//               }}
-//             >
-//               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-//                 <Button
-//                   style={{
-//                     background: "#fff",
-//                     border: "none",
-//                     borderRadius: "50%",
-//                     width: "40px",
-//                     height: "40px",
-//                     padding: "0",
-//                     display: "flex",
-//                     alignItems: "center",
-//                     justifyContent: "center",
-//                   }}
-//                 >
-//                   <FaPaperclip size={20} color="#54656f" />
-//                 </Button>
-
-//                 <Input
-//                   type="text"
-//                   value={newMessage}
-//                   onChange={(e) => setNewMessage(e.target.value)}
-//                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-//                   placeholder="Type a message..."
-//                   style={{
-//                     borderRadius: "20px",
-//                     height: "40px",
-//                     fontSize: "14px",
-//                     paddingLeft: "15px",
-//                     paddingRight: "15px",
-//                     flexGrow: 1,
-//                     border: "1px solid #e0e0e0",
-//                     backgroundColor: "#fff",
-//                   }}
-//                 />
-
-//                 <Button
-//                   onClick={sendMessage}
-//                   style={{
-//                     backgroundColor: "#00a884",
-//                     borderRadius: "50%",
-//                     width: "40px",
-//                     height: "40px",
-//                     padding: "0",
-//                     border: "none",
-//                     display: "flex",
-//                     alignItems: "center",
-//                     justifyContent: "center",
-//                   }}
-//                 >
-//                   <FaPaperPlane size={20} color="#fff" />
-//                 </Button>
-//               </div>
-//             </div>
-//           </>
-//         ) : (
-//           <div style={{
-//             display: "flex",
-//             alignItems: "center",
-//             justifyContent: "center",
-//             height: "100%",
-//             color: "#666"
-//           }}>
-//             Select a chat to start messaging
-//           </div>
-//         )}
-//       </Col>
-//     );
-//   };
-
-//   return (
-//     <div style={{ 
-//       height: "100vh", 
-//       display: "flex",
-//       flexDirection: "column",
-//       overflow: "hidden",
-//       position: "relative",
-//     }}>
-//       <div>
-//         <Header />
-//       </div>
-//       {renderNewChatModal()}
-//       <Container 
-//         fluid 
-//         style={{ 
-//           flex: 1,
-//           padding: "20px 15px 0 15px",
-//           minHeight: 0,
-//           zIndex: 1,
-//         }}
-//       >
-//         <Row style={{ height: "100%" }}>
-//           {(!selectedUser || !isMobileView) && renderUserList()}
-//           {(selectedUser || !isMobileView) && renderChatWindow()}
-//         </Row>
-//       </Container>
-
-//       {loading && (
-//         <div style={{
-//           position: "fixed",
-//           top: 0,
-//           left: 0,
-//           right: 0,
-//           bottom: 0,
-//           backgroundColor: "rgba(255, 255, 255, 0.7)",
-//           display: "flex",
-//           alignItems: "center",
-//           justifyContent: "center",
-//           zIndex: 1000
-//         }}>
-//           <div>Loading...</div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// const formatMessageTime = (timestamp) => {
-//   const date = new Date(parseInt(timestamp) * 1000);
-//   const now = new Date();
-//   const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-
-//   if (diffDays === 0) {
-//     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-//   } else if (diffDays === 1) {
-//     return 'Yesterday';
-//   } else if (diffDays < 7) {
-//     return date.toLocaleDateString([], { weekday: 'long' });
-//   } else {
-//     return date.toLocaleDateString([], { 
-//       year: 'numeric', 
-//       month: 'short', 
-//       day: 'numeric' 
-//     });
-//   }
-// };
-
-// const groupMessagesByDate = (messages) => {
-//   const groups = {};
-//   messages.forEach(message => {
-//     const date = new Date(parseInt(message.currentStatusTimestamp) * 1000)
-//       .toLocaleDateString();
-//     if (!groups[date]) {
-//       groups[date] = [];
-//     }
-//     groups[date].push(message);
-//   });
-//   return groups;
-// };
-
-// const getCountryFlag = (phoneNumber) => {
-//   for (const country of countryList) {
-//     if (phoneNumber.startsWith(country.code)) {
-//       return country.flag;
-//     }
-//   }
-//   return '🌐';
-// };
-
-// export default WhatsAppChats;
-
-
-
-
-
 import React, { useState, useEffect, useRef } from "react";
-import { FaArrowLeft, FaPaperclip, FaPaperPlane } from "react-icons/fa";
+import { FaArrowLeft, FaPaperclip, FaPaperPlane, FaCheck, FaCheckDouble, FaClock, FaExclamationTriangle } from "react-icons/fa";
 import { Button, Col, Container, Input, Row, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import axios from "axios";
+import io from "socket.io-client";
 import Header from "components/Headers/Header";
-import io from 'socket.io-client';
 
 
 const countryList = [
@@ -2224,7 +17,11 @@ const countryList = [
 
 const WhatsAppChats = () => {
   const [messages, setMessages] = useState([]);
-  const [contacts, setContacts] = useState([]);
+  const [socket, setSocket] = useState(null);
+  const [contacts, setContacts] = useState(() => {
+    const savedContacts = localStorage.getItem('whatsappContacts');
+    return savedContacts ? JSON.parse(savedContacts) : [];
+  });
   const [newMessage, setNewMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
@@ -2232,85 +29,104 @@ const WhatsAppChats = () => {
   const [isNewChatModal, setIsNewChatModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [socket, setSocket] = useState(null);
-  const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
   const chatEndRef = useRef(null);
+  const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
 
   const isMobileView = window.innerWidth <= 768;
   const token = localStorage.getItem('token');
 
+
   useEffect(() => {
-    // Initialize socket connection
-    const newSocket = io('http://192.168.0.107:25483');
+    const newSocket = io("http://192.168.100.8:25483", {
+      transports: ["websocket"],
+      withCredentials: true,
+    });
+
+    newSocket.on("connect", () => {
+      console.log("Connected to socket server");
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+    });
+
     setSocket(newSocket);
 
-    // Socket event listeners
-    newSocket.on('new_message', (messageData) => {
-      setMessages(prev => {
-        const exists = prev.some(msg => msg.messageId === messageData.messageId);
-        if (!exists) {
-          // Add sender name and other properties from webhook
-          const newMsg = {
-            ...messageData,
-            senderName: messageData.senderName || "Unknown",
-            currentStatusTimestamp: messageData.currentStatusTimestamp || Date.now().toString(),
-          };
-          return [...prev, newMsg];
-        }
-        return prev;
-      });
-    });
-
-    newSocket.on('message_status_update', (updatedMessage) => {
-      setMessages(prev => prev.map(msg => 
-        msg.messageId === updatedMessage.messageId ? {
-          ...msg,
-          status: updatedMessage.status,
-          currentStatusTimestamp: updatedMessage.currentStatusTimestamp,
-          ...(updatedMessage.status === 'sent' && { sentTimestamp: updatedMessage.currentStatusTimestamp }),
-          ...(updatedMessage.status === 'delivered' && { deliveredTimestamp: updatedMessage.currentStatusTimestamp }),
-          ...(updatedMessage.status === 'read' && { readTimestamp: updatedMessage.currentStatusTimestamp }),
-          ...(updatedMessage.status === 'failed' && { 
-            failedTimestamp: updatedMessage.currentStatusTimestamp,
-            failureReason: updatedMessage.failureReason 
-          })
-        } : msg
-      ));
-    });
-
-    newSocket.on('message_sent', (messageData) => {
-      setMessages(prev => prev.map(msg => 
-        msg.messageId === messageData.messageId ? {
-          ...msg,
-          ...messageData,
-          status: 'sent',
-          sentTimestamp: messageData.sentTimestamp,
-          currentStatusTimestamp: messageData.currentStatusTimestamp
-        } : msg
-      ));
-    });
-    // Initial data fetch
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 30000);
-
     return () => {
-      clearInterval(interval);
-      newSocket.disconnect();
+      if (newSocket) newSocket.disconnect();
     };
   }, []);
 
+  // Handle real-time message updates
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!socket) return;
+
+    // Listen for new incoming messages
+    socket.on("new_message", (messageData) => {
+      setMessages(prevMessages => {
+        // Check if message already exists
+        const messageExists = prevMessages.some(msg => msg.messageId === messageData.messageId);
+        if (messageExists) return prevMessages;
+        
+        const newMessages = [...prevMessages, messageData];
+        updateContactsWithMessages([messageData]);
+        return newMessages;
+      });
+    });
+
+    // Listen for sent messages confirmation
+    socket.on("message_sent", (messageData) => {
+      setMessages(prevMessages => {
+        const messageIndex = prevMessages.findIndex(msg => msg.messageId === messageData.messageId);
+        if (messageIndex === -1) {
+          return [...prevMessages, messageData];
+        }
+        
+        const updatedMessages = [...prevMessages];
+        updatedMessages[messageIndex] = {
+          ...updatedMessages[messageIndex],
+          ...messageData
+        };
+        return updatedMessages;
+      });
+    });
+
+    // Listen for message status updates
+    socket.on("message_status_update", (updatedMessage) => {
+      setMessages(prevMessages => {
+        return prevMessages.map(msg => 
+          msg.messageId === updatedMessage.messageId
+            ? { ...msg, ...updatedMessage }
+            : msg
+        );
+      });
+    });
+
+    return () => {
+      socket.off("new_message");
+      socket.off("message_sent");
+      socket.off("message_status_update");
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    localStorage.setItem('whatsappContacts', JSON.stringify(contacts));
+  }, [contacts]);
+
+  useEffect(() => {
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchMessages = async () => {
     try {
       setLoading(true);
       const response = await axios.post(
-        'http://192.168.0.107:25483/api/v1/messages/getMessages',
+        'http://192.168.100.8:25483/api/v1/messages/getMessages',
         {
           businessId: "102953305799075",
-          lastTimestamp: lastMessageTimestamp
+          lastTimestamp: null
         },
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -2318,25 +134,14 @@ const WhatsAppChats = () => {
       );
       
       if (response.data.success) {
-        setMessages(prevMessages => {
-          const newMessages = [...prevMessages];
-          response.data.data.forEach(newMsg => {
-            const index = newMessages.findIndex(msg => msg.messageId === newMsg.messageId);
-            if (index === -1) {
-              newMessages.push(newMsg);
-            } else {
-              newMessages[index] = newMsg;
-            }
-          });
-          return newMessages;
-        });
-
+        setMessages(response.data.data);
         if (response.data.data.length) {
           const latestTimestamp = Math.max(
             ...response.data.data.map(msg => parseInt(msg.currentStatusTimestamp))
           );
           setLastMessageTimestamp(latestTimestamp);
         }
+        updateContactsWithMessages(response.data.data);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -2345,26 +150,68 @@ const WhatsAppChats = () => {
     }
   };
 
-  const handleNewMessage = (message) => {
-    setMessages(prev => {
-      const exists = prev.some(msg => msg.messageId === message.messageId);
-      if (!exists) {
-        return [...prev, message];
+  const MessageStatusIcon = ({ status }) => {
+    switch(status?.toLowerCase()) {
+      case 'sent':
+        return <FaCheck size={12} color="#667781" />;
+      case 'delivered':
+        return <FaCheckDouble size={12} color="#667781" />;
+      case 'read':
+        return <FaCheckDouble size={12} color="#53bdeb" />;
+      case 'failed':
+        return <FaExclamationTriangle size={12} color="#ef5350" />;
+      case 'sending':
+        return <FaClock size={12} color="#667781" />;
+      default:
+        return <FaCheck size={12} color="#667781" />;
+    }
+  };
+
+  const updateContactsWithMessages = (newMessages) => {
+    const updatedContacts = [...contacts];
+    const messagesByUser = new Map();
+
+    newMessages.forEach(msg => {
+      const userNumber = msg.from === "923030307660" ? msg.to : msg.from;
+      if (!messagesByUser.has(userNumber) || 
+          parseInt(msg.currentStatusTimestamp) > parseInt(messagesByUser.get(userNumber).currentStatusTimestamp)) {
+        messagesByUser.set(userNumber, msg);
       }
-      return prev;
     });
+
+    messagesByUser.forEach((latestMsg, userNumber) => {
+      const contactIndex = updatedContacts.findIndex(c => c.phoneNumber === userNumber);
+      if (contactIndex !== -1) {
+        updatedContacts[contactIndex] = {
+          ...updatedContacts[contactIndex],
+          lastMessage: latestMsg.messageBody,
+          timestamp: latestMsg.currentStatusTimestamp
+        };
+      }
+    });
+
+    setContacts(updatedContacts);
   };
 
-  const handleStatusUpdate = (updatedMessage) => {
-    setMessages(prev => prev.map(msg => 
-      msg.messageId === updatedMessage.messageId ? updatedMessage : msg
-    ));
-  };
-
-  const handleMessageSent = (sentMessage) => {
-    setMessages(prev => prev.map(msg => 
-      msg.messageId === sentMessage.messageId ? sentMessage : msg
-    ));
+  const startNewChat = () => {
+    const fullNumber = selectedCountry.code + phoneNumber;
+    const existingContact = contacts.find(c => c.phoneNumber === fullNumber);
+    
+    if (!existingContact) {
+      const newUser = {
+        phoneNumber: fullNumber,
+        lastMessage: "",
+        timestamp: (Date.now() / 1000).toString(),
+        flag: selectedCountry.flag
+      };
+      setContacts(prev => [...prev, newUser]);
+      setSelectedUser(newUser);
+    } else {
+      setSelectedUser(existingContact);
+    }
+    
+    setPhoneNumber("");
+    setIsNewChatModal(false);
   };
 
   const sendMessage = async () => {
@@ -2383,13 +230,14 @@ const WhatsAppChats = () => {
       sentTimestamp: (Date.now() / 1000).toString()
     };
 
+    // Update UI immediately with temporary message
     setMessages(prev => [...prev, tempMessage]);
     setNewMessage("");
     scrollToBottom();
 
     try {
       const response = await axios.post(
-        'http://192.168.0.107:25483/api/v1/messages/send',
+        'http://192.168.100.8:25483/api/v1/messages/send',
         {
           to: selectedUser.phoneNumber,
           body: newMessage
@@ -2399,67 +247,67 @@ const WhatsAppChats = () => {
         }
       );
 
-      if (response.data.success) {
-        // Let the webhook handle the status updates through socket events
-        console.log("Message sent successfully:", response.data);
-      }
+      // The socket will handle the successful message update
     } catch (error) {
       console.error("Error sending message:", error);
-      setMessages(prev => prev.filter(msg => msg.messageId !== tempId));
+      // Update the temporary message to show failure
+      setMessages(prev => prev.map(msg =>
+        msg.messageId === tempId ? {
+          ...msg,
+          status: "failed"
+        } : msg
+      ));
     }
   };
-
-  const uniqueUsers = React.useMemo(() => {
-    const users = new Map();
-    
-    // Add contacts first
-    contacts.forEach(contact => {
-      users.set(contact.phoneNumber, {
-        ...contact,
-        lastMessage: "",
-        lastMessageStatus: "",
-        timestamp: Date.now().toString()
-      });
-    });
-    
-    // Process messages to get latest message for each user
-    messages.forEach(msg => {
-      const userNumber = msg.from === "923030307660" ? msg.to : msg.from;
-      const existingUser = users.get(userNumber);
-      
-      const messageTimestamp = parseInt(msg.currentStatusTimestamp);
-      if (!existingUser || messageTimestamp > parseInt(existingUser.timestamp)) {
-        users.set(userNumber, {
-          phoneNumber: userNumber,
-          lastMessage: msg.messageBody,
-          lastMessageStatus: msg.status || "delivered",
-          timestamp: msg.currentStatusTimestamp,
-          flag: countryList.find(c => userNumber.startsWith(c.code))?.flag || '🌐'
-        });
-      }
-    });
-    
-    return Array.from(users.values())
-      .sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp));
-  }, [messages, contacts]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const startNewChat = () => {
-    const fullNumber = selectedCountry.code + phoneNumber;
-    const newUser = {
-      phoneNumber: fullNumber,
-      lastMessage: "",
-      timestamp: (Date.now() / 1000).toString(),
-      flag: selectedCountry.flag
-    };
-    setContacts(prev => [...prev, newUser]);
-    setSelectedUser(newUser);
-    setPhoneNumber("");
-    setIsNewChatModal(false);
-  };
+  const uniqueUsers = React.useMemo(() => {
+    const users = new Map();
+    
+    contacts.forEach(contact => {
+      if (contact?.phoneNumber) {  // Add null check
+        users.set(contact.phoneNumber, contact);
+      }
+    });
+    
+    messages.forEach(msg => {
+      if (!msg?.from || !msg?.to) return;  // Skip invalid messages
+      
+      const number = msg.from === "923030307660" ? msg.to : msg.from;
+      if (!users.has(number)) {
+        // Safely find matching country code
+        const country = countryList.find(c => 
+          number && c?.code && number.startsWith(c.code)
+        );
+        
+        const newContact = {
+          phoneNumber: number,
+          lastMessage: msg.messageBody || '',
+          timestamp: msg.currentStatusTimestamp || Date.now().toString(),
+          flag: country?.flag || '🌐'
+        };
+        users.set(number, newContact);
+        
+        if (!contacts.some(c => c?.phoneNumber === number)) {
+          setContacts(prev => [...prev, newContact]);
+        }
+      }
+    });
+    
+    return Array.from(users.values())
+      .filter(user => user?.phoneNumber)  // Filter out any invalid users
+      .sort((a, b) => parseInt(b.timestamp || '0') - parseInt(a.timestamp || '0'));
+  }, [messages, contacts]);
+
+
+const filteredUsers = uniqueUsers.filter(user =>
+  user.phoneNumber && searchTerm 
+    ? user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    : true
+);
 
   const renderNewChatModal = () => (
     <Modal isOpen={isNewChatModal} toggle={() => setIsNewChatModal(false)}>
@@ -2596,29 +444,22 @@ const WhatsAppChats = () => {
               <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
                 {user.phoneNumber}
               </h6>
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "space-between",
-                fontSize: "12px",
-                color: "#667781"
-              }}>
-                <div style={{ 
-                  display: "flex",
-                  alignItems: "center",
-                  maxWidth: "70%",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap"
-                }}>
-                  {user.lastMessageStatus === "sent" && <span style={{ marginRight: "4px" }}>✓</span>}
-                  {user.lastMessageStatus === "delivered" && <span style={{ marginRight: "4px" }}>✓✓</span>}
-                  {user.lastMessageStatus === "read" && <span style={{ marginRight: "4px", color: "#53bdeb" }}>✓✓</span>}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "70%",
+                  }}
+                >
                   {user.lastMessage}
                 </div>
-                <span style={{ fontSize: "11px" }}>
-                  {formatMessageTime(user.timestamp)}
-                </span>
+                <div style={{ fontSize: "11px", color: "#888" }}>
+                  {new Date(parseInt(user.timestamp) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
             </div>
           </div>
@@ -2672,7 +513,7 @@ const WhatsAppChats = () => {
               >
                 <div style={{ 
                   width: "30px", 
-                  height: "30px", 
+                  height: "30px",
                   borderRadius: "50%", 
                   backgroundColor: "#e0e0e0",
                   display: "flex",
@@ -2726,28 +567,27 @@ const WhatsAppChats = () => {
                       backgroundColor: message.from === selectedUser.phoneNumber ? "#fff" : "#dcf8c6",
                       borderRadius: "7.5px",
                       boxShadow: "0 1px 0.5px rgba(0, 0, 0, 0.13)",
+                      marginBottom: "2px",
                     }}
                   >
-                    <div style={{ fontSize: "14px", marginRight: "45px" }}>
+                    <div style={{ fontSize: "14px", color: "#303030", marginRight: "15px" }}>
                       {message.messageBody}
                     </div>
                     <div style={{ 
                       fontSize: "11px", 
                       color: "#667781", 
-                      position: "absolute",
-                      right: "8px",
-                      bottom: "6px",
+                      textAlign: "right",
                       display: "flex",
-                      alignItems: "center"
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      gap: "4px"
                     }}>
-                      {formatMessageTime(message.currentStatusTimestamp)}
+                      {new Date(parseInt(message.currentStatusTimestamp) * 1000).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
                       {message.from !== selectedUser.phoneNumber && (
-                        <span style={{ marginLeft: "4px" }}>
-                          {message.status === "read" && <span style={{ color: "#53bdeb" }}>✓✓</span>}
-                          {message.status === "delivered" && "✓✓"}
-                          {message.status === "sent" && "✓"}
-                          {message.status === "sending" && "⌛"}
-                        </span>
+                        <MessageStatusIcon status={message.status} />
                       )}
                     </div>
                   </div>
@@ -2800,7 +640,6 @@ const WhatsAppChats = () => {
 
                 <Button
                   onClick={sendMessage}
-                  disabled={!newMessage.trim()}
                   style={{
                     backgroundColor: "#00a884",
                     borderRadius: "50%",
@@ -2832,11 +671,6 @@ const WhatsAppChats = () => {
       </Col>
     );
   };
-
-  // Filter users based on search term
-  const filteredUsers = uniqueUsers.filter(user =>
-    user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div style={{ 
@@ -2883,27 +717,6 @@ const WhatsAppChats = () => {
       )}
     </div>
   );
-};
-
-// Utility function to format message timestamps
-const formatMessageTime = (timestamp) => {
-  const date = new Date(parseInt(timestamp) * 1000);
-  const now = new Date();
-  const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } else if (diffDays === 1) {
-    return 'Yesterday';
-  } else if (diffDays < 7) {
-    return date.toLocaleDateString([], { weekday: 'long' });
-  } else {
-    return date.toLocaleDateString([], { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  }
 };
 
 export default WhatsAppChats;
