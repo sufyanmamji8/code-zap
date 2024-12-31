@@ -35,7 +35,7 @@ const WhatsAppChats = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    const newSocket = io("http://192.168.0.108:25483", {
+    const newSocket = io("http://192.168.0.109:25483", {
       transports: ["websocket"],
       withCredentials: true,
     });
@@ -109,7 +109,7 @@ const WhatsAppChats = () => {
     try {
       setLoading(true);
       const response = await axios.post(
-        'http://192.168.0.108:25483/api/v1/messages/getMessages',
+        'http://192.168.0.109:25483/api/v1/messages/getMessages',
         {
           businessId: businessId,
           lastTimestamp: null
@@ -252,7 +252,7 @@ const WhatsAppChats = () => {
 
     try {
       const response = await axios.post(
-        'http://192.168.0.108:25483/api/v1/messages/send',
+        'http://192.168.0.109:25483/api/v1/messages/send',
         {
           to: selectedUser.phoneNumber,
           body: newMessage
