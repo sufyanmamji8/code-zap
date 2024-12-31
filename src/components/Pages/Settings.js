@@ -33,13 +33,65 @@ const handleSaveConfiguration = () => {
   }
 };
 
+// const handleSubmit = async () => {
+//   if (phoneId && accountId && callbackUrl && accessToken) {
+//     try {
+//       const token = localStorage.getItem('token');
+
+//       if (!token) {
+//         alert('Authorization token is missing. Please log in again.');
+//         return;
+//       }
+
+//       const response = await axios.post(
+//         'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/save-configuration',
+//         {
+//           phoneNumberId: phoneId,
+//           whatsappBusinessAccountId: accountId,
+//           callbackUrl: callbackUrl,
+//           accessToken: accessToken,
+//         },
+//         {
+//           headers: {
+//             Authorization: `Bearer ${token}`
+//           }
+//         }
+//       );
+
+//       if (response.data.success) {
+//         sessionStorage.setItem("phoneId", phoneId);
+//         sessionStorage.setItem("accountId", accountId);
+//         sessionStorage.setItem("callbackUrl", callbackUrl);
+//         sessionStorage.setItem("accessToken", accessToken);
+
+//         localStorage.setItem(`${token}_isWhatsAppView`, 'true');
+        
+//         navigate('/admin/chats', { 
+//           state: { 
+//             whatsAppView: true 
+//           } 
+//         });
+
+//         toast.success("Configuration saved successfully!");
+//       } else {
+//         toast.error('Configuration failed. Please try again.');
+//       }
+//     } catch (error) {
+//       console.error('Error saving configuration:', error);
+//       toast.error('Configuration failed. Please try again.');
+//     }
+//   } else {
+//     toast.error('Please fill in all fields.');
+//   }
+// };
+
+
 const handleSubmit = async () => {
   if (phoneId && accountId && callbackUrl && accessToken) {
     try {
       const token = localStorage.getItem('token');
-
       if (!token) {
-        alert('Authorization token is missing. Please log in again.');
+        toast.error('Please log in again.');
         return;
       }
 
@@ -59,6 +111,7 @@ const handleSubmit = async () => {
       );
 
       if (response.data.success) {
+        // Store latest config in session
         sessionStorage.setItem("phoneId", phoneId);
         sessionStorage.setItem("accountId", accountId);
         sessionStorage.setItem("callbackUrl", callbackUrl);
@@ -66,22 +119,17 @@ const handleSubmit = async () => {
 
         localStorage.setItem(`${token}_isWhatsAppView`, 'true');
         
-        navigate('/admin/chats', { 
-          state: { 
-            whatsAppView: true 
-          } 
-        });
-
         toast.success("Configuration saved successfully!");
-      } else {
-        toast.error('Configuration failed. Please try again.');
+        navigate('/admin/chats', { 
+          state: { whatsAppView: true }
+        });
       }
     } catch (error) {
-      console.error('Error saving configuration:', error);
-      toast.error('Configuration failed. Please try again.');
+      console.error('Error:', error);
+      toast.error('Failed to save configuration');
     }
   } else {
-    toast.error('Please fill in all fields.');
+    toast.error('Please fill all fields');
   }
 };
 

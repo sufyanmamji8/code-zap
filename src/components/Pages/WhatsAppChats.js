@@ -5,7 +5,6 @@ import axios from "axios";
 import io from "socket.io-client";
 import Header from "components/Headers/Header";
 
-
 const countryList = [
   { code: '92', country: 'Pakistan', flag: '🇵🇰' },
   { code: '91', country: 'India', flag: '🇮🇳' },
@@ -30,118 +29,116 @@ const WhatsAppChats = () => {
   const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
   const [phoneNumber, setPhoneNumber] = useState("");
   const chatEndRef = useRef(null);
-  const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
-
+  const businessId = "102953305799075";
   const isMobileView = window.innerWidth <= 768;
   const token = localStorage.getItem('token');
 
-
+  // Initialize socket connection
   useEffect(() => {
-    const newSocket = io("http://192.168.100.8:25483", {
+    const newSocket = io("http://192.168.0.108:25483", {
       transports: ["websocket"],
       withCredentials: true,
     });
-
+  
     newSocket.on("connect", () => {
       console.log("Connected to socket server");
+      newSocket.emit('join_room', `business_${businessId}`);
     });
-
+  
     newSocket.on("connect_error", (error) => {
       console.error("Socket connection error:", error);
     });
-
+  
     setSocket(newSocket);
-
+  
     return () => {
       if (newSocket) newSocket.disconnect();
     };
   }, []);
-
-  // Handle real-time message updates
+  
+  // Enhanced real-time message and status update handling
+  // Socket effect for handling real-time updates
   useEffect(() => {
     if (!socket) return;
-
+  
     // Listen for new incoming messages
     socket.on("new_message", (messageData) => {
-      setMessages(prevMessages => {
-        // Check if message already exists
-        const messageExists = prevMessages.some(msg => msg.messageId === messageData.messageId);
-        if (messageExists) return prevMessages;
-        
-        const newMessages = [...prevMessages, messageData];
-        updateContactsWithMessages([messageData]);
-        return newMessages;
+      console.log("New message received:", messageData);
+      setMessages(prev => {
+        const exists = prev.some(msg => msg.messageId === messageData.messageId);
+        return exists ? prev : [...prev, messageData];
       });
     });
-
-    // Listen for sent messages confirmation
-    socket.on("message_sent", (messageData) => {
-      setMessages(prevMessages => {
-        const messageIndex = prevMessages.findIndex(msg => msg.messageId === messageData.messageId);
-        if (messageIndex === -1) {
-          return [...prevMessages, messageData];
-        }
-        
-        const updatedMessages = [...prevMessages];
-        updatedMessages[messageIndex] = {
-          ...updatedMessages[messageIndex],
-          ...messageData
-        };
-        return updatedMessages;
-      });
+  
+    // Handle status updates
+    socket.on("message_status_update", (updateData) => {
+      console.log("Status update received:", updateData);
+      setMessages(prev => prev.map(msg =>
+        msg.messageId === updateData.messageId
+          ? {
+              ...msg,
+              status: updateData.status,
+              currentStatusTimestamp: updateData.currentStatusTimestamp,
+              sentTimestamp: updateData.sentTimestamp || msg.sentTimestamp,
+              deliveredTimestamp: updateData.deliveredTimestamp || msg.deliveredTimestamp,
+              readTimestamp: updateData.readTimestamp || msg.readTimestamp,
+              failedTimestamp: updateData.failedTimestamp || msg.failedTimestamp,
+              failureReason: updateData.failureReason
+            }
+          : msg
+      ));
     });
-
-    // Listen for message status updates
-    socket.on("message_status_update", (updatedMessage) => {
-      setMessages(prevMessages => {
-        return prevMessages.map(msg => 
-          msg.messageId === updatedMessage.messageId
-            ? { ...msg, ...updatedMessage }
-            : msg
-        );
-      });
-    });
-
+  
     return () => {
       socket.off("new_message");
-      socket.off("message_sent");
       socket.off("message_status_update");
     };
   }, [socket]);
-
+  
+  // Save contacts to localStorage
   useEffect(() => {
     localStorage.setItem('whatsappContacts', JSON.stringify(contacts));
   }, [contacts]);
-
+  
+  // Initial messages fetch
   useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 30000);
-    return () => clearInterval(interval);
+    fetchInitialMessages();
   }, []);
-
-  const fetchMessages = async () => {
+  
+  const fetchInitialMessages = async () => {
     try {
       setLoading(true);
       const response = await axios.post(
-        'http://192.168.100.8:25483/api/v1/messages/getMessages',
+        'http://192.168.0.108:25483/api/v1/messages/getMessages',
         {
-          businessId: "102953305799075",
+          businessId: businessId,
           lastTimestamp: null
         },
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      
+
       if (response.data.success) {
-        setMessages(response.data.data);
-        if (response.data.data.length) {
-          const latestTimestamp = Math.max(
-            ...response.data.data.map(msg => parseInt(msg.currentStatusTimestamp))
-          );
-          setLastMessageTimestamp(latestTimestamp);
-        }
-        updateContactsWithMessages(response.data.data);
+        const allMessages = response.data.data;
+        setMessages(allMessages);
+        
+        // Extract unique contacts from messages
+        const uniqueContacts = new Map();
+        
+        allMessages.forEach(msg => {
+          const phoneNumber = msg.from === "923030307660" ? msg.to : msg.from;
+          const country = countryList.find(c => phoneNumber.startsWith(c.code));
+          
+          uniqueContacts.set(phoneNumber, {
+            phoneNumber,
+            lastMessage: msg.messageBody,
+            timestamp: msg.currentStatusTimestamp,
+            flag: country?.flag || '🌐'
+          });
+        });
+
+        setContacts(Array.from(uniqueContacts.values()));
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -149,21 +146,25 @@ const WhatsAppChats = () => {
       setLoading(false);
     }
   };
-
   const MessageStatusIcon = ({ status }) => {
+    const getIconStyle = (status) => ({
+      transition: 'all 0.3s ease',
+      animation: status === 'sending' ? 'spin 1s linear infinite' : 'none',
+    });
+
     switch(status?.toLowerCase()) {
       case 'sent':
-        return <FaCheck size={12} color="#667781" />;
+        return <FaCheck size={12} color="#667781" style={getIconStyle(status)} />;
       case 'delivered':
-        return <FaCheckDouble size={12} color="#667781" />;
+        return <FaCheckDouble size={12} color="#667781" style={getIconStyle(status)} />;
       case 'read':
-        return <FaCheckDouble size={12} color="#53bdeb" />;
+        return <FaCheckDouble size={12} color="#53bdeb" style={getIconStyle(status)} />;
       case 'failed':
-        return <FaExclamationTriangle size={12} color="#ef5350" />;
+        return <FaExclamationTriangle size={12} color="#ef5350" style={getIconStyle(status)} />;
       case 'sending':
-        return <FaClock size={12} color="#667781" />;
+        return <FaClock size={12} color="#667781" style={getIconStyle(status)} />;
       default:
-        return <FaCheck size={12} color="#667781" />;
+        return <FaCheck size={12} color="#667781" style={getIconStyle('sent')} />;
     }
   };
 
@@ -214,13 +215,13 @@ const WhatsAppChats = () => {
     setIsNewChatModal(false);
   };
 
-  const sendMessage = async () => {
+   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedUser) return;
 
     const tempId = Date.now().toString();
     const tempMessage = {
       messageId: tempId,
-      businessId: "102953305799075",
+      businessId: businessId,
       from: "923030307660",
       to: selectedUser.phoneNumber,
       messageBody: newMessage,
@@ -230,14 +231,28 @@ const WhatsAppChats = () => {
       sentTimestamp: (Date.now() / 1000).toString()
     };
 
-    // Update UI immediately with temporary message
+    // Update messages immediately
     setMessages(prev => [...prev, tempMessage]);
+    
+    // Update contacts if it's a new contact
+    const existingContact = contacts.find(c => c.phoneNumber === selectedUser.phoneNumber);
+    if (!existingContact) {
+      const country = countryList.find(c => selectedUser.phoneNumber.startsWith(c.code));
+      const newContact = {
+        phoneNumber: selectedUser.phoneNumber,
+        lastMessage: newMessage,
+        timestamp: tempMessage.currentStatusTimestamp,
+        flag: country?.flag || '🌐'
+      };
+      setContacts(prev => [...prev, newContact]);
+    }
+
     setNewMessage("");
     scrollToBottom();
 
     try {
       const response = await axios.post(
-        'http://192.168.100.8:25483/api/v1/messages/send',
+        'http://192.168.0.108:25483/api/v1/messages/send',
         {
           to: selectedUser.phoneNumber,
           body: newMessage
@@ -247,15 +262,20 @@ const WhatsAppChats = () => {
         }
       );
 
-      // The socket will handle the successful message update
+      if (response.data.success && response.data.data.messages) {
+        const actualMessageId = response.data.data.messages[0].id;
+        setMessages(prev => prev.map(msg =>
+          msg.messageId === tempId
+            ? { ...msg, messageId: actualMessageId, status: 'sent' }
+            : msg
+        ));
+      }
     } catch (error) {
       console.error("Error sending message:", error);
-      // Update the temporary message to show failure
       setMessages(prev => prev.map(msg =>
-        msg.messageId === tempId ? {
-          ...msg,
-          status: "failed"
-        } : msg
+        msg.messageId === tempId
+          ? { ...msg, status: "failed", failureReason: error.response?.data?.message || "Failed to send message" }
+          : msg
       ));
     }
   };
@@ -264,50 +284,65 @@ const WhatsAppChats = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const uniqueUsers = React.useMemo(() => {
-    const users = new Map();
+  // First, the uniqueUsers memo remains the same
+const uniqueUsers = React.useMemo(() => {
+  const users = new Map();
+  
+  // First add all contacts
+  contacts.forEach(contact => {
+    if (contact && contact.phoneNumber) {
+      users.set(contact.phoneNumber, contact);
+    }
+  });
+  
+  // Then process messages
+  messages.forEach(msg => {
+    if (!msg) return;
     
-    contacts.forEach(contact => {
-      if (contact?.phoneNumber) {  // Add null check
-        users.set(contact.phoneNumber, contact);
-      }
-    });
+    // Safely determine the number
+    const number = msg.from === "923030307660" ? msg.to : msg.from;
+    if (!number) return;
     
-    messages.forEach(msg => {
-      if (!msg?.from || !msg?.to) return;  // Skip invalid messages
+    if (!users.has(number)) {
+      // Safely find matching country
+      const country = countryList.find(c => 
+        c && c.code && number.startsWith(c.code)
+      );
       
-      const number = msg.from === "923030307660" ? msg.to : msg.from;
-      if (!users.has(number)) {
-        // Safely find matching country code
-        const country = countryList.find(c => 
-          number && c?.code && number.startsWith(c.code)
-        );
-        
-        const newContact = {
-          phoneNumber: number,
-          lastMessage: msg.messageBody || '',
-          timestamp: msg.currentStatusTimestamp || Date.now().toString(),
-          flag: country?.flag || '🌐'
-        };
-        users.set(number, newContact);
-        
-        if (!contacts.some(c => c?.phoneNumber === number)) {
-          setContacts(prev => [...prev, newContact]);
-        }
+      const newContact = {
+        phoneNumber: number,
+        lastMessage: msg.messageBody || "",
+        timestamp: msg.currentStatusTimestamp || (Date.now() / 1000).toString(),
+        flag: (country?.flag) || '🌐'
+      };
+      
+      users.set(number, newContact);
+      
+      // Only update contacts if this is a new number
+      if (!contacts.some(c => c?.phoneNumber === number)) {
+        setContacts(prev => [...prev, newContact]);
       }
+    }
+  });
+  
+  // Convert to array and sort
+  return Array.from(users.values())
+    .filter(user => user && user.phoneNumber && user.timestamp) // Filter out invalid entries
+    .sort((a, b) => {
+      const timestampA = parseInt(a.timestamp) || 0;
+      const timestampB = parseInt(b.timestamp) || 0;
+      return timestampB - timestampA;
     });
-    
-    return Array.from(users.values())
-      .filter(user => user?.phoneNumber)  // Filter out any invalid users
-      .sort((a, b) => parseInt(b.timestamp || '0') - parseInt(a.timestamp || '0'));
-  }, [messages, contacts]);
+}, [messages, contacts]);
 
-
-const filteredUsers = uniqueUsers.filter(user =>
-  user.phoneNumber && searchTerm 
-    ? user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
-    : true
-);
+// Add a new memo for filtered users
+const filteredUsers = React.useMemo(() => {
+  return uniqueUsers.filter(user =>
+    user.phoneNumber && searchTerm 
+      ? user.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
+      : true
+  );
+}, [uniqueUsers, searchTerm]);
 
   const renderNewChatModal = () => (
     <Modal isOpen={isNewChatModal} toggle={() => setIsNewChatModal(false)}>
@@ -672,8 +707,11 @@ const filteredUsers = uniqueUsers.filter(user =>
     );
   };
 
+
+  
+
   return (
-    <div style={{ 
+   <div style={{ 
       height: "100vh", 
       display: "flex",
       flexDirection: "column",
@@ -682,6 +720,7 @@ const filteredUsers = uniqueUsers.filter(user =>
     }}>
       <div>
         <Header />
+        
       </div>
       {renderNewChatModal()}
       <Container 
@@ -717,6 +756,7 @@ const filteredUsers = uniqueUsers.filter(user =>
       )}
     </div>
   );
+  
 };
 
 export default WhatsAppChats;
