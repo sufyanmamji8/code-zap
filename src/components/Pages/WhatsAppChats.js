@@ -4,8 +4,8 @@ import { FaArrowLeft, FaPaperclip, FaPaperPlane, FaCheck, FaCheckDouble, FaClock
 import { Button, Col, Container, Input, Row, Modal, ModalHeader, ModalBody, ModalFooter, Card, CardBody } from "reactstrap";
 import axios from "axios";
 import io from "socket.io-client";
-import Header from "components/Headers/Header";
 import { useLocation } from 'react-router-dom';
+import { MESSAGE_API_ENDPOINT } from "Api/Constant";
 
 const countryList = [
   { code: '92', country: 'Pakistan', flag: '🇵🇰' },
@@ -91,8 +91,7 @@ const WhatsAppChats = () => {
 
     try {
       setLoading(false);
-      const response = await axios.post(
-        'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/getMessages',
+      const response = await axios.post(`${MESSAGE_API_ENDPOINT}/getMessages`,
         {
           businessId: businessId,
           lastTimestamp: null
@@ -158,7 +157,7 @@ const WhatsAppChats = () => {
       case 'sending':
         return <FaClock size={12} color="#667781" style={getIconStyle(status)} />;
       default:
-        return <FaCheck size={12} color="#667781" style={getIconStyle('sent')} />;
+        return <FaCheck size={12} color="#667781" style={getIconStyle('')} />;
     }
   };
 
@@ -167,7 +166,7 @@ const WhatsAppChats = () => {
     const messagesByUser = new Map();
 
     newMessages.forEach(msg => {
-      const userNumber = msg.from === "923030307660" ? msg.to : msg.from;
+      const userNumber = msg.from === config.phoneNumber ? msg.to : msg.from;
       if (!messagesByUser.has(userNumber) || 
           parseInt(msg.currentStatusTimestamp) > parseInt(messagesByUser.get(userNumber).currentStatusTimestamp)) {
         messagesByUser.set(userNumber, msg);
@@ -248,8 +247,7 @@ const WhatsAppChats = () => {
     }, 100);
   
     try {
-      const response = await axios.post(
-        'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/send',
+      const response = await axios.post(`${MESSAGE_API_ENDPOINT}/send`,
         {
           to: selectedUser.phoneNumber,
           body: newMessage,
@@ -264,7 +262,7 @@ const WhatsAppChats = () => {
         const actualMessageId = response.data.data.messages[0].id;
         setMessages(prev => prev.map(msg =>
           msg.messageId === tempId
-            ? { ...msg, messageId: actualMessageId, status: 'sent' }
+            ? { ...msg, messageId: actualMessageId, status: '' }
             : msg
         ));
       }
@@ -302,7 +300,7 @@ const uniqueUsers = React.useMemo(() => {
   messages.forEach(msg => {
     if (!msg) return;
     
-    const number = msg.from === "923030307660" ? msg.to : msg.from;
+    const number = msg.from === config.phoneNumber ? msg.to : msg.from;
     if (!number) return;
     
     if (!users.has(number)) {
@@ -601,6 +599,7 @@ const filteredUsers = React.useMemo(() => {
                 overflowY: "auto",
                 backgroundColor: "#efeae2",
                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+                marginBottom: isMobileView ? "60px" : 0, // Add space for fixed input box in mobile
               }}
             >
               {chatMessages.map((message) => (
@@ -652,9 +651,15 @@ const filteredUsers = React.useMemo(() => {
 
             <div 
               style={{ 
-                padding: "10px", 
+                padding: "10px",
                 backgroundColor: "#f0f0f0",
-                borderTop: "1px solid #e0e0e0" 
+                borderTop: "1px solid #e0e0e0",
+                position: isMobileView ? "fixed" : "relative",
+                bottom: 0,
+                left: isMobileView ? 0 : "auto",
+                right: isMobileView ? 0 : "auto",
+                width: isMobileView ? "100%" : "auto",
+                zIndex: 2,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -729,14 +734,14 @@ const filteredUsers = React.useMemo(() => {
 
   return (
    <div style={{ 
-      height: "100vh", 
+      height: "85vh", 
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
       position: "relative",
     }}>
       <div>
-        <Header />
+        {/* <Header /> */}
         
       </div>
       {renderNewChatModal()}
@@ -744,7 +749,7 @@ const filteredUsers = React.useMemo(() => {
         fluid 
         style={{ 
           flex: 1,
-          padding: "20px 15px 0 15px",
+          padding: "18px 15px 0 15px",
           minHeight: 0,
           zIndex: 1,
         }}

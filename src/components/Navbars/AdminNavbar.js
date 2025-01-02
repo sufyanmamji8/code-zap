@@ -1,4 +1,3 @@
-import Header from "components/Headers/Header";
 import { Link, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -10,72 +9,244 @@ import {
   Container,
   Media,
 } from "reactstrap";
-import { toast } from "sonner";  // Importing the toast library
+import { toast } from "sonner";
+import { useState, useEffect } from "react";
 
-const AdminNavbar = (props) => {
-  const navigate = useNavigate();
-
-  // Handle the log out process and show the success toast
- const handleLogOut = () => {
-  localStorage.removeItem("token"); 
-  sessionStorage.removeItem("phoneId"); // Remove configuration data from sessionStorage
-  sessionStorage.removeItem("accountId");
-  sessionStorage.removeItem("accessToken"); 
-  sessionStorage.removeItem("callbackUrl");  // Remove configuration data from sessionStorage
-  navigate("/auth/login"); // Redirect to login page
-  toast.success("Logout Sucessfully")
+const styles = {
+  avatar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '36px',
+    height: '36px',
+    padding: '2px',
+    borderRadius: '50%',
+    cursor: 'pointer'
+  },
+  mobileNavbarContainer: {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    right: '0',
+    height: '60px',
+    background: 'white',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '0 1rem',
+    zIndex: 1000,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+  },
+  navbarContainer: {
+    background: 'linear-gradient(180deg, #00BCD4 0%, #2196F3 100%)',
+    width: 'calc(100% - 2rem)',
+    padding: '0.5rem',
+    position: 'relative',
+    margin: '0.5rem',
+    borderRadius: '12px',
+    zIndex: 1000
+  },
+  mobileMenu: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem'
+  },
+  dropdownMenu: {
+    zIndex: 1050,
+    position: 'absolute',
+    minWidth: '160px',
+    right: 0,
+    top: '100%'
+  },
+  avatarImage: {
+    maxWidth: '100%',
+    height: 'auto',
+    borderRadius: '50%',
+    objectFit: 'cover'
+  },
+  menuButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '40px',
+    height: '40px',
+    background: 'none',
+    border: 'none',
+    padding: '8px',
+    cursor: 'pointer'
+  },
+  hamburgerIcon: {
+    width: '24px',
+    height: '24px',
+    position: 'relative',
+    cursor: 'pointer'
+  },
+  hamburgerBar: {
+    width: '100%',
+    height: '2px',
+    backgroundColor: '#000',
+    position: 'absolute',
+    left: 0,
+    transition: 'all 0.3s ease'
+  }
 };
 
-  return (
-    <>
-    
-      <Navbar className="navbar-top navbar-respons  navbar-dark" expand="md" id="navbar-main">
-        <Container fluid>
-          <Link
-            className="h4 mb-0 text-white text-uppercase  d-lg-inline-block"
-            to="/"
-          >
-            {props.brandText}
-          </Link>
+const AdminNavbar = ({ brandText, sidebarOpen, onToggleSidebar }) => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const navigate = useNavigate();
 
-          <Nav className="align-items-center  d-md-flex" navbar>
-            <UncontrolledDropdown nav>
-              <DropdownToggle className="pr-0" nav>
-                <Media className="align-items-center">
-                  <span className="avatar avatar-sm rounded-circle">
-                    <img
-                      alt="..."
-                      src={require("../../assets/img/theme/team-2-800x800.jpg")}
-                    />
-                  </span>
-                  {/* <Media className="ml-2  d-lg-block">
-                    <span className="mb-0 text-sm font-weight-bold">
-                     CodoZap
-                    </span>
-                  </Media> */}
-                </Media>
-              </DropdownToggle>
-              <DropdownMenu className="dropdown-menu-arrow" right>
-                <DropdownItem className="noti-title" header tag="div">
-                  <h6 className="text-overflow m-0">Welcome!</h6>
-                </DropdownItem>
-                <DropdownItem to="/admin/user-profile" tag={Link}>
-                  <i className="ni ni-single-02" />
-                  <span>My profile</span>
-                </DropdownItem>
-                <DropdownItem divider />
-                <DropdownItem onClick={handleLogOut}>
-                  <i className="ni ni-user-run" />
-                  <span>Logout</span>
-                </DropdownItem>
-              </DropdownMenu>
-            </UncontrolledDropdown>
-          </Nav>
-        </Container>
-      </Navbar>
-      
-    </>
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  
+
+  const handleLogOut = () => {
+    const itemsToClear = [
+      "token",
+      "phoneId",
+      "accountId",
+      "accessToken",
+      "callbackUrl"
+    ];
+    
+    itemsToClear.forEach(item => {
+      localStorage.removeItem(item);
+      sessionStorage.removeItem(item);
+    });
+
+    navigate("/auth/login");
+    toast.success("Logout Successfully");
+  };
+
+  const HamburgerIcon = () => (
+    <div style={{
+      ...styles.hamburgerIcon,
+      transform: sidebarOpen ? 'rotate(90deg)' : 'none',
+      transition: 'transform 0.3s ease'
+    }}>
+      <span style={{
+        ...styles.hamburgerBar,
+        top: sidebarOpen ? '11px' : '2px',
+        transform: sidebarOpen ? 'rotate(45deg)' : 'none'
+      }} />
+      <span style={{
+        ...styles.hamburgerBar,
+        top: '11px',
+        opacity: sidebarOpen ? 0 : 1
+      }} />
+      <span style={{
+        ...styles.hamburgerBar,
+        top: sidebarOpen ? '11px' : '20px',
+        transform: sidebarOpen ? 'rotate(-45deg)' : 'none'
+      }} />
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div style={styles.mobileNavbarContainer}>
+        <button 
+          style={styles.menuButton}
+          onClick={onToggleSidebar}
+          aria-label="Toggle sidebar"
+        >
+          <HamburgerIcon />
+        </button>
+        
+        <div style={styles.mobileMenu}>
+          <UncontrolledDropdown>
+            <DropdownToggle nav className="p-0">
+              <Media className="align-items-center">
+                <span style={styles.avatar}>
+                  <img
+                    alt="Profile"
+                    src={require("../../assets/img/theme/team-2-800x800.jpg")}
+                    style={styles.avatarImage}
+                  />
+                </span>
+              </Media>
+            </DropdownToggle>
+            <DropdownMenu right style={styles.dropdownMenu}>
+              <DropdownItem className="noti-title" header tag="div">
+                <h6 className="text-overflow m-0">Welcome!</h6>
+              </DropdownItem>
+              <DropdownItem to="/admin/user-profile" tag={Link}>
+                <i className="ni ni-single-02" />
+                <span>My profile</span>
+              </DropdownItem>
+              <DropdownItem divider />
+              <DropdownItem onClick={handleLogOut}>
+                <i className="ni ni-user-run" />
+                <span>Logout</span>
+              </DropdownItem>
+            </DropdownMenu>
+          </UncontrolledDropdown>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Navbar 
+      className="navbar-top navbar-dark" 
+      expand="md" 
+      id="navbar-main" 
+      style={styles.navbarContainer}
+    >
+      <Container fluid style={{ padding: 0 }}>
+        <Link
+          className="h4 mb-0 text-white text-uppercase d-lg-inline-block"
+          to="/"
+        >
+          {brandText}
+        </Link>
+
+        <Nav className="align-items-center d-md-flex ml-auto" navbar>
+          <UncontrolledDropdown nav>
+            <DropdownToggle className="pr-0" nav>
+              <Media className="align-items-center">
+                <span style={styles.avatar}>
+                  <img
+                    alt="Profile"
+                    src={require("../../assets/img/theme/team-2-800x800.jpg")}
+                    style={styles.avatarImage}
+                  />
+                </span>
+              </Media>
+            </DropdownToggle>
+            <DropdownMenu right style={styles.dropdownMenu}>
+              <DropdownItem className="noti-title" header tag="div">
+                <h6 className="text-overflow m-0">Welcome!</h6>
+              </DropdownItem>
+              <DropdownItem to="/admin/user-profile" tag={Link}>
+                <i className="ni ni-single-02" />
+                <span>My profile</span>
+              </DropdownItem>
+              <DropdownItem divider />
+              <DropdownItem onClick={handleLogOut}>
+                <i className="ni ni-user-run" />
+                <span>Logout</span>
+              </DropdownItem>
+            </DropdownMenu>
+          </UncontrolledDropdown>
+        </Nav>
+      </Container>
+    </Navbar>
   );
 };
 
 export default AdminNavbar;
+
+
+
+
+
+
+
+

@@ -4,7 +4,7 @@ import React from 'react'
 const WhatsAppCampaigns = () => {
   return (
     <div>
-      <Header/>
+      {/* <Header/> */}
     </div>
   )
 }

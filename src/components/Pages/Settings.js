@@ -95,7 +95,7 @@ const Settings = () => {
 
   return (
     <div>
-      <Header />
+      {/* <Header /> */}
       <div className="settings-header">
         <h2>WhatsApp Configuration</h2>
         <h4>Configure your WhatsApp Business Account</h4>

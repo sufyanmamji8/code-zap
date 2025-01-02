@@ -12,7 +12,7 @@ import Header from "components/Headers/Header.js";
 const Templates = () => {
   return (
     <>
-      <Header />
+      {/* <Header /> */}
       {/* Page content */}
       
     </>

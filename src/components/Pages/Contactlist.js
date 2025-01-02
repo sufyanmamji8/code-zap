@@ -11,7 +11,7 @@ const Contactlist = () => {
 
   return (
     <div>
-      <Header />
+      {/* <Header /> */}
       
       {/* Search Bar Section */}
       <div className="search-bar-container">

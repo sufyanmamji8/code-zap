@@ -17,7 +17,7 @@ const AgentsList = () => {
 
   return (
     <div>
-      <Header />
+      {/* <Header /> */}
 
       {/* Search Bar with Go Button */}
       <div className="search-bar-container">

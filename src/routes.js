@@ -140,12 +140,12 @@ var routes = [
     layout: "/admin",
     showInSidebar: false,
   }, {
-    path: "/User-profile",
-    name: "Userprofile",
-    icon: "ni ni-single-02",
-    component: <AdminNavbar />,
-    layout: "/admin",
-    showInSidebar: false,
+    // path: "/User-profile",
+    // name: "Userprofile",
+    // icon: "ni ni-single-02",
+    // component: <AdminNavbar />,
+    // layout: "/admin",
+    // showInSidebar: false,
   },
 ];
 

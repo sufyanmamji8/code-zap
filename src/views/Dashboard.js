@@ -142,7 +142,7 @@ const Dashboard = () => {
 
   return (
     <>
-      <Header />
+      {/* <Header /> */}
       
       {/* Welcome Message */}
       <div className="dashboard-header">

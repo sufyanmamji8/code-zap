@@ -29,7 +29,7 @@ const AgentsAdd = () => {
 
   return (
     <div>
-      <Header />
+      {/* <Header /> */}
       <div className="agents-add-container">
         {/* Heading and Back Button */}
         <div className="heading-container">

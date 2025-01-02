@@ -113,7 +113,7 @@ const EditCompany = () => {
 
   return (
     <>
-      <Header />
+      {/* <Header /> */}
       <div className="container mt-4">
         <h2 className="text-center mb-4" style={{ fontWeight: "bold", color: "#0d6efd" }}>
           Edit WhatsApp Account

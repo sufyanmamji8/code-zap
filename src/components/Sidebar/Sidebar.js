@@ -19,12 +19,68 @@ import {
 } from "reactstrap";
 import { toast } from "sonner";
 
+
+const styles = {
+  sidebarWrapper: {
+    position: 'relative',
+    zIndex: 999,
+  },
+  mobileOverlay: {
+    position: 'fixed',
+    top: '60px',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 998,
+    display: 'none',
+  },
+  mobileSidebarOpen: {
+    display: 'block',
+  },
+  navbar: {
+    '@media (max-width: 768px)': {
+      position: 'fixed',
+      top: '60px',
+      left: '-280px',
+      bottom: 0,
+      width: '280px',
+      transition: 'left 0.3s ease',
+      overflow: 'auto',
+    }
+  },
+  navbarOpen: {
+    '@media (max-width: 768px)': {
+      left: 0,
+    }
+  },
+  brand: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    padding: '1rem',
+  },
+  brandImage: {
+    height: '40px',
+    width: 'auto',
+    marginRight: '1rem',
+  },
+  brandTitle: {
+    margin: 0,
+    fontSize: '1.5rem',
+    color: '#32325d',
+  }
+};
+
+
 const Sidebar = (props) => {
   const [collapseOpen, setCollapseOpen] = useState(false);
   const [isWhatsAppView, setIsWhatsAppView] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  
+  
   
   // WhatsApp specific routes
   const whatsAppRoutes = [

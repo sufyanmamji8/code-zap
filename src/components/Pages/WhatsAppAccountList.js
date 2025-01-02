@@ -116,7 +116,7 @@ const WhatsAppAccountList = () => {
 
   return (
     <div>
-      <Header />
+      {/* <Header /> */}
       <h1 className="display-4 text-center my-4" style={{ fontWeight: "bold", color: "#343a40" }}>
         WhatsApp Accounts List
       </h1>
