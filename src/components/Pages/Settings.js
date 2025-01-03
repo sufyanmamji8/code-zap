@@ -52,7 +52,8 @@ const Settings = () => {
         }
 
         const response = await axios.post(
-          'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/save-configuration',
+          // 'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/save-configuration',
+          'http://192.168.0.109:25483/api/v1/configuration/save-configuration',
           {
             companyId,
             phoneNumberId: phoneId,

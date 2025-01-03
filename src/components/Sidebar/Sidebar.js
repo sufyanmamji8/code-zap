@@ -69,7 +69,26 @@ const styles = {
     margin: 0,
     fontSize: '1.5rem',
     color: '#32325d',
+  },
+  '@media (max-width: 768px)': {
+    '.navbar-collapse': {
+      position: 'fixed',
+      top: '60px',
+      left: 0,
+      width: '250px',
+      height: 'calc(100vh - 60px)',
+      backgroundColor: 'white',
+      paddingLeft: '15px',
+      paddingRight: '15px',
+      overflowY: 'auto',
+      transition: 'transform 0.3s ease',
+      transform: 'translateX(-100%)'
+    },
+    '.navbar-collapse.show': {
+      transform: 'translateX(0)'
+    }
   }
+  
 };
 
 
@@ -79,7 +98,6 @@ const Sidebar = (props) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  
   
   
   // WhatsApp specific routes
@@ -366,3 +384,13 @@ Sidebar.propTypes = {
 };
 
 export default Sidebar;
+
+
+
+
+
+
+
+
+
+
