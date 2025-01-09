@@ -1,179 +1,188 @@
-import React, { useState, useEffect, useRef } from "react";
-// ... (keep existing imports)
+// Update the useEffect for socket message handling to properly update contacts
+useEffect(() => {
+  if (!socket || !businessId) return;
 
-const WhatsAppChats = () => {
-  // ... (keep all existing state and functions until renderChatWindow)
-
-  const formatMessageDate = (timestamp) => {
-    const messageDate = new Date(parseInt(timestamp) * 1000);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (messageDate.toDateString() === today.toDateString()) {
-      return "Today";
-    } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return "Yesterday";
-    } else {
-      return messageDate.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-    }
-  };
-
-  const groupMessagesByDate = (messages) => {
-    const groups = {};
-    messages.forEach(message => {
-      const date = new Date(parseInt(message.currentStatusTimestamp) * 1000).toDateString();
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(message);
-    });
-    return groups;
-  };
-
-  const renderChatWindow = () => {
-    const chatMessages = selectedUser ? 
-      messages.filter(msg => 
-        msg.from === selectedUser.phoneNumber || msg.to === selectedUser.phoneNumber
-      ) : [];
-
-    const groupedMessages = groupMessagesByDate(chatMessages);
+  socket.on(`onmessagerecv-${businessId}`, (data) => {
+    console.log(`Message from server:${businessId}`, data);
     
-    return (
-      <Col
-        xs="12"
-        md="8"
-        style={{
-          height: "calc(100vh - 100px)",
-          display: "flex",
-          flexDirection: "column",
-          backgroundColor: "#f4f8fb",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* ... (keep existing header code) */}
+    // Update messages
+    fetchInitialMessages();
+    
+    // Update contacts with new message
+    setContacts(prevContacts => {
+      const newContacts = [...prevContacts];
+      const contactIndex = newContacts.findIndex(c => 
+        c.phoneNumber === (data.from === config.phoneNumber ? data.to : data.from)
+      );
+      
+      if (contactIndex !== -1) {
+        // Update existing contact
+        const updatedContact = {
+          ...newContacts[contactIndex],
+          lastMessage: data.messageBody,
+          timestamp: data.currentStatusTimestamp,
+          senderName: data.senderName || newContacts[contactIndex].senderName
+        };
+        newContacts.splice(contactIndex, 1); // Remove old position
+        newContacts.unshift(updatedContact); // Add to top
+      } else {
+        // Add new contact
+        const country = countryList.find(c => data.from.startsWith(c.code));
+        const newContact = {
+          phoneNumber: data.from === config.phoneNumber ? data.to : data.from,
+          lastMessage: data.messageBody,
+          timestamp: data.currentStatusTimestamp,
+          senderName: data.senderName || "Unknown",
+          flag: country?.flag || '🌐'
+        };
+        newContacts.unshift(newContact);
+      }
+      
+      return newContacts;
+    });
+  });
 
-        <div
-          style={{
-            flex: 1,
-            padding: "20px",
-            overflowY: "auto",
-            backgroundColor: "#efeae2",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-            marginBottom: isMobileView ? "60px" : 0,
-          }}
-        >
-          {Object.entries(groupedMessages).map(([date, dateMessages]) => (
-            <div key={date}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                margin: '20px 0',
-                position: 'relative',
-              }}>
-                <div style={{
-                  backgroundColor: '#E1F2FA',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  color: '#54656f',
-                  boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
-                  fontWeight: '500',
-                }}>
-                  {formatMessageDate(dateMessages[0].currentStatusTimestamp)}
-                </div>
-              </div>
+  return () => {
+    socket.off(`onmessagerecv-${businessId}`);
+  };
+}, [socket, businessId]);
 
-              {dateMessages.map((message) => {
-                const isReceived = message.from === selectedUser.phoneNumber;
-                return (
-                  <div
-                    key={message.messageId}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: isReceived ? "flex-start" : "flex-end",
-                      marginBottom: "12px",
-                      position: "relative"
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "relative",
-                        maxWidth: "70%",
-                        padding: "10px 14px",
-                        backgroundColor: isReceived ? "#fff" : "#dcf8c6",
-                        borderRadius: "12px",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-                        borderTopLeftRadius: isReceived ? "0" : "12px",
-                        borderTopRightRadius: isReceived ? "12px" : "0",
-                      }}
-                    >
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          [isReceived ? "left" : "right"]: -8,
-                          width: "8px",
-                          height: "16px",
-                          backgroundColor: isReceived ? "#fff" : "#dcf8c6",
-                          clipPath: isReceived ? 
-                            "polygon(100% 0, 0 0, 100% 100%)" : 
-                            "polygon(0 0, 100% 0, 0 100%)"
-                        }}
-                      />
-                      
-                      <div style={{ 
-                        fontSize: "14px", 
-                        color: "#303030",
-                        marginRight: "24px",
-                        lineHeight: "1.4",
-                        wordBreak: "break-word"
-                      }}>
-                        {message.messageBody}
-                      </div>
-                      
-                      <div style={{ 
-                        fontSize: "11px", 
-                        color: "#667781", 
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end",
-                        gap: "4px",
-                        marginTop: "4px"
-                      }}>
-                        <span>
-                          {new Date(parseInt(message.currentStatusTimestamp) * 1000)
-                            .toLocaleTimeString([], { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                        </span>
-                        {!isReceived && (
-                          <MessageStatusIcon status={message.status} />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-          <div ref={chatEndRef} />
-        </div>
+// Update sendMessage function to handle contact updates
+const sendMessage = async () => {
+  if (!newMessage.trim() || !selectedUser || !config?.phoneNumber || !companyId) return;
 
-        {/* ... (keep existing input area code) */}
-      </Col>
-    );
+  const tempId = Date.now().toString();
+  const tempMessage = {
+    messageId: tempId,
+    businessId: businessId,
+    from: config.phoneNumber,
+    to: selectedUser.phoneNumber,
+    messageBody: newMessage,
+    type: "text",
+    status: "sending",
+    currentStatusTimestamp: (Date.now() / 1000).toString(),
+    sentTimestamp: (Date.now() / 1000).toString(),
+    senderName: selectedUser.senderName || "Unknown"
   };
 
-  // ... (keep rest of the component code)
+  setMessages(prev => [...prev, tempMessage]);
+
+  // Update contacts list
+  setContacts(prevContacts => {
+    const newContacts = [...prevContacts];
+    const contactIndex = newContacts.findIndex(c => c.phoneNumber === selectedUser.phoneNumber);
+    
+    if (contactIndex !== -1) {
+      // Update existing contact
+      const updatedContact = {
+        ...newContacts[contactIndex],
+        lastMessage: newMessage,
+        timestamp: tempMessage.currentStatusTimestamp
+      };
+      newContacts.splice(contactIndex, 1); // Remove from old position
+      newContacts.unshift(updatedContact); // Add to top
+    } else {
+      // Add new contact
+      const country = countryList.find(c => selectedUser.phoneNumber.startsWith(c.code));
+      const newContact = {
+        ...selectedUser,
+        lastMessage: newMessage,
+        timestamp: tempMessage.currentStatusTimestamp,
+        flag: country?.flag || '🌐'
+      };
+      newContacts.unshift(newContact);
+    }
+    
+    return newContacts;
+  });
+
+  setNewMessage("");
+  setTimeout(() => scrollToBottom(), 100);
+
+  try {
+    const response = await axios.post(
+      `${MESSAGE_API_ENDPOINT}/send`,
+      {
+        to: selectedUser.phoneNumber,
+        body: newMessage,
+        companyId: companyId
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    if (response.data.success && response.data.data.messages) {
+      const actualMessageId = response.data.data.messages[0].id;
+      setMessages(prev => prev.map(msg =>
+        msg.messageId === tempId
+          ? { ...msg, messageId: actualMessageId, status: 'sent' }
+          : msg
+      ));
+    }
+  } catch (error) {
+    console.error("Error sending message:", error);
+    setMessages(prev => prev.map(msg =>
+      msg.messageId === tempId
+        ? { ...msg, status: "failed", failureReason: error.response?.data?.message || "Failed to send message" }
+        : msg
+    ));
+  }
 };
 
-export default WhatsAppChats;
+// Add a socket listener for message status updates
+useEffect(() => {
+  if (!socket || !businessId) return;
+
+  socket.on(`messageStatus-${businessId}`, (data) => {
+    setMessages(prev => prev.map(msg =>
+      msg.messageId === data.messageId
+        ? { ...msg, status: data.status }
+        : msg
+    ));
+  });
+
+  return () => {
+    socket.off(`messageStatus-${businessId}`);
+  };
+}, [socket, businessId]);
+
+// Update the fetchInitialMessages function to include sender names
+const fetchInitialMessages = async () => {
+  if (!businessId || !selectedUser) return;
+  
+  try {
+    setLoading(true);
+    const response = await axios.post(
+      `${MESSAGE_API_ENDPOINT}/getMessages`,
+      {
+        businessId: businessId,
+        from: selectedUser.phoneNumber,
+        lastTimestamp: null
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    if (response.data.success) {
+      setMessages(response.data.data);
+      
+      // Update sender name if available
+      if (response.data.data.length > 0) {
+        const latestMessage = response.data.data[0];
+        if (latestMessage.senderName) {
+          setContacts(prev => prev.map(contact =>
+            contact.phoneNumber === selectedUser.phoneNumber
+              ? { ...contact, senderName: latestMessage.senderName }
+              : contact
+          ));
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+  } finally {
+    setLoading(false);
+  }
+};
