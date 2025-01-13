@@ -117,7 +117,7 @@ const Sidebar = (props) => {
     ]},
     { name: "Templates", icon: "ni ni-single-copy-04", path: "/templates", layout: "/admin" },
     { name: "Campaign", icon: "ni ni-notification-70", path: "/campaign", layout: "/admin" },
-    { name: "Settings", icon: "fa fa-cog", path: "/settings", layout: "/admin" },
+    // { name: "Settings", icon: "fa fa-cog", path: "/settings", layout: "/admin" },
   ];
 
   // Default routes

@@ -15,6 +15,7 @@ import AgentsAdd from "components/Pages/AgentsAdd";
 import Settings from "components/Pages/Settings";
 import Contactlist from "components/Pages/Contactlist";
 import AdminNavbar from "components/Navbars/AdminNavbar";
+import WhatsAppTemplates from "components/Pages/WhatsAppTemplates";
 
 var routes = [
   {
@@ -45,20 +46,20 @@ var routes = [
     component: <WhatsApp />,
     layout: "/admin",
   },
-  {
-    path: "/templates",
-    name: "Templates",
-    icon: "ni ni-folder-17 text-gray",
-    component: <Templates />,
-    layout: "/admin",
-  },
-  {
-    path: "/campaign",
-    name: "Campaigns",
-    icon: "ni ni-send text-gray",
-    component: <Campaign />,
-    layout: "/admin",
-  },
+  // {
+  //   path: "/templates",
+  //   name: "Templates",
+  //   icon: "ni ni-folder-17 text-gray",
+  //   component: <Templates />,
+  //   layout: "/admin",
+  // },
+  // {
+  //   path: "/campaign",
+  //   name: "Campaigns",
+  //   icon: "ni ni-send text-gray",
+  //   component: <Campaign />,
+  //   layout: "/admin",
+  // },
   
   {
     path: "/getCompanyById/:id",
@@ -139,7 +140,16 @@ var routes = [
     component: <Contactlist />,
     layout: "/admin",
     showInSidebar: false,
-  }, {
+  },{
+    path: "/templates",
+    name: "Templates",
+    icon: "ni ni-single-02",
+    component: <WhatsAppTemplates />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  
+  {
     // path: "/User-profile",
     // name: "Userprofile",
     // icon: "ni ni-single-02",
