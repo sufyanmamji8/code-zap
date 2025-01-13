@@ -365,7 +365,7 @@ const Settings = () => {
         }
 
         const response = await axios.post(
-          'http://192.168.0.103:25483/api/v1/configuration/check-configuration',
+          'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/check-configuration',
           { companyId },
           {
             headers: {
