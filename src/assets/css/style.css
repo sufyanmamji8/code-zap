@@ -45,6 +45,13 @@
     }
 }
 
+@media only screen and (max-width: 578px){
+    .chat-remove {
+        /* height: 100vh !important; */
+   
+    }
+}
+
 .navbar-top .container-fluid {
     justify-content: end;
 }

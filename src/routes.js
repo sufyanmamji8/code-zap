@@ -16,6 +16,7 @@ import Settings from "components/Pages/Settings";
 import Contactlist from "components/Pages/Contactlist";
 import AdminNavbar from "components/Navbars/AdminNavbar";
 import WhatsAppTemplates from "components/Pages/WhatsAppTemplates";
+import WhatsAppAnalytics from "components/Pages/WhatsAppAnalytics";
 
 var routes = [
   {
@@ -145,6 +146,14 @@ var routes = [
     name: "Templates",
     icon: "ni ni-single-02",
     component: <WhatsAppTemplates />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/analytics",
+    name: "Analytics",
+    icon: "ni ni-single-02",
+    component: <WhatsAppAnalytics />,
     layout: "/admin",
     showInSidebar: false,
   },

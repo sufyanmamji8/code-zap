@@ -41,7 +41,7 @@ const styles = {
     background: 'linear-gradient(180deg, #00BCD4 0%, #2196F3 100%)',
     width: 'calc(100% - 2rem)',
     padding: '0.5rem',
-    position: 'relative',
+    position: 'sticky',
     margin: '0.5rem',
     borderRadius: '12px',
     zIndex: 1000
