@@ -57,7 +57,7 @@ const WhatsAppTemplates = () => {
       try {
         setIsLoading(true);
         const response = await axios.post(
-          "http://192.168.0.105:25483/api/v1/messages/fetchTemplates",
+          "http://192.168.0.108:25483/api/v1/messages/fetchTemplates",
           {
             companyId: companyId,
           },
@@ -115,7 +115,7 @@ const WhatsAppTemplates = () => {
 
   // Handle row click to navigate to analytics
   const handleRowClick = (template) => {
-    navigate("/admin/analytics", {
+    navigate("/admin/send-template", {
       state: {
         companyId,
         companyName,

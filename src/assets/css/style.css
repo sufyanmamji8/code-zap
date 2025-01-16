@@ -1,6 +1,11 @@
 .navbar-respons {
     padding: 4px 0 0 0 !important;
 }
+.message.sent {
+    max-width: 100% !important;
+}
+
+
 
 /* Medium devices (landscape tablets, 768px and up) */
 @media only screen and (max-width: 767px) {
@@ -46,8 +51,12 @@
 }
 
 @media only screen and (max-width: 578px){
-    .chat-remove {
-        /* height: 100vh !important; */
+    .style-height {
+        height: 100vh !important;
+   
+    }
+    .screen-height {
+        height: 100vh !important;
    
     }
 }

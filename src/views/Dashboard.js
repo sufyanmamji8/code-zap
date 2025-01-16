@@ -1,17 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Button,
-  Card,
-  CardBody,
-  CardTitle,
-  CardText,
-  Row,
-  Col,
-  Container,
-  Badge,
-  Spinner
-} from "reactstrap";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { Button, Card, CardBody, CardTitle, CardText, Row, Col, Container, Badge } from "reactstrap";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
@@ -23,6 +11,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
+  const [selectedCard, setSelectedCard] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,7 +36,7 @@ const Dashboard = () => {
   const checkConfiguration = async (companyId, token) => {
     try {
       const response = await axios.post(
-        `http://192.168.0.105:25483/api/v1/configuration/check-configuration`,
+        `http://192.168.0.108:25483/api/v1/configuration/check-configuration`,
         { companyId },
         {
           headers: {
@@ -126,7 +115,7 @@ const handleOpenWhatsApp = async (companyId, companyName) => {
     }
 
     const response = await axios.post(
-      `http://192.168.0.105:25483/api/v1/configuration/check-configuration`,
+      `http://192.168.0.108:25483/api/v1/configuration/check-configuration`,
       { companyId},
       {
         headers: {
@@ -205,53 +194,49 @@ const handleOpenWhatsApp = async (companyId, companyName) => {
   const StatusBadge = ({ status }) => (
     <Badge
       color={status === "active" ? "success" : "danger"}
-      className="px-3 py-2 text-uppercase fw-bold"
-      style={{ fontSize: "0.7rem", letterSpacing: "0.05em" }}
+      className="status-badge px-3 py-2 text-uppercase fw-bold"
     >
-      {status}
+      {status === "active" ? "🟢 Active" : "🔴 Inactive"}
     </Badge>
   );
 
   const AccountCard = ({ account }) => (
-    <Card className="h-100 border-0 account-card">
-      <CardBody className="d-flex flex-column">
-        {/* Title and Status */}
+    <Card 
+      className={`fun-card h-100 border-0 ${selectedCard === account._id ? 'selected' : ''}`}
+      onClick={() => setSelectedCard(account._id)}
+    >
+      <CardBody className="d-flex flex-column position-relative">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <CardTitle tag="h5" className="mb-0 fw-bold text-primary">
             {account.name}
           </CardTitle>
           <StatusBadge status={account.status} />
         </div>
-  
-        {/* Description */}
+
         <CardText className="text-muted flex-grow-1">
           {account.description || "No description available"}
         </CardText>
-  
-        {/* Meta Info */}
+
         <div className="meta-info mb-3">
           <small className="text-muted d-flex align-items-center">
-            <i className="fas fa-calendar-alt me-2"></i>
+            <span className="me-2" role="img" aria-label="calendar">📅</span>
             Created: {formatDate(account.createdAt)}
           </small>
         </div>
-  
-        {/* Buttons */}
-        <div className="button-group d-flex flex-column">
+
+        <div className="button-group d-flex gap-2">
           <Button
             onClick={() => handleOpenWhatsApp(account._id, account.name)}
-            className="whatsapp-btn mb-2"
+            className="fun-button whatsapp-btn flex-grow-1"
           >
-            <i className="fab fa-whatsapp me-2"></i>
             Open WhatsApp
           </Button>
-  
+
           {accountConfigs[account._id] && (
             <Button
               onClick={() => handleEditConfiguration(account._id)}
-              className="config-btn"
+              className="fun-button config-btn flex-grow-1"
             >
-              <i className="fas fa-cog me-2"></i>
               Edit Config
             </Button>
           )}
@@ -259,42 +244,44 @@ const handleOpenWhatsApp = async (companyId, companyName) => {
       </CardBody>
     </Card>
   );
-  
 
   const EmptyState = () => (
-    <div className="text-center py-5 empty-state">
-      <i className="fas fa-inbox fa-3x mb-3 text-muted"></i>
-      <h4 className="text-muted">No WhatsApp Accounts Found</h4>
-      <p className="text-muted mb-0">No business accounts are currently available.</p>
+    <div className="empty-state text-center py-5">
+      <div className="empty-animation mb-4">
+        <span role="img" aria-label="empty" className="empty-emoji">📱</span>
+        <span role="img" aria-label="empty" className="empty-emoji">💭</span>
+        <span role="img" aria-label="empty" className="empty-emoji">❓</span>
+      </div>
+      <h4 className="text-primary">No WhatsApp Accounts Yet!</h4>
+      <p className="text-muted">Time to add your first business account!</p>
     </div>
   );
 
   return (
-    <Container fluid className="px-4 dashboard-container">
-      <div className="dashboard-header text-center py-4 mb-4">
-        <h1 className="display-4 fw-bold text-gradient mb-3">
-          Welcome Back, {userName || "User"}
+    <Container fluid className="dashboard-container px-4">
+      <div className="fun-header text-center py-4 mb-4">
+        <h1 className="display-4 fw-bold fun-gradient mb-3">
+          Welcome Back, {userName || "Friend"}
         </h1>
         <h2 className="h3 text-muted fw-light">
-          WhatsApp Business Accounts
+          Your WhatsApp Business Hub
+          <span role="img" aria-label="rocket" className="ms-2">🚀</span>
         </h2>
       </div>
 
       {error && (
-        <div className="alert alert-danger text-center mx-auto mb-4" style={{ maxWidth: "800px" }}>
+        <div className="fun-alert alert mx-auto mb-4">
+          <span role="img" aria-label="warning" className="me-2">⚠️</span>
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="d-flex flex-column align-items-center justify-content-center py-5">
-          <DotLottieReact
-            src="https://lottie.host/9b89015f-9958-43d9-a7c5-39fe7e494a08/eADyK0IzIX.lottie"
-            loop
-            autoplay
-            style={{ width: '150px', height: '150px' }}
-          />
-          <p className="text-muted mt-3 h5">Loading your accounts...</p>
+        <div className="loading-state text-center py-5">
+          <div className="loading-emoji">
+            <span role="img" aria-label="loading" className="loading-bounce">⏳</span>
+          </div>
+          <p className="text-muted mt-3 h5">Loading your  Whatsapp accounts...</p>
         </div>
       ) : (
         <Row className="g-4">
@@ -317,69 +304,143 @@ const handleOpenWhatsApp = async (companyId, companyName) => {
           .dashboard-container {
             max-width: 1400px;
             margin: 0 auto;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
+            min-height: 100vh;
+            padding-top: 2rem;
           }
 
-          .text-gradient {
-            background: linear-gradient(45deg, #1a73e8, #34a853);
+          .fun-gradient {
+            background: linear-gradient(45deg, #25D366, #128C7E);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
           }
 
-          .dashboard-header {
-            background: linear-gradient(to right, #f8f9fa, #e9ecef);
-            border-radius: 1rem;
-            margin: 1rem 0;
+          .fun-header {
+            background: white;
+            border-radius: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
           }
 
-          .account-card {
-  border-radius: 1rem;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+          .fun-card {
+            border-radius: 1rem;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+          }
+
+          .fun-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+          }
+
+          .fun-card.selected {
+            border: 3px solid #25D366;
+            transform: translateY(-8px);
+          }
+
+          .fun-button {
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 0.60rem;
+    transition: all 0.3s ease;
+    border: none;
+    text-align: center;
+    display: inline-flex
+;
+    align-items: center;
+    justify-content: center;
 }
 
-.account-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
+          .whatsapp-btn {
+            background: #25D366;
+            color: white;
+          }
 
-/* Buttons Styling */
-.whatsapp-btn {
-  background-color: #25D366;
-  border: none;
-  color: #fff;
-  font-weight: 600;
-  border-radius: 0.5rem;
-  padding: 0.8rem;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-}
+          .config-btn {
+            background: #128C7E;
+            color: white;
+          }
 
-.whatsapp-btn:hover {
-  background-color:rgb(255, 255, 255);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
+          .fun-button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          }
 
-.config-btn {
-  background-color: #1a73e8;
-  border: none;
-  color: #fff;
-  font-weight: 600;
-  border-radius: 0.5rem;
-  padding: 0.8rem;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-}
+          .status-badge {
+            border-radius: 1rem;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+          }
 
-.config-btn:hover {
-  background-color:rgb(255, 255, 255);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
+          .empty-state {
+            background: white;
+            border-radius: 2rem;
+            padding: 3rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+          }
 
-/* Add Gap for Mobile View */
-@media (max-width: 576px) {
-  .row.g-4 > * {
-    margin-bottom: 1rem; /* Add gap between cards */
-  }
-}
+          .empty-animation {
+            font-size: 2.5rem;
+          }
 
+          .empty-emoji {
+            margin: 0 0.5rem;
+            display: inline-block;
+            animation: float 3s ease-in-out infinite;
+          }
+
+          .loading-emoji {
+            font-size: 3rem;
+          }
+
+          .loading-bounce {
+            display: inline-block;
+            animation: bounce 1s infinite;
+          }
+
+          @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+          }
+
+          .fun-alert {
+            background: #FFE5E5;
+            color: #FF4444;
+            border-radius: 1rem;
+            border: none;
+            max-width: 800px;
+          }
+
+          /* Mobile Specific Styles */
+          @media (max-width: 768px) {
+            .row.g-4 {
+              margin: 0;  /* Reset margin */
+              padding: 1rem;  /* Add padding */
+            }
+            
+            .row.g-4 > [class*='col-'] {
+              padding: 0.75rem;  /* Add spacing between cards */
+            }
+
+            .fun-card {
+              margin-bottom: 1rem;  /* Add bottom margin to cards */
+            }
+
+            .button-group {
+              flex-direction: column;  /* Stack buttons on mobile */
+              gap: 0.5rem;  /* Add gap between stacked buttons */
+            }
+
+            .fun-button {
+              width: 100%;  /* Full width buttons on mobile */
+            }
+          }
         `}
       </style>
     </Container>

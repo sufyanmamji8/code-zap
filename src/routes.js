@@ -3,7 +3,6 @@ import Login from "views/examples/Login.js";
 import WhatsApp from "views/examples/Whatsapp.js";
 import Dashboard from "views/Dashboard.js";
 import Campaign from "views/examples/Campaign.js";
-import Templates from "views/examples/Templates.js";
 import EditCompany from "components/Pages/EditWhatsappAccount";
 import WhatsAppAccountList from "components/Pages/WhatsAppAccountList";
 import WhatsAppStats from "components/Pages/WhatsAppStats";
@@ -17,6 +16,8 @@ import Contactlist from "components/Pages/Contactlist";
 import AdminNavbar from "components/Navbars/AdminNavbar";
 import WhatsAppTemplates from "components/Pages/WhatsAppTemplates";
 import WhatsAppAnalytics from "components/Pages/WhatsAppAnalytics";
+import Users from "views/examples/Users";
+import SendTemplate from "components/Pages/SendTemplate";
 
 var routes = [
   {
@@ -48,10 +49,10 @@ var routes = [
     layout: "/admin",
   },
   // {
-  //   path: "/templates",
-  //   name: "Templates",
-  //   icon: "ni ni-folder-17 text-gray",
-  //   component: <Templates />,
+  //   path: "/users",
+  //   name: "Users",
+  //   icon: "ni ni-single-02 text-gray",
+  //   component: <Users />,
   //   layout: "/admin",
   // },
   // {
@@ -154,6 +155,14 @@ var routes = [
     name: "Analytics",
     icon: "ni ni-single-02",
     component: <WhatsAppAnalytics />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/send-template",
+    name: "SendTemplate",
+    icon: "ni ni-single-02",
+    component: <SendTemplate />,
     layout: "/admin",
     showInSidebar: false,
   },
