@@ -26,6 +26,10 @@ const WhatsAppTemplates = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const token = localStorage.getItem("token");
   const location = useLocation();
@@ -102,6 +106,24 @@ const WhatsAppTemplates = () => {
     return matchesSearch && matchesCategory && matchesLanguage;
   });
 
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentTemplates = filteredTemplates.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredTemplates.length / itemsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case "APPROVED":
@@ -113,8 +135,13 @@ const WhatsAppTemplates = () => {
     }
   };
 
-  // Handle row click to navigate to analytics
+  // Modified handleRowClick to check template status
   const handleRowClick = (template) => {
+    if (template.status === "REJECTED") {
+      toast.error("This template is not approved and cannot be sent.");
+      return;
+    }
+    
     navigate("/admin/send-template", {
       state: {
         companyId,
@@ -123,6 +150,11 @@ const WhatsAppTemplates = () => {
         templateName: template.name
       }
     });
+  };
+
+  // Function to capitalize first letter and lowercase the rest
+  const formatCategory = (category) => {
+    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
   };
 
   return (
@@ -137,7 +169,6 @@ const WhatsAppTemplates = () => {
         <Button
           color="primary"
           className="btn-sm"
-          // onClick={() => navigate("/create-template")}
         >
           + Create Template
         </Button>
@@ -167,8 +198,8 @@ const WhatsAppTemplates = () => {
                 onChange={(e) => setSelectedCategory(e.target.value)}
               >
                 <option value="">All Categories</option>
-                <option value="MARKETING">Marketing</option>
-                <option value="UTILITY">Utility</option>
+                <option value="MARKETING">{formatCategory("Marketing")}</option>
+                <option value="UTILITY">{formatCategory("Utility")}</option>
               </Input>
             </FormGroup>
           </Col>
@@ -224,15 +255,18 @@ const WhatsAppTemplates = () => {
                   </td>
                 </tr>
               ) : (
-                filteredTemplates.map((template, index) => (
+                currentTemplates.map((template, index) => (
                   <tr 
                     key={index} 
                     onClick={() => handleRowClick(template)}
-                    style={{ cursor: 'pointer' }}
+                    style={{ 
+                      cursor: template.status === "REJECTED" ? "not-allowed" : "pointer",
+                      opacity: template.status === "REJECTED" ? 0.7 : 1
+                    }}
                     className="hover:bg-gray-50"
                   >
                     <td>{template.name}</td>
-                    <td>{template.category}</td>
+                    <td>{formatCategory(template.category)}</td>
                     <td>{template.language}</td>
                     <td>
                       <Badge color={getStatusColor(template.status)} pill>
@@ -249,9 +283,34 @@ const WhatsAppTemplates = () => {
           </Table>
         </div>
 
+        {/* Pagination Controls */}
+        {filteredTemplates.length > 0 && (
+          <div className="d-flex justify-content-between align-items-center mt-4">
+            <Button
+              color="primary"
+              outline
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <div className="text-muted">
+              Page {currentPage} of {totalPages}
+            </div>
+            <Button
+              color="primary"
+              outline
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+
         {/* Bottom Info */}
         <div className="mt-3 text-muted small text-center">
-          {filteredTemplates.length} templates shown out of {templates.length}.
+          Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredTemplates.length)} of {filteredTemplates.length} templates
         </div>
       </CardBody>
     </Card>

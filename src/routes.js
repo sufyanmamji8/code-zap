@@ -18,6 +18,7 @@ import WhatsAppTemplates from "components/Pages/WhatsAppTemplates";
 import WhatsAppAnalytics from "components/Pages/WhatsAppAnalytics";
 import Users from "views/examples/Users";
 import SendTemplate from "components/Pages/SendTemplate";
+import ApiKey from "components/Pages/ApiKey";
 
 var routes = [
   {
@@ -127,6 +128,14 @@ var routes = [
     layout: "/admin",
     showInSidebar: false,
   },
+  {
+    path: "/api-key",
+    name: "Api",
+    icon: "ni ni-key-25 text-gray",
+    component: <ApiKey />,
+    layout: "/admin",
+    showInSidebar: false,
+},
   {
     path: "settings",
     name: "Settings",
