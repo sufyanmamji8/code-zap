@@ -26,8 +26,6 @@ const WhatsAppTemplates = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
-  
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -35,22 +33,16 @@ const WhatsAppTemplates = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Get companyId and companyName from location state or localStorage
   useEffect(() => {
     if (location.state?.companyId) {
       setCompanyId(location.state.companyId);
-      setCompanyName(
-        location.state.companyName ||
-          localStorage.getItem("selectedCompanyName") ||
-          ""
-      );
+      setCompanyName(location.state.companyName || localStorage.getItem("selectedCompanyName") || "");
     } else if (localStorage.getItem("selectedCompanyId")) {
       setCompanyId(localStorage.getItem("selectedCompanyId"));
       setCompanyName(localStorage.getItem("selectedCompanyName") || "");
     }
   }, [location]);
 
-  // Fetch templates when companyId is available
   useEffect(() => {
     const fetchTemplates = async () => {
       if (!companyId || !token) {
@@ -61,10 +53,8 @@ const WhatsAppTemplates = () => {
       try {
         setIsLoading(true);
         const response = await axios.post(
-          "http://192.168.0.108:25483/api/v1/messages/fetchTemplates",
-          {
-            companyId: companyId,
-          },
+          "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates",
+          { companyId },
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -73,10 +63,8 @@ const WhatsAppTemplates = () => {
           }
         );
 
-        const data = response.data;
-
-        if (data.success && data.templates) {
-          setTemplates(data.templates);
+        if (response.data.success && response.data.templates) {
+          setTemplates(response.data.templates);
         } else {
           toast.error("Failed to fetch templates");
         }
@@ -96,221 +84,216 @@ const WhatsAppTemplates = () => {
   }, [companyId, token, navigate]);
 
   const filteredTemplates = templates.filter((template) => {
-    const matchesSearch = template.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchesCategory =
-      !selectedCategory || template.category === selectedCategory;
-    const matchesLanguage =
-      !selectedLanguage || template.language === selectedLanguage;
-    return matchesSearch && matchesCategory && matchesLanguage;
+    return (
+      template.name.toLowerCase().includes(search.toLowerCase()) &&
+      (!selectedCategory || template.category === selectedCategory) &&
+      (!selectedLanguage || template.language === selectedLanguage)
+    );
   });
 
-  // Pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentTemplates = filteredTemplates.slice(indexOfFirstItem, indexOfLastItem);
+  const currentTemplates = filteredTemplates.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
   const totalPages = Math.ceil(filteredTemplates.length / itemsPerPage);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "APPROVED":
-        return "success";
-      case "REJECTED":
-        return "danger";
-      default:
-        return "warning";
-    }
-  };
-
-  // Modified handleRowClick to check template status
   const handleRowClick = (template) => {
     if (template.status === "REJECTED") {
       toast.error("This template is not approved and cannot be sent.");
       return;
     }
-    
     navigate("/admin/send-template", {
       state: {
         companyId,
         companyName,
         templateId: template.id,
-        templateName: template.name
-      }
+        templateName: template.name,
+      },
     });
   };
 
-  // Function to capitalize first letter and lowercase the rest
-  const formatCategory = (category) => {
-    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+  const getStatusBadge = (status) => {
+    const colors = {
+      APPROVED: "success",
+      REJECTED: "danger",
+      PENDING: "warning",
+    };
+    return (
+      <Badge color={colors[status] || "secondary"} pill className="px-3 py-2">
+        {status}
+      </Badge>
+    );
   };
 
   return (
-    <Card className="shadow rounded border-0 overflow-hidden">
-      <CardHeader className="d-flex justify-content-between align-items-center">
-        <div>
-          <h4 className="mb-0">WhatsApp Templates</h4>
-          {companyName && (
-            <small className="text-muted mt-1 d-block">{companyName}</small>
-          )}
-        </div>
-        <Button
-          color="primary"
-          className="btn-sm"
-        >
-          + Create Template
-        </Button>
-      </CardHeader>
-      <CardBody>
-        {/* Filters Section */}
-        <Row className="mb-4 align-items-end">
-          <Col md={4} sm={6} xs={12}>
-            <FormGroup>
-              <Label for="search">Search</Label>
-              <Input
-                id="search"
-                type="text"
-                placeholder="Search templates..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </FormGroup>
+    <Card className="shadow-sm border-0">
+      {/* Header Section */}
+      <CardHeader className="bg-white border-bottom">
+        <Row className="align-items-center">
+          <Col>
+            <h4 className="mb-0 text-primary">WhatsApp Templates</h4>
+            {companyName && (
+              <small className="text-muted">
+                Managing templates for {companyName}
+              </small>
+            )}
           </Col>
-          <Col md={4} sm={6} xs={12}>
-            <FormGroup>
-              <Label for="category">Category</Label>
-              <Input
-                id="category"
-                type="select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <option value="">All Categories</option>
-                <option value="MARKETING">{formatCategory("Marketing")}</option>
-                <option value="UTILITY">{formatCategory("Utility")}</option>
-              </Input>
-            </FormGroup>
-          </Col>
-          <Col md={4} sm={6} xs={12}>
-            <FormGroup>
-              <Label for="language">Language</Label>
-              <Input
-                id="language"
-                type="select"
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-              >
-                <option value="">All Languages</option>
-                <option value="en_US">English (US)</option>
-              </Input>
-            </FormGroup>
+          <Col xs="auto">
+            <Button color="primary" className="rounded-pill px-4">
+              <i className="fas fa-plus me-2"></i>
+              Create Template
+            </Button>
           </Col>
         </Row>
+      </CardHeader>
 
-        {/* Table Section */}
-        <div className="table-responsive">
-          <Table hover bordered className="align-middle">
-            <thead className="table-light">
-              <tr>
-                <th>Template Name</th>
-                <th>Category</th>
-                <th>Language</th>
-                <th>Status</th>
-                <th>Message Delivered</th>
-                <th>Message Read</th>
-                <th>Last Edited</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan="7" className="py-4">
-                    <Spinner color="primary" /> Loading templates...
-                  </td>
-                </tr>
-              ) : !companyId ? (
-                <tr>
-                  <td colSpan="7" className="py-4">
-                    <Alert color="warning">
-                      Please select a company to view templates.
-                    </Alert>
-                  </td>
-                </tr>
-              ) : filteredTemplates.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="py-4">
-                    <Alert color="info">No templates found.</Alert>
-                  </td>
-                </tr>
-              ) : (
-                currentTemplates.map((template, index) => (
-                  <tr 
-                    key={index} 
-                    onClick={() => handleRowClick(template)}
-                    style={{ 
-                      cursor: template.status === "REJECTED" ? "not-allowed" : "pointer",
-                      opacity: template.status === "REJECTED" ? 0.7 : 1
-                    }}
-                    className="hover:bg-gray-50"
+      <CardBody className="p-4">
+        {/* Filter Section */}
+        <Card className="bg-light border-0 mb-4">
+          <CardBody>
+            <Row className="g-3">
+              <Col md={4}>
+                <FormGroup>
+                  <Label className="text-muted small">Search Templates</Label>
+                  <Input
+                    placeholder="Search by name..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="rounded-pill"
+                  />
+                </FormGroup>
+              </Col>
+              <Col md={4}>
+                <FormGroup>
+                  <Label className="text-muted small">Category</Label>
+                  <Input
+                    type="select"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="rounded-pill"
                   >
-                    <td>{template.name}</td>
-                    <td>{formatCategory(template.category)}</td>
+                    <option value="">All Categories</option>
+                    <option value="MARKETING">Marketing</option>
+                    <option value="UTILITY">Utility</option>
+                  </Input>
+                </FormGroup>
+              </Col>
+              <Col md={4}>
+                <FormGroup>
+                  <Label className="text-muted small">Language</Label>
+                  <Input
+                    type="select"
+                    value={selectedLanguage}
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                    className="rounded-pill"
+                  >
+                    <option value="">All Languages</option>
+                    <option value="en_US">English (US)</option>
+                    <option value="es">Spanish</option>
+                  </Input>
+                </FormGroup>
+              </Col>
+            </Row>
+          </CardBody>
+        </Card>
+
+        {/* Templates Table */}
+        <div className="table-responsive">
+          {isLoading ? (
+            <div className="text-center py-5">
+              <Spinner color="primary" className="mb-2" />
+              <p className="text-muted">Loading templates...</p>
+            </div>
+          ) : !companyId ? (
+            <Alert color="info" className="rounded-3 text-center">
+              <i className="fas fa-info-circle me-2"></i>
+              Please select a company to view templates
+            </Alert>
+          ) : filteredTemplates.length === 0 ? (
+            <Alert color="light" className="rounded-3 text-center">
+              <i className="fas fa-search me-2"></i>
+              No templates found matching your criteria
+            </Alert>
+          ) : (
+            <Table hover className="align-middle">
+              <thead className="bg-light">
+                <tr>
+                  <th className="border-0">Template Name</th>
+                  <th className="border-0">Category</th>
+                  <th className="border-0">Language</th>
+                  <th className="border-0">Status</th>
+                  <th className="border-0 text-center">Delivered</th>
+                  <th className="border-0 text-center">Read</th>
+                  <th className="border-0">Last Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentTemplates.map((template, index) => (
+                  <tr
+                    key={index}
+                    onClick={() => handleRowClick(template)}
+                    className={`cursor-pointer ${
+                      template.status === "REJECTED" ? "opacity-50" : ""
+                    }`}
+                    style={{ cursor: template.status === "REJECTED" ? "not-allowed" : "pointer" }}
+                  >
+                    <td className="fw-medium">{template.name}</td>
+                    <td>{template.category.charAt(0) + template.category.slice(1).toLowerCase()}</td>
                     <td>{template.language}</td>
-                    <td>
-                      <Badge color={getStatusColor(template.status)} pill>
-                        {template.status}
+                    <td>{getStatusBadge(template.status)}</td>
+                    <td className="text-center">
+                      <Badge color="light" pill className="px-3">
+                        {template.delivered || 0}
                       </Badge>
                     </td>
-                    <td>0</td>
-                    <td>0</td>
-                    <td>{new Date().toLocaleDateString()}</td>
+                    <td className="text-center">
+                      <Badge color="light" pill className="px-3">
+                        {template.read || 0}
+                      </Badge>
+                    </td>
+                    <td className="text-muted">
+                      {new Date(template.updatedAt).toLocaleDateString()}
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </Table>
+                ))}
+              </tbody>
+            </Table>
+          )}
         </div>
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         {filteredTemplates.length > 0 && (
           <div className="d-flex justify-content-between align-items-center mt-4">
             <Button
-              color="primary"
-              outline
-              onClick={handlePrevPage}
+              color="light"
+              className="rounded-pill px-4"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             >
+              <i className="fas fa-arrow-left me-2"></i>
               Previous
             </Button>
-            <div className="text-muted">
+            <small className="text-muted">
               Page {currentPage} of {totalPages}
-            </div>
+            </small>
             <Button
-              color="primary"
-              outline
-              onClick={handleNextPage}
+              color="light"
+              className="rounded-pill px-4"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
             >
               Next
+              <i className="fas fa-arrow-right ms-2"></i>
             </Button>
           </div>
         )}
 
-        {/* Bottom Info */}
-        <div className="mt-3 text-muted small text-center">
-          Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredTemplates.length)} of {filteredTemplates.length} templates
+        {/* Results Summary */}
+        <div className="text-center mt-3">
+          <small className="text-muted">
+            Showing {Math.min(currentPage * itemsPerPage, filteredTemplates.length)} of{" "}
+            {filteredTemplates.length} templates
+          </small>
         </div>
       </CardBody>
     </Card>

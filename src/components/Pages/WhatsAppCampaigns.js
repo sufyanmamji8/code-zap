@@ -3,9 +3,7 @@ import React from 'react'
 
 const WhatsAppCampaigns = () => {
   return (
-    <div>
-      {/* <Header/> */}
-    </div>
+    <h1>Hamza</h1>
   )
 }
 

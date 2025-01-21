@@ -287,3 +287,213 @@ const ApiKey = () => {
 };
 
 export default ApiKey;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import React from 'react';
+// import { Card, CardHeader, CardBody, Alert, Button } from 'reactstrap';
+// import { useState, useEffect } from 'react';
+// import { useNavigate } from 'react-router-dom';
+// import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+// import axios from 'axios';
+// import { toast } from 'sonner';
+
+// const TemplateMessage = () => {
+//   const navigate = useNavigate();
+//   const [messages, setMessages] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const token = localStorage.getItem('token');
+//   const businessId = '102953305799075';
+//   const companyId = '67766f5326d48c4790f1fbd1';
+
+//   useEffect(() => {
+//     fetchMessages();
+//   }, []);
+
+//   const fetchMessages = async () => {
+//     if (!businessId || !token) {
+//       setLoading(false);
+//       return;
+//     }
+
+//     try {
+//       const response = await axios.post(
+//         'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/getTemplates',
+//         { businessId , companyId },
+//         {
+//           headers: {
+//             Authorization: `Bearer ${token}`,
+//             'Content-Type': 'application/json'
+//           }
+//         }
+//       );
+
+//       if (response.data.success) {
+//         setMessages(response.data.data);
+//       } else {
+//         setError('Failed to load messages');
+//         toast.error('Failed to load messages');
+//       }
+//     } catch (error) {
+//       console.error('Error fetching messages:', error);
+//       setError(error.message);
+//       if (error.response?.status === 401) {
+//         navigate('/auth/login');
+//       } else {
+//         toast.error('Failed to load messages');
+//       }
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const renderTemplateContent = (message) => {
+//     const headerComponent = message.components?.find(comp => comp.type === 'header');
+//     const bodyComponent = message.components?.find(comp => comp.type === 'body');
+
+//     return (
+//       <div className="template-content">
+//         {headerComponent?.media?.link && (
+//           <div className="template-image mb-3">
+//             <img
+//               src={headerComponent.media.link}
+//               alt="Template Header"
+//               className="w-100 rounded"
+//             />
+//           </div>
+//         )}
+        
+//         <div className="template-body">
+//           {bodyComponent?.text && (
+//             <div className="template-text">
+//               {bodyComponent.text.split('\n').map((line, index) => (
+//                 <p key={index} className="mb-1">{line}</p>
+//               ))}
+//             </div>
+//           )}
+//         </div>
+
+//         <div className="template-meta mt-3">
+//           <div className="meta-item">
+//             <small className="text-muted">Template: {message.templateName}</small>
+//           </div>
+//           <div className="meta-item">
+//             <small className="text-muted">Status: {message.status}</small>
+//           </div>
+//           {message.readTimestamp && (
+//             <div className="meta-item">
+//               <small className="text-muted">
+//                 Read at: {new Date(parseInt(message.readTimestamp) * 1000).toLocaleString()}
+//               </small>
+//             </div>
+//           )}
+//         </div>
+//       </div>
+//     );
+//   };
+
+//   if (loading) {
+//     return (
+//       <div className="loading-overlay">
+//         <div className="loader-container">
+//           <DotLottieReact
+//             src="https://lottie.host/5060de43-85ac-474a-a85b-892f9730e17a/b3jJ1vGkWh.lottie"
+//             loop
+//             autoplay
+//             style={{ width: '200px', height: '200px' }}
+//           />
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="container-fluid p-4">
+//       <Card className="shadow">
+//         <CardHeader className="d-flex justify-content-between align-items-center">
+//           <h4 className="mb-0">Template Messages</h4>
+//           <Button color="primary" onClick={fetchMessages}>
+//             <i className="fas fa-sync-alt me-2"></i>
+//             Refresh
+//           </Button>
+//         </CardHeader>
+//         <CardBody>
+//           {error && (
+//             <Alert color="danger" className="mb-4">
+//               {error}
+//             </Alert>
+//           )}
+
+//           {messages.length === 0 ? (
+//             <Alert color="info">No template messages found</Alert>
+//           ) : (
+//             <div className="row">
+//               {messages.map((message) => (
+//                 <div key={message.messageId} className="col-md-4 mb-4">
+//                   <div className="template-card">
+//                     {renderTemplateContent(message)}
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </CardBody>
+//       </Card>
+
+//       <style jsx>{`
+//         .loading-overlay {
+//           position: fixed;
+//           top: 0;
+//           left: 0;
+//           right: 0;
+//           bottom: 0;
+//           background-color: rgba(255, 255, 255, 0.9);
+//           display: flex;
+//           justify-content: center;
+//           align-items: center;
+//           z-index: 9999;
+//         }
+//         .template-card {
+//           background: white;
+//           border-radius: 12px;
+//           padding: 16px;
+//           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+//           border: 1px solid #e1e1e1;
+//           height: 100%;
+//         }
+//         .template-image img {
+//           max-height: 200px;
+//           object-fit: cover;
+//           width: 100%;
+//         }
+//         .template-text {
+//           font-size: 0.95rem;
+//           color: #4a4a4a;
+//           white-space: pre-wrap;
+//         }
+//         .template-meta {
+//           border-top: 1px solid #f0f0f0;
+//           padding-top: 8px;
+//           margin-top: 8px;
+//         }
+//         .meta-item {
+//           padding: 4px 0;
+//         }
+//       `}</style>
+//     </div>
+//   );
+// };
+
+// export default TemplateMessage;
