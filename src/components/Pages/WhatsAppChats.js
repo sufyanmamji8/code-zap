@@ -1302,18 +1302,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   FaArrowLeft,
@@ -1376,31 +1364,29 @@ const WhatsAppChats = () => {
   const contactListRef = useRef(null);
   const isMobileView = window.innerWidth <= 768;
   const token = localStorage.getItem("token");
-  const [contactsPerPage, setContactsPerPage] = useState(
-    calculateContactsPerPage()
-  );
+  const [contactsPerPage, setContactsPerPage] = useState(calculateContactsPerPage());
   const [countrySearchTerm, setCountrySearchTerm] = useState("");
   const [filteredCountries, setFilteredCountries] = useState(countryList);
-  const [templates, setTemplates] = useState([]);
 
   useEffect(() => {
     const handleResize = () => {
       setContactsPerPage(calculateContactsPerPage());
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
     if (businessId) {
       socketRef.current = io("https://codozap-e04e12b02929.herokuapp.com");
-
+  
       socketRef.current.on(`onmessagerecv-${businessId}`, async () => {
         console.log("Socket: New message received");
-
+  
         if (selectedUser) {
           await fetchMessages(selectedUser.phoneNumber);
+          await fetchTemplates(); // Fetch templates after new message
         }
 
         const response = await axios.post(
@@ -1430,13 +1416,11 @@ const WhatsAppChats = () => {
               : "",
           }));
 
-          setContacts((prevContacts) => {
+          setContacts(prevContacts => {
             const existingContactsNotInFirstPage = prevContacts.filter(
-              (existingContact) =>
-                !newContacts.some(
-                  (newContact) =>
-                    newContact.phoneNumber === existingContact.phoneNumber
-                )
+              existingContact => !newContacts.some(
+                newContact => newContact.phoneNumber === existingContact.phoneNumber
+              )
             );
 
             return [...newContacts, ...existingContactsNotInFirstPage];
@@ -1451,69 +1435,117 @@ const WhatsAppChats = () => {
       };
     }
   }, [businessId, selectedUser, companyId, token, contactsPerPage]);
+  
 
-  // Fetch contacts with pagination
-  const fetchContacts = async (pageNum = 1, isInitial = false) => {
-    if (!businessId || (!isInitial && !hasMore) || loadingMore) return;
 
+  const fetchTemplates = async () => {
+    if (!selectedUser?.phoneNumber) return;
+    
     try {
-      setLoadingMore(true);
-
       const response = await axios.post(
-        `${MESSAGE_API_ENDPOINT}/getContact`,
+        `${MESSAGE_API_ENDPOINT}/getTemplates`,
         {
+          businessId,
           companyId,
+          to: selectedUser.phoneNumber
         },
         {
-          params: {
-            page: pageNum,
-            limit: contactsPerPage, // Use dynamic contactsPerPage instead of fixed 5
-          },
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
-
+  
       if (response.data.success) {
-        const newContacts = response.data.contacts.map((contact) => ({
-          ...contact,
-          phoneNumber: contact._id,
-          name: contact.senderName || contact.name || contact._id,
-          lastMessage: contact.recentMessage || "",
-          timestamp: contact.latestChat
-            ? new Date(contact.latestChat).getTime() / 1000
-            : "",
-        }));
-
-        setContacts((prev) => {
-          if (pageNum === 1) {
-            return newContacts;
-          } else {
-            const existingPhoneNumbers = prev.map((c) => c.phoneNumber);
-            const uniqueNewContacts = newContacts.filter(
-              (contact) => !existingPhoneNumbers.includes(contact.phoneNumber)
-            );
-            return [...prev, ...uniqueNewContacts];
-          }
+        const receivedTemplates = response.data.data
+          .filter(template => template.to === selectedUser.phoneNumber)
+          .map(template => ({
+            ...template,
+            isTemplate: true,
+            timestamp: Date.now() / 1000,
+            to: selectedUser.phoneNumber,
+            from: config.phoneNumber,
+            messageBody: template.components.find(c => c.type === "BODY")?.text || '',
+            status: 'delivered',
+            sentTimestamp: Date.now() / 1000,
+            currentStatusTimestamp: Date.now() / 1000,
+            originalTimestamp: Date.now() / 1000
+          }));
+  
+        setMessages(prev => {
+          const nonTemplates = prev.filter(msg => !msg.isTemplate);
+          return [...nonTemplates, ...receivedTemplates].sort((a, b) => {
+            const timeA = parseInt(a.originalTimestamp);
+            const timeB = parseInt(b.originalTimestamp);
+            return timeA - timeB;
+          });
         });
-
-        setHasMore(pageNum < response.data.pagination.totalPages);
-        setPage(pageNum);
       }
     } catch (error) {
-      console.error("Error fetching contacts:", error);
-    } finally {
-      setLoadingMore(false);
-      if (isInitial) setInitialLoading(false);
+      console.error('Error fetching templates:', error);
     }
   };
 
-  useEffect(() => {
-    if (selectedUser && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+  // Fetch contacts with pagination
+  const fetchContacts = async (pageNum = 1, isInitial = false) => {
+  if (!businessId || (!isInitial && !hasMore) || loadingMore) return;
+
+  try {
+    setLoadingMore(true);
+
+    const response = await axios.post(
+      `${MESSAGE_API_ENDPOINT}/getContact`,
+      {
+        companyId,
+      },
+      {
+        params: {
+          page: pageNum,
+          limit: contactsPerPage, // Use dynamic contactsPerPage instead of fixed 5
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.data.success) {
+      const newContacts = response.data.contacts.map((contact) => ({
+        ...contact,
+        phoneNumber: contact._id,
+        name: contact.senderName || contact.name || contact._id,
+        lastMessage: contact.recentMessage || "",
+        timestamp: contact.latestChat
+          ? new Date(contact.latestChat).getTime() / 1000
+          : "",
+      }));
+
+      setContacts((prev) => {
+        if (pageNum === 1) {
+          return newContacts;
+        } else {
+          const existingPhoneNumbers = prev.map((c) => c.phoneNumber);
+          const uniqueNewContacts = newContacts.filter(
+            (contact) => !existingPhoneNumbers.includes(contact.phoneNumber)
+          );
+          return [...prev, ...uniqueNewContacts];
+        }
+      });
+
+      setHasMore(pageNum < response.data.pagination.totalPages);
+      setPage(pageNum);
     }
-  }, [messages, selectedUser]);
+  } catch (error) {
+    console.error("Error fetching contacts:", error);
+  } finally {
+    setLoadingMore(false);
+    if (isInitial) setInitialLoading(false);
+  }
+};
+
+useEffect(() => {
+  if (selectedUser && chatEndRef.current) {
+    chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }
+}, [messages, selectedUser]);
 
   // Fetch messages for selected contact
   const fetchMessages = async (contactPhoneNumber) => {
@@ -1586,9 +1618,16 @@ const WhatsAppChats = () => {
   useEffect(() => {
     if (businessId) {
       fetchContacts(1, true);
-      fetchTemplates(); // Add template fetching
     }
   }, [businessId]);
+
+   useEffect(() => {
+    if (selectedUser?.phoneNumber) {
+      fetchContacts();
+      fetchMessages(selectedUser.phoneNumber);
+      fetchTemplates();
+    }
+  }, [selectedUser]);
 
   // Handle contact selection
   useEffect(() => {
@@ -1778,9 +1817,7 @@ const WhatsAppChats = () => {
       if (!contactNumber) return;
 
       const existingUser = users.get(contactNumber);
-      const messageTimestamp = parseInt(
-        msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp
-      );
+      const messageTimestamp = parseInt(msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp);
       const existingTimestamp = existingUser
         ? parseInt(existingUser.timestamp)
         : 0;
@@ -1794,10 +1831,7 @@ const WhatsAppChats = () => {
           ...(existingUser || {}),
           phoneNumber: contactNumber,
           lastMessage: msg.messageBody,
-          timestamp:
-            msg.sentTimestamp ||
-            msg.originalTimestamp ||
-            msg.currentStatusTimestamp,
+          timestamp: msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp,
           flag: country?.flag || "🌐",
         });
       }
@@ -1813,12 +1847,7 @@ const WhatsAppChats = () => {
   }, [messages, contacts, config?.phoneNumber]);
 
   const sendMessage = async () => {
-    if (
-      !newMessage.trim() ||
-      !selectedUser ||
-      !config?.phoneNumber ||
-      !companyId
-    ) {
+    if (!newMessage.trim() || !selectedUser || !config?.phoneNumber || !companyId) {
       console.warn("Missing required data for sending message");
       return;
     }
@@ -1834,9 +1863,9 @@ const WhatsAppChats = () => {
       messageBody: newMessage,
       type: "text",
       status: "sending",
-      sentTimestamp: currentTimestamp, // Original sent timestamp
-      currentStatusTimestamp: currentTimestamp, // Will be updated with status changes
-      originalTimestamp: currentTimestamp, // New field to store original time
+      sentTimestamp: currentTimestamp,      // Original sent timestamp
+      currentStatusTimestamp: currentTimestamp,  // Will be updated with status changes
+      originalTimestamp: currentTimestamp,   // New field to store original time
       senderName: config.companyName || config.phoneNumber,
     };
 
@@ -1885,7 +1914,7 @@ const WhatsAppChats = () => {
                   messageId: actualMessageId,
                   status: "sent",
                   currentStatusTimestamp: Date.now() / 1000, // Update status timestamp
-                  sentTimestamp: msg.originalTimestamp, // Keep original timestamp
+                  sentTimestamp: msg.originalTimestamp  // Keep original timestamp
                 }
               : msg
           )
@@ -1901,8 +1930,8 @@ const WhatsAppChats = () => {
             ? {
                 ...msg,
                 status: "failed",
-                currentStatusTimestamp: Date.now() / 1000, // Update status timestamp
-                sentTimestamp: msg.originalTimestamp, // Keep original timestamp
+                currentStatusTimestamp: Date.now() / 1000,  // Update status timestamp
+                sentTimestamp: msg.originalTimestamp,       // Keep original timestamp
                 failureReason:
                   error.response?.data?.message || "Failed to send message",
               }
@@ -1914,81 +1943,6 @@ const WhatsAppChats = () => {
     setNewMessage("");
     setTimeout(() => scrollToBottom(), 100);
   };
-
-  const processTemplateText = (template) => {
-    if (!template.components) return "";
-
-    // Find the body component that contains the main text
-    const bodyComponent = template.components.find(comp => comp.type === "BODY");
-    if (!bodyComponent || !bodyComponent.text) return "";
-
-    let processedText = bodyComponent.text;
-
-    // Replace positional parameters {{1}}, {{2}}, etc. with sample values
-    const sampleValues = {
-      "{{1}}": template.sample_values?.param1 || "[Movie Name]",
-      "{{2}}": template.sample_values?.param2 || "[Time & Date]",
-      "{{3}}": template.sample_values?.param3 || "[Venue]",
-      "{{4}}": template.sample_values?.param4 || "[Seat Details]"
-    };
-
-    // Replace each parameter with its sample value
-    Object.entries(sampleValues).forEach(([param, value]) => {
-      processedText = processedText.replace(param, value);
-    });
-
-    return processedText;
-  };
-
-  const fetchTemplates = async () => {
-    if (!businessId || !token) return;
-  
-    try {
-      const response = await axios.post(
-        `${MESSAGE_API_ENDPOINT}/getTemplates`,
-        { businessId, companyId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-  
-      if (response.data.success && response.data.data) {
-        const processedTemplates = response.data.data.map(template => {
-          // Process the template text with sample values
-          const messageBody = processTemplateText(template);
-          
-          return {
-            messageId: template._id || Date.now().toString(),
-            businessId: template.businessId,
-            from: config.phoneNumber,
-            to: selectedUser?.phoneNumber || "",
-            type: "template",
-            status: "sent",
-            sentTimestamp: template.timestamp || Date.now() / 1000,
-            currentStatusTimestamp: template.timestamp || Date.now() / 1000,
-            template: {
-              name: template.name,
-              language: template.language || "en",
-              category: template.category,
-              components: template.components || [],
-              parameter_format: template.parameter_format,
-              status: template.status
-            },
-            messageBody: messageBody, // Include the processed text
-            components: template.components || []
-          };
-        });
-  
-        setTemplates(processedTemplates);
-      }
-    } catch (error) {
-      console.error("Error fetching templates:", error);
-    }
-  };
-  
-
-  
-  
 
   const formatDate = (timestamp) => {
     const date = new Date(parseInt(timestamp) * 1000);
@@ -2011,22 +1965,25 @@ const WhatsAppChats = () => {
 
   const groupMessagesByDate = (messages) => {
     const groups = {};
-
+  
     messages.forEach((message) => {
-      const date = new Date(
-        parseInt(message.currentStatusTimestamp) * 1000
-      ).toDateString();
+      const timestamp = message.originalTimestamp || message.currentStatusTimestamp;
+      const date = new Date(parseInt(timestamp) * 1000).toDateString();
       if (!groups[date]) {
         groups[date] = [];
       }
       groups[date].push(message);
     });
-
+  
     return Object.entries(groups)
       .map(([date, messages]) => ({
         date,
-        timestamp: parseInt(messages[0].currentStatusTimestamp),
-        messages,
+        timestamp: parseInt(messages[0].originalTimestamp || messages[0].currentStatusTimestamp),
+        messages: messages.sort((a, b) => {
+          const timeA = parseInt(a.originalTimestamp || a.currentStatusTimestamp);
+          const timeB = parseInt(b.originalTimestamp || b.currentStatusTimestamp);
+          return timeA - timeB;
+        })
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
   };
@@ -2054,19 +2011,123 @@ const WhatsAppChats = () => {
   );
 
   const format12HourTime = (timestamp) => {
-    return new Date(parseInt(timestamp) * 1000).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
+    return new Date(parseInt(timestamp) * 1000).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     });
+  };
+
+  const TemplateMessage = ({ template }) => {
+    const { components } = template;
+    const isReceived = template.from === selectedUser?.phoneNumber;
+    
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: isReceived ? "flex-start" : "flex-end", // Align based on sender
+          marginBottom: "12px",
+          maxWidth: "70%",
+          marginLeft: isReceived ? "0" : "auto",
+          marginRight: isReceived ? "auto" : "0"
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: isReceived ? "#fff" : "#dcf8c6", // Different color for sent/received
+            borderRadius: "8px",
+            padding: "12px",
+            position: "relative",
+            width: "100%"
+          }}
+        >
+          {components.map((component, idx) => {
+            switch (component.type) {
+              case "HEADER":
+                return (
+                  <div key={idx} className="mb-2">
+                    {component.media && (
+                      <img
+                        src={component.media.link}
+                        alt="Template header"
+                        style={{
+                          width: "100%",
+                          borderRadius: "4px",
+                          marginBottom: "8px"
+                        }}
+                      />
+                    )}
+                    {component.text && (
+                      <div style={{ fontSize: "14px", fontWeight: "500" }}>
+                        {component.text}
+                      </div>
+                    )}
+                  </div>
+                );
+              
+              case "BODY":
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      fontSize: "14px",
+                      margin: "8px 0"
+                    }}
+                  >
+                    {component.text}
+                  </div>
+                );
+              
+              case "FOOTER":
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      fontSize: "11px",
+                      color: "#667781",
+                      marginTop: "4px"
+                    }}
+                  >
+                    {component.text}
+                  </div>
+                );
+              
+              default:
+                return null;
+            }
+          })}
+          
+          <div
+            style={{
+              fontSize: "11px",
+              color: "#667781",
+              marginTop: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: "4px"
+            }}
+          >
+            <span>
+              {format12HourTime(template.timestamp)}
+            </span>
+            <MessageStatusIcon
+              status={template.status}
+              failureReason={template.failureReason}
+            />
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderNewChatModal = () => {
     const filterCountries = (searchTerm) => {
-      return countryList.filter(
-        (country) =>
-          country.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          country.code.includes(searchTerm)
+      return countryList.filter(country =>
+        country.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        country.code.includes(searchTerm)
       );
     };
 
@@ -2088,9 +2149,7 @@ const WhatsAppChats = () => {
         >
           New Chat
         </ModalHeader>
-        <ModalBody className="p-2">
-          {" "}
-          {/* Reducing body padding */}
+        <ModalBody className="p-2"> {/* Reducing body padding */}
           <div className="d-flex flex-column gap-2">
             <Input
               type="text"
@@ -2101,14 +2160,12 @@ const WhatsAppChats = () => {
               size="sm" // Smaller input
             />
 
-            <div
-              style={{
-                maxHeight: "150px", // Reduced height
-                overflowY: "auto",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
-              }}
-            >
+            <div style={{
+              maxHeight: "150px", // Reduced height
+              overflowY: "auto",
+              border: "1px solid #ddd",
+              borderRadius: "4px"
+            }}>
               {filteredCountries.map((country) => (
                 <div
                   key={country.code}
@@ -2119,31 +2176,19 @@ const WhatsAppChats = () => {
                   style={{
                     padding: "6px 8px", // Reduced padding
                     cursor: "pointer",
-                    backgroundColor:
-                      selectedCountry.code === country.code
-                        ? "#e8f5ff"
-                        : "white",
+                    backgroundColor: selectedCountry.code === country.code ? "#e8f5ff" : "white",
                     display: "flex",
                     alignItems: "center",
                     gap: "6px",
                     borderBottom: "1px solid #eee",
-                    fontSize: "0.9rem", // Smaller font
+                    fontSize: "0.9rem" // Smaller font
                   }}
-                  onMouseEnter={(e) =>
-                    (e.target.style.backgroundColor = "#f5f5f5")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.target.style.backgroundColor =
-                      selectedCountry.code === country.code
-                        ? "#e8f5ff"
-                        : "white")
-                  }
+                  onMouseEnter={(e) => e.target.style.backgroundColor = "#f5f5f5"}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = selectedCountry.code === country.code ? "#e8f5ff" : "white"}
                 >
                   <span>{country.flag}</span>
                   <span style={{ flex: 1 }}>{country.country}</span>
-                  <span style={{ color: "#666", fontSize: "0.8rem" }}>
-                    +{country.code}
-                  </span>
+                  <span style={{ color: "#666", fontSize: "0.8rem" }}>+{country.code}</span>
                 </div>
               ))}
             </div>
@@ -2155,9 +2200,7 @@ const WhatsAppChats = () => {
               <Input
                 type="text"
                 value={phoneNumber}
-                onChange={(e) =>
-                  setPhoneNumber(e.target.value.replace(/\D/g, ""))
-                }
+                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
                 placeholder="Phone number"
                 size="sm" // Smaller input
                 style={{ flex: 1 }}
@@ -2165,9 +2208,7 @@ const WhatsAppChats = () => {
             </div>
           </div>
         </ModalBody>
-        <ModalFooter className="py-2 px-2">
-          {" "}
-          {/* Reducing footer padding */}
+        <ModalFooter className="py-2 px-2"> {/* Reducing footer padding */}
           <Button
             color="secondary"
             size="sm" // Smaller button
@@ -2192,95 +2233,6 @@ const WhatsAppChats = () => {
     );
   };
 
-  const renderMessage = (message) => {
-    const isReceived = message.from === selectedUser.phoneNumber;
-    const isTemplate = message.type === "template";
-  
-    return (
-      <div
-        key={message.messageId}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: isReceived ? "flex-start" : "flex-end",
-          marginBottom: "12px",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "380px",
-            backgroundColor: isTemplate ? "#e3f2fd" : isReceived ? "#ffffff" : "#dcf8c6",
-            borderRadius: "8px",
-            padding: "12px",
-            position: "relative",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-          }}
-        >
-          {isTemplate && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "12px",
-                color: "#1976d2",
-                marginBottom: "8px",
-                fontWeight: "500",
-                borderBottom: "1px solid #e0e0e0",
-                paddingBottom: "8px",
-              }}
-            >
-              <i className="fas fa-ticket-alt"></i>
-              <span>{message.template?.name || "Template"}</span>
-              <span className="ms-1 text-muted">
-                ({message.template?.language || "en"}) - 
-                {message.template?.category || "UTILITY"}
-              </span>
-            </div>
-          )}
-  
-          <div
-            style={{
-              fontSize: "14px",
-              lineHeight: "1.5",
-              color: "#111111",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}
-          >
-            {message.messageBody}
-          </div>
-  
-          <div
-            style={{
-              fontSize: "11px",
-              color: "#667781",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "4px",
-              marginTop: "8px",
-              paddingTop: "4px",
-            }}
-          >
-            <span>{format12HourTime(message.sentTimestamp)}</span>
-            {!isReceived && (
-              <MessageStatusIcon
-                status={message.status}
-                failureReason={message.failureReason}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-
-
-  
-  
-
   const renderUserList = () => (
     <Col
       xs="12"
@@ -2291,7 +2243,7 @@ const WhatsAppChats = () => {
         height: "100%",
         padding: "10px",
         position: "relative",
-        overflow: "hidden",
+        overflow: "hidden"
       }}
     >
       {initialLoading && <LoaderOverlay />}
@@ -2307,16 +2259,10 @@ const WhatsAppChats = () => {
               <i className="fab fa-whatsapp fa-lg text-white"></i>
             </div>
             <div>
-              <small
-                className="font-weight-bold"
-                style={{ marginLeft: "10px" }}
-              >
+              <small className="font-weight-bold" style={{ marginLeft: "10px" }}>
                 {config?.companyName}
               </small>
-              <h5
-                className="mb-1 font-weight-bold"
-                style={{ marginLeft: "10px" }}
-              >
+              <h5 className="mb-1 font-weight-bold" style={{ marginLeft: "10px" }}>
                 {config?.phoneNumber}
               </h5>
             </div>
@@ -2332,7 +2278,7 @@ const WhatsAppChats = () => {
           justifyContent: "space-between",
           alignItems: "center",
           gap: "10px",
-          flexShrink: 0,
+          flexShrink: 0
         }}
       >
         <Button
@@ -2374,7 +2320,7 @@ const WhatsAppChats = () => {
           overflowY: "auto",
           flex: 1,
           marginTop: "5px",
-          paddingRight: "5px",
+          paddingRight: "5px"
         }}
       >
         {contacts.map((contact) => {
@@ -2463,13 +2409,7 @@ const WhatsAppChats = () => {
           );
         })}
         {loadingMore && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "10px",
-              marginBottom: "5px",
-            }}
-          >
+          <div style={{ textAlign: "center", padding: "10px", marginBottom: "5px" }}>
             Loading more contacts...
           </div>
         )}
@@ -2479,13 +2419,18 @@ const WhatsAppChats = () => {
 
   const renderChatWindow = () => {
     const chatMessages = selectedUser
-      ? messages.filter(
-          (msg) =>
-            msg.from === selectedUser.phoneNumber ||
-            msg.to === selectedUser.phoneNumber
-        )
+      ? messages
+          .filter(msg => 
+            (msg.from === selectedUser.phoneNumber || msg.to === selectedUser.phoneNumber) &&
+            (!msg.isTemplate || msg.to === selectedUser.phoneNumber)
+          )
+          .sort((a, b) => {
+            const timeA = parseInt(a.originalTimestamp || a.currentStatusTimestamp);
+            const timeB = parseInt(b.originalTimestamp || b.currentStatusTimestamp);
+            return timeA - timeB;
+          })
       : [];
-
+  
     const groupedMessages = groupMessagesByDate(chatMessages);
 
     return (
@@ -2577,171 +2522,139 @@ const WhatsAppChats = () => {
             </div>
 
             <div
-              style={{
-                flex: 1,
-                padding: "20px",
-                overflowY: "auto",
-                backgroundColor: "#efeae2",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-                marginBottom: isMobileView ? "60px" : 0,
-              }}
-            >
+          style={{
+            flex: 1,
+            padding: "20px",
+            overflowY: "auto",
+            backgroundColor: "#efeae2",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+            marginBottom: isMobileView ? "60px" : 0,
+          }}
+        >
               {groupedMessages.map((group) => (
                 <div key={group.date}>
                   {renderDateSeparator(group.timestamp)}
                   {group.messages.map((message) => {
-                    const isReceived =
-                      message.from === selectedUser.phoneNumber;
-                    const isTemplate = message.type === "template";
-
-                    return (
-                      <div
-                        key={message.messageId}
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: isReceived ? "flex-start" : "flex-end",
-                          marginBottom: "12px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            maxWidth: "70%",
-                            padding: "12px 16px",
-                            backgroundColor: isTemplate
-                              ? "#e3f2fd"
-                              : isReceived
-                              ? "#fff"
-                              : "#dcf8c6",
-                            borderRadius: "12px",
-                            position: "relative",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-                          }}
-                        >
-                          {isTemplate && (
-                            <div
-                              style={{
-                                fontSize: "12px",
-                                color: "#1976d2",
-                                marginBottom: "6px",
-                                fontWeight: "500",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                              }}
-                            >
-                              <i className="fas fa-ticket-alt" />
-                              Template Message
-                            </div>
-                          )}
-
-                          <div
-                            style={{
-                              fontSize: "14px",
-                              marginBottom: "4px",
-                              whiteSpace: "pre-wrap",
-                            }}
-                          >
-                            {message.messageBody}
-                          </div>
-
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              color: "#667781",
-                              textAlign: "right",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "flex-end",
-                              gap: "4px",
-                              marginTop: "4px",
-                            }}
-                          >
-                            <span>
-                              {format12HourTime(
-                                message.sentTimestamp ||
-                                  message.currentStatusTimestamp
-                              )}
-                            </span>
-                            {!isReceived && (
-                              <MessageStatusIcon
-                                status={message.status}
-                                failureReason={message.failureReason}
-                              />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                     if (message.isTemplate) {
+                      return <TemplateMessage key={message._id} template={message} />;
+                    }
+  const isReceived = message.from === selectedUser.phoneNumber;
+  return (
+    <div
+      key={message.messageId}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: isReceived ? "flex-start" : "flex-end",
+        marginBottom: "12px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "70%",
+          padding: "8px 12px",
+          backgroundColor: isReceived ? "#fff" : "#dcf8c6",
+          borderRadius: "8px",
+          position: "relative",
+        }}
+      >
+        <div style={{ fontSize: "14px", marginBottom: "4px" }}>
+          {message.messageBody}
+        </div>
+        <div
+          style={{
+            fontSize: "11px",
+            color: "#667781",
+            textAlign: "right",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: "4px",
+          }}
+        >
+          <span>
+            {format12HourTime(message.sentTimestamp || message.currentStatusTimestamp)}
+          </span>
+          {!isReceived && (
+            <MessageStatusIcon
+              status={message.status}
+              failureReason={message.failureReason}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+})}
                 </div>
               ))}
               <div ref={chatEndRef} style={{ height: "1px" }} />
             </div>
+
             <div
-              style={{
-                padding: "12px 16px",
-                backgroundColor: "#f0f0f0",
-                position: isMobileView ? "fixed" : "relative",
-                bottom: 0,
-                left: isMobileView ? 0 : "auto",
-                right: isMobileView ? 0 : "auto",
-                width: isMobileView ? "100%" : "auto",
-                zIndex: 2,
-                borderTop: "none", // Removed the border
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  backgroundColor: "#fff",
-                  padding: "6px 12px",
-                  borderRadius: "24px",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                }}
-              >
-                <Button
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: "8px",
-                    color: "#54656f",
-                  }}
-                >
-                  <FaPaperclip size={20} />
-                </Button>
-                <Input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                  placeholder="Type a message..."
-                  style={{
-                    border: "none",
-                    padding: "8px",
-                    flex: 1,
-                    backgroundColor: "transparent",
-                    boxShadow: "none", // Remove any default input shadow
-                    outline: "none", // Remove outline on focus
-                  }}
-                />
-                <Button
-                  onClick={sendMessage}
-                  disabled={!newMessage.trim()}
-                  style={{
-                    backgroundColor: newMessage.trim() ? "#00a884" : "#e9edef",
-                    border: "none",
-                    padding: "8px",
-                    borderRadius: "50%",
-                    color: newMessage.trim() ? "#fff" : "#8696a0",
-                  }}
-                >
-                  <FaPaperPlane size={18} />
-                </Button>
-              </div>
-            </div>
+  style={{
+    padding: "12px 16px",
+    backgroundColor: "#f0f0f0",
+    position: isMobileView ? "fixed" : "relative",
+    bottom: 0,
+    left: isMobileView ? 0 : "auto",
+    right: isMobileView ? 0 : "auto",
+    width: isMobileView ? "100%" : "auto",
+    zIndex: 2,
+    borderTop: "none" // Removed the border
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      backgroundColor: "#fff",
+      padding: "6px 12px",
+      borderRadius: "24px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+    }}
+  >
+    <Button
+      style={{
+        background: "transparent",
+        border: "none",
+        padding: "8px",
+        color: "#54656f",
+      }}
+    >
+      <FaPaperclip size={20} />
+    </Button>
+    <Input
+      type="text"
+      value={newMessage}
+      onChange={(e) => setNewMessage(e.target.value)}
+      onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+      placeholder="Type a message..."
+      style={{
+        border: "none",
+        padding: "8px",
+        flex: 1,
+        backgroundColor: "transparent",
+        boxShadow: "none", // Remove any default input shadow
+        outline: "none" // Remove outline on focus
+      }}
+    />
+    <Button
+      onClick={sendMessage}
+      disabled={!newMessage.trim()}
+      style={{
+        backgroundColor: newMessage.trim() ? "#00a884" : "#e9edef",
+        border: "none",
+        padding: "8px",
+        borderRadius: "50%",
+        color: newMessage.trim() ? "#fff" : "#8696a0",
+      }}
+    >
+      <FaPaperPlane size={18} />
+    </Button>
+  </div>
+</div>
           </>
         ) : (
           <div

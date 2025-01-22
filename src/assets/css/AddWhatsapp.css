@@ -1,0 +1,186 @@
+/* AddWhatsapp.css */
+.add-whatsapp-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .form-container {
+    width: 100%;
+    max-width: 600px;
+    margin: auto;
+  }
+  
+  .form-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    background: white;
+    overflow: hidden;
+  }
+  
+  .modern-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    padding: 2.5rem 2rem;
+    border: none;
+  }
+  
+  .header-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+  
+  .modern-header h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .modern-header p {
+    opacity: 0.9;
+    margin: 0;
+  }
+  
+  .modern-body {
+    padding: 2rem;
+  }
+  
+  .modern-form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .modern-label {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+  }
+  
+  .label-icon {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+  }
+  
+  .modern-input,
+  .modern-select,
+  .modern-textarea {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+  
+  .modern-input:focus,
+  .modern-select:focus,
+  .modern-textarea:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+  
+  .modern-input-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .country-dropdown {
+    min-width: 120px;
+  }
+  
+  .country-toggle {
+    background: #f7fafc !important;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 1rem !important;
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .modern-dropdown-menu {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    max-height: 300px;
+    width: 300px;
+  }
+  
+  .search-container {
+    margin-bottom: 1rem;
+  }
+  
+  .search-input {
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    padding: 0.5rem;
+  }
+  
+  .countries-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .country-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+  
+  .country-item:hover {
+    background-color: #f7fafc;
+  }
+  
+  .country-flag {
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+  }
+  
+  .country-name {
+    flex: 1;
+  }
+  
+  .country-code {
+    color: #718096;
+  }
+  
+  .modern-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 1rem 2rem !important;
+    width: 100%;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease !important;
+    margin-top: 1rem;
+  }
+  
+  .modern-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .add-whatsapp-container {
+      padding: 1rem;
+    }
+    
+    .modern-header {
+      padding: 2rem 1.5rem;
+    }
+    
+    .modern-body {
+      padding: 1.5rem;
+    }
+  }
