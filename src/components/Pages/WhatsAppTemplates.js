@@ -53,7 +53,7 @@ const WhatsAppTemplates = () => {
       try {
         setIsLoading(true);
         const response = await axios.post(
-          "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates",
+          "http://192.168.0.108:25483/api/v1/messages/fetchTemplates",
           { companyId },
           {
             headers: {

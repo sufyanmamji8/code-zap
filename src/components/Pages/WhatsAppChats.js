@@ -1367,6 +1367,7 @@ const WhatsAppChats = () => {
   const [contactsPerPage, setContactsPerPage] = useState(calculateContactsPerPage());
   const [countrySearchTerm, setCountrySearchTerm] = useState("");
   const [filteredCountries, setFilteredCountries] = useState(countryList);
+  const [fetchedTemplateContacts, setFetchedTemplateContacts] = useState(new Set());
 
   useEffect(() => {
     const handleResize = () => {
@@ -1441,6 +1442,9 @@ const WhatsAppChats = () => {
   const fetchTemplates = async () => {
     if (!selectedUser?.phoneNumber) return;
     
+    // Check if templates for this contact have already been fetched
+    if (fetchedTemplateContacts.has(selectedUser.phoneNumber)) return;
+  
     try {
       const response = await axios.post(
         `${MESSAGE_API_ENDPOINT}/getTemplates`,
@@ -1457,32 +1461,42 @@ const WhatsAppChats = () => {
       if (response.data.success) {
         const receivedTemplates = response.data.data
           .filter(template => template.to === selectedUser.phoneNumber)
-          .map(template => ({
-            ...template,
-            isTemplate: true,
-            timestamp: Date.now() / 1000,
-            to: selectedUser.phoneNumber,
-            from: config.phoneNumber,
-            messageBody: template.components.find(c => c.type === "BODY")?.text || '',
-            status: 'delivered',
-            sentTimestamp: Date.now() / 1000,
-            currentStatusTimestamp: Date.now() / 1000,
-            originalTimestamp: Date.now() / 1000
-          }));
+          .map(template => {
+            const originalTimestamp = template.createdAt 
+              ? Math.floor(new Date(template.createdAt).getTime() / 1000)
+              : Date.now() / 1000;
   
-        setMessages(prev => {
-          const nonTemplates = prev.filter(msg => !msg.isTemplate);
-          return [...nonTemplates, ...receivedTemplates].sort((a, b) => {
+            return {
+              ...template,
+              isTemplate: true,
+              timestamp: originalTimestamp,
+              to: selectedUser.phoneNumber,
+              from: config.phoneNumber,
+              messageBody: template.components.find(c => c.type === "BODY")?.text || '',
+              status: 'delivered',
+              sentTimestamp: originalTimestamp,
+              currentStatusTimestamp: originalTimestamp,
+              originalTimestamp: originalTimestamp
+            };
+          });
+  
+        setMessages((prev) => {
+          const combinedMessages = [...prev, ...receivedTemplates];
+          return combinedMessages.sort((a, b) => {
             const timeA = parseInt(a.originalTimestamp);
             const timeB = parseInt(b.originalTimestamp);
             return timeA - timeB;
           });
         });
+  
+        // Mark templates as fetched for this contact
+        setFetchedTemplateContacts(prev => new Set(prev.add(selectedUser.phoneNumber)));
       }
     } catch (error) {
       console.error('Error fetching templates:', error);
     }
   };
+  
 
   // Fetch contacts with pagination
   const fetchContacts = async (pageNum = 1, isInitial = false) => {
@@ -1621,11 +1635,15 @@ useEffect(() => {
     }
   }, [businessId]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (selectedUser?.phoneNumber) {
       fetchContacts();
       fetchMessages(selectedUser.phoneNumber);
-      fetchTemplates();
+      
+      // Only fetch templates if not already fetched
+      if (!fetchedTemplateContacts.has(selectedUser.phoneNumber)) {
+        fetchTemplates();
+      }
     }
   }, [selectedUser]);
 
@@ -2019,109 +2037,93 @@ useEffect(() => {
   };
 
   const TemplateMessage = ({ template }) => {
-    const { components } = template;
-    const isReceived = template.from === selectedUser?.phoneNumber;
-    
-    return (
-      <div
-        style={{
+  const { components } = template;
+  const isReceived = template.from === selectedUser?.phoneNumber;
+
+  const statusIcon = template.status !== 'delivered' 
+    ? <MessageStatusIcon status={template.status} failureReason={template.failureReason} />
+    : null;
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: isReceived ? "flex-start" : "flex-end",
+      marginBottom: "12px",
+      maxWidth: "70%",
+      marginLeft: isReceived ? "0" : "auto",
+      marginRight: isReceived ? "auto" : "0"
+    }}>
+      <div style={{
+        backgroundColor: isReceived ? "#fff" : "#dcf8c6",
+        borderRadius: "8px",
+        padding: "12px",
+        position: "relative",
+        width: "100%"
+      }}>
+        {components.map((component, idx) => {
+          switch (component.type) {
+            case "HEADER":
+              return component.media ? (
+                <div key={idx} className="mb-2">
+                  <img
+                    src={component.media.link}
+                    alt="Template header"
+                    style={{
+                      width: "100%",
+                      borderRadius: "4px",
+                      marginBottom: "8px"
+                    }}
+                  />
+                  {component.text && (
+                    <div style={{ fontSize: "14px", fontWeight: "500" }}>
+                      {component.text}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div key={idx} className="mb-2">
+                  <div style={{ fontSize: "14px", fontWeight: "500" }}>
+                    {component.text}
+                  </div>
+                </div>
+              );
+
+            case "BODY":
+              return (
+                <div key={idx} style={{ fontSize: "14px", margin: "8px 0" }}>
+                  {component.text}
+                </div>
+              );
+
+            case "FOOTER":
+              return (
+                <div key={idx} style={{ fontSize: "11px", color: "#667781", marginTop: "4px" }}>
+                  {component.text}
+                </div>
+              );
+
+            default:
+              return null;
+          }
+        })}
+
+        <div style={{
+          fontSize: "11px",
+          color: "#667781",
+          marginTop: "4px",
           display: "flex",
-          flexDirection: "column",
-          alignItems: isReceived ? "flex-start" : "flex-end", // Align based on sender
-          marginBottom: "12px",
-          maxWidth: "70%",
-          marginLeft: isReceived ? "0" : "auto",
-          marginRight: isReceived ? "auto" : "0"
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: isReceived ? "#fff" : "#dcf8c6", // Different color for sent/received
-            borderRadius: "8px",
-            padding: "12px",
-            position: "relative",
-            width: "100%"
-          }}
-        >
-          {components.map((component, idx) => {
-            switch (component.type) {
-              case "HEADER":
-                return (
-                  <div key={idx} className="mb-2">
-                    {component.media && (
-                      <img
-                        src={component.media.link}
-                        alt="Template header"
-                        style={{
-                          width: "100%",
-                          borderRadius: "4px",
-                          marginBottom: "8px"
-                        }}
-                      />
-                    )}
-                    {component.text && (
-                      <div style={{ fontSize: "14px", fontWeight: "500" }}>
-                        {component.text}
-                      </div>
-                    )}
-                  </div>
-                );
-              
-              case "BODY":
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      fontSize: "14px",
-                      margin: "8px 0"
-                    }}
-                  >
-                    {component.text}
-                  </div>
-                );
-              
-              case "FOOTER":
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      fontSize: "11px",
-                      color: "#667781",
-                      marginTop: "4px"
-                    }}
-                  >
-                    {component.text}
-                  </div>
-                );
-              
-              default:
-                return null;
-            }
-          })}
-          
-          <div
-            style={{
-              fontSize: "11px",
-              color: "#667781",
-              marginTop: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: "4px"
-            }}
-          >
-            <span>
-              {format12HourTime(template.timestamp)}
-            </span>
-            <MessageStatusIcon
-              status={template.status}
-              failureReason={template.failureReason}
-            />
-          </div>
+          alignItems: "center",
+          justifyContent: "flex-end",
+          gap: "4px"
+        }}>
+          <span>{format12HourTime(template.timestamp)}</span>
+          {!isReceived && <MessageStatusIcon status={template.status} failureReason={template.failureReason} />}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const renderNewChatModal = () => {
     const filterCountries = (searchTerm) => {
@@ -2532,12 +2534,12 @@ useEffect(() => {
           }}
         >
               {groupedMessages.map((group) => (
-                <div key={group.date}>
-                  {renderDateSeparator(group.timestamp)}
-                  {group.messages.map((message) => {
-                     if (message.isTemplate) {
-                      return <TemplateMessage key={message._id} template={message} />;
-                    }
+  <div key={group.date}>
+    {renderDateSeparator(group.timestamp)}
+    {group.messages.map((message) => {
+      if (message.isTemplate) {
+        return <TemplateMessage key={message._id} template={message} />;
+      }
   const isReceived = message.from === selectedUser.phoneNumber;
   return (
     <div
