@@ -1299,9 +1299,6 @@
 
 
 
-
-
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   FaArrowLeft,
@@ -1367,7 +1364,8 @@ const WhatsAppChats = () => {
   const [contactsPerPage, setContactsPerPage] = useState(calculateContactsPerPage());
   const [countrySearchTerm, setCountrySearchTerm] = useState("");
   const [filteredCountries, setFilteredCountries] = useState(countryList);
-  const [fetchedTemplateContacts, setFetchedTemplateContacts] = useState(new Set());
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -1381,13 +1379,12 @@ const WhatsAppChats = () => {
   useEffect(() => {
     if (businessId) {
       socketRef.current = io("https://codozap-e04e12b02929.herokuapp.com");
-  
+
       socketRef.current.on(`onmessagerecv-${businessId}`, async () => {
         console.log("Socket: New message received");
-  
+
         if (selectedUser) {
           await fetchMessages(selectedUser.phoneNumber);
-          await fetchTemplates(); // Fetch templates after new message
         }
 
         const response = await axios.post(
@@ -1436,67 +1433,36 @@ const WhatsAppChats = () => {
       };
     }
   }, [businessId, selectedUser, companyId, token, contactsPerPage]);
-  
 
+  const fetchUserTemplates = async (contactPhoneNumber) => {
+    if (!businessId || !companyId || !contactPhoneNumber) return;
 
-  const fetchTemplates = async () => {
-    if (!selectedUser?.phoneNumber) return;
-    
-    // Check if templates for this contact have already been fetched
-    if (fetchedTemplateContacts.has(selectedUser.phoneNumber)) return;
-  
     try {
+      setLoadingTemplates(true);
       const response = await axios.post(
         `${MESSAGE_API_ENDPOINT}/getTemplates`,
         {
           businessId,
           companyId,
-          to: selectedUser.phoneNumber
+          contactNumber: contactPhoneNumber
         },
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
       );
-  
+
       if (response.data.success) {
-        const receivedTemplates = response.data.data
-          .filter(template => template.to === selectedUser.phoneNumber)
-          .map(template => {
-            const originalTimestamp = template.createdAt 
-              ? Math.floor(new Date(template.createdAt).getTime() / 1000)
-              : Date.now() / 1000;
-  
-            return {
-              ...template,
-              isTemplate: true,
-              timestamp: originalTimestamp,
-              to: selectedUser.phoneNumber,
-              from: config.phoneNumber,
-              messageBody: template.components.find(c => c.type === "BODY")?.text || '',
-              status: 'delivered',
-              sentTimestamp: originalTimestamp,
-              currentStatusTimestamp: originalTimestamp,
-              originalTimestamp: originalTimestamp
-            };
-          });
-  
-        setMessages((prev) => {
-          const combinedMessages = [...prev, ...receivedTemplates];
-          return combinedMessages.sort((a, b) => {
-            const timeA = parseInt(a.originalTimestamp);
-            const timeB = parseInt(b.originalTimestamp);
-            return timeA - timeB;
-          });
-        });
-  
-        // Mark templates as fetched for this contact
-        setFetchedTemplateContacts(prev => new Set(prev.add(selectedUser.phoneNumber)));
+        setTemplates(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching templates:', error);
+      console.error("Error fetching user templates:", error);
+    } finally {
+      setLoadingTemplates(false);
     }
   };
-  
 
   // Fetch contacts with pagination
   const fetchContacts = async (pageNum = 1, isInitial = false) => {
@@ -1635,22 +1601,19 @@ useEffect(() => {
     }
   }, [businessId]);
 
-  useEffect(() => {
-    if (selectedUser?.phoneNumber) {
-      fetchContacts();
-      fetchMessages(selectedUser.phoneNumber);
-      
-      // Only fetch templates if not already fetched
-      if (!fetchedTemplateContacts.has(selectedUser.phoneNumber)) {
-        fetchTemplates();
-      }
-    }
-  }, [selectedUser]);
-
   // Handle contact selection
   useEffect(() => {
     if (selectedUser?.phoneNumber) {
-      fetchMessages(selectedUser.phoneNumber);
+      // First fetch contacts
+      fetchContacts(1, true)
+        .then(() => {
+          // Then fetch messages
+          fetchMessages(selectedUser.phoneNumber)
+            .then(() => {
+              // Finally fetch user-specific templates
+              fetchUserTemplates(selectedUser.phoneNumber);
+            });
+        });
     }
   }, [selectedUser]);
 
@@ -1983,27 +1946,61 @@ useEffect(() => {
 
   const groupMessagesByDate = (messages) => {
     const groups = {};
-  
+
     messages.forEach((message) => {
-      const timestamp = message.originalTimestamp || message.currentStatusTimestamp;
-      const date = new Date(parseInt(timestamp) * 1000).toDateString();
+      const date = new Date(
+        parseInt(message.currentStatusTimestamp) * 1000
+      ).toDateString();
       if (!groups[date]) {
         groups[date] = [];
       }
       groups[date].push(message);
     });
-  
+
     return Object.entries(groups)
       .map(([date, messages]) => ({
         date,
-        timestamp: parseInt(messages[0].originalTimestamp || messages[0].currentStatusTimestamp),
-        messages: messages.sort((a, b) => {
-          const timeA = parseInt(a.originalTimestamp || a.currentStatusTimestamp);
-          const timeB = parseInt(b.originalTimestamp || b.currentStatusTimestamp);
-          return timeA - timeB;
-        })
+        timestamp: parseInt(messages[0].currentStatusTimestamp),
+        messages,
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
+  };
+
+  const renderTemplates = () => {
+    if (loadingTemplates || templates.length === 0) return null;
+
+    return (
+      <div 
+        style={{
+          backgroundColor: '#f0f0f0', 
+          padding: '10px', 
+          borderRadius: '8px', 
+          margin: '10px 0'
+        }}
+      >
+        <h5>Available Templates</h5>
+        {templates.map((template) => (
+          <div 
+            key={template._id} 
+            style={{
+              backgroundColor: 'white', 
+              margin: '5px 0', 
+              padding: '10px', 
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+            onClick={() => {
+              // Logic to use template message
+              const templateBody = template.components.find(c => c.type === 'BODY')?.text || '';
+              setNewMessage(templateBody);
+            }}
+          >
+            <strong>{template.templateName}</strong>
+            <p>{template.components.find(c => c.type === 'BODY')?.text}</p>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const renderDateSeparator = (date) => (
@@ -2035,95 +2032,6 @@ useEffect(() => {
       hour12: true
     });
   };
-
-  const TemplateMessage = ({ template }) => {
-  const { components } = template;
-  const isReceived = template.from === selectedUser?.phoneNumber;
-
-  const statusIcon = template.status !== 'delivered' 
-    ? <MessageStatusIcon status={template.status} failureReason={template.failureReason} />
-    : null;
-
-  return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: isReceived ? "flex-start" : "flex-end",
-      marginBottom: "12px",
-      maxWidth: "70%",
-      marginLeft: isReceived ? "0" : "auto",
-      marginRight: isReceived ? "auto" : "0"
-    }}>
-      <div style={{
-        backgroundColor: isReceived ? "#fff" : "#dcf8c6",
-        borderRadius: "8px",
-        padding: "12px",
-        position: "relative",
-        width: "100%"
-      }}>
-        {components.map((component, idx) => {
-          switch (component.type) {
-            case "HEADER":
-              return component.media ? (
-                <div key={idx} className="mb-2">
-                  <img
-                    src={component.media.link}
-                    alt="Template header"
-                    style={{
-                      width: "100%",
-                      borderRadius: "4px",
-                      marginBottom: "8px"
-                    }}
-                  />
-                  {component.text && (
-                    <div style={{ fontSize: "14px", fontWeight: "500" }}>
-                      {component.text}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div key={idx} className="mb-2">
-                  <div style={{ fontSize: "14px", fontWeight: "500" }}>
-                    {component.text}
-                  </div>
-                </div>
-              );
-
-            case "BODY":
-              return (
-                <div key={idx} style={{ fontSize: "14px", margin: "8px 0" }}>
-                  {component.text}
-                </div>
-              );
-
-            case "FOOTER":
-              return (
-                <div key={idx} style={{ fontSize: "11px", color: "#667781", marginTop: "4px" }}>
-                  {component.text}
-                </div>
-              );
-
-            default:
-              return null;
-          }
-        })}
-
-        <div style={{
-          fontSize: "11px",
-          color: "#667781",
-          marginTop: "4px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          gap: "4px"
-        }}>
-          <span>{format12HourTime(template.timestamp)}</span>
-          {!isReceived && <MessageStatusIcon status={template.status} failureReason={template.failureReason} />}
-        </div>
-      </div>
-    </div>
-  );
-};
 
   const renderNewChatModal = () => {
     const filterCountries = (searchTerm) => {
@@ -2419,22 +2327,104 @@ useEffect(() => {
     </Col>
   );
 
+  const renderTemplateMessage = (message) => {
+    const { components } = message;
+    const isReceived = message.from === selectedUser.phoneNumber;
+  
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: isReceived ? "flex-start" : "flex-end",
+          marginBottom: "10px",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "60%",
+            padding: "6px 10px",
+            backgroundColor: isReceived ? "#fff" : "#dcf8c6",
+            borderRadius: "6px",
+          }}
+        >
+          {components.map((component, index) => {
+            switch (component.type) {
+              case "HEADER":
+                return (
+                  <img
+                    key={index}
+                    src={component.media.link}
+                    alt="Template Header"
+                    style={{ maxWidth: "100%", borderRadius: "6px 6px 0 0" }}
+                  />
+                );
+              case "BODY":
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      fontSize: "12px",
+                      marginBottom: "4px",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {component.text}
+                  </div>
+                );
+              case "FOOTER":
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      fontSize: "10px",
+                      color: "#4f4d4d",
+                    }}
+                  >
+                    {component.text}
+                  </div>
+                );
+              default:
+                return null;
+            }
+          })}
+          <div
+            style={{
+              fontSize: "10px",
+              color: "#667781",
+              textAlign: "right",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: "4px",
+            }}
+          >
+            <span>
+              {format12HourTime(message.sentTimestamp || message.currentStatusTimestamp)}
+            </span>
+            {!isReceived && (
+              <MessageStatusIcon
+                status={message.status}
+                failureReason={message.failureReason}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderChatWindow = () => {
     const chatMessages = selectedUser
-      ? messages
-          .filter(msg => 
-            (msg.from === selectedUser.phoneNumber || msg.to === selectedUser.phoneNumber) &&
-            (!msg.isTemplate || msg.to === selectedUser.phoneNumber)
-          )
-          .sort((a, b) => {
-            const timeA = parseInt(a.originalTimestamp || a.currentStatusTimestamp);
-            const timeB = parseInt(b.originalTimestamp || b.currentStatusTimestamp);
-            return timeA - timeB;
-          })
+      ? messages.filter(
+          (msg) =>
+            msg.from === selectedUser.phoneNumber ||
+            msg.to === selectedUser.phoneNumber
+        )
       : [];
   
     const groupedMessages = groupMessagesByDate(chatMessages);
-
+  
     return (
       <Col
         xs="12"
@@ -2445,218 +2435,199 @@ useEffect(() => {
           flexDirection: "column",
           backgroundColor: "#f4f8fb",
           position: "relative",
-          // overflow: "hidden",
         }}
       >
+        {/* New Chat Header */}
+        {selectedUser && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "10px 20px",
+              backgroundColor: "rgb(0, 168, 132)",
+              borderBottom: "1px solidrgb(224, 224, 224)",
+            }}
+          >
+            {isMobileView && (
+              <Button
+                onClick={() => setSelectedUser(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "white",
+                  marginRight: "10px",
+                  padding: 0,
+                }}
+              >
+                <FaArrowLeft size={20} />
+              </Button>
+            )}
+  
+            {/* Avatar */}
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "#e0e0e0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: "15px",
+                fontSize: "20px",
+              }}
+            >
+              {selectedUser.flag || "👤"}
+            </div>
+  
+            {/* User Info */}
+            <div>
+              <h6 style={{ margin: 0, fontWeight: "bold", color: "white", fontSize: "13px" }}>
+                {selectedUser.senderName || selectedUser.phoneNumber}
+              </h6>
+            </div>
+          </div>
+        )}
+  
         {initialLoading && <LoaderOverlay />}
         {selectedUser ? (
           <>
             <div
               style={{
-                padding: "15px",
-                background: "linear-gradient(135deg, #00a884 0%, #008c70 100%)",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderRadius: "10px 10px 0 0",
-                position: "sticky",
-                top: 0,
-                zIndex: 1,
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                flex: 1,
+                padding: "20px",
+                overflowY: "auto",
+                backgroundColor: "#efeae2",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+                marginBottom: isMobileView ? "60px" : 0,
               }}
             >
-              <h5
-                style={{
-                  margin: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  color: "#fff",
-                }}
-              >
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    backdropFilter: "blur(4px)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "12px",
-                    fontSize: "18px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  {selectedUser.flag}
-                </div>
-                <div>
-                  <div style={{ fontWeight: "600" }}>
-                    {selectedUser.senderName ||
-                      selectedUser.name ||
-                      senderNames[selectedUser.phoneNumber] ||
-                      selectedUser.phoneNumber}
-                  </div>
-                  <div style={{ fontSize: "12px", opacity: 0.9 }}>
-                    {selectedUser.phoneNumber}
-                  </div>
-                </div>
-              </h5>
-              {isMobileView && (
-                <Button
-                  onClick={() => setSelectedUser(null)}
-                  style={{
-                    backgroundColor: "rgba(255,255,255,0.1)",
-                    border: "none",
-                    color: "#fff",
-                    borderRadius: "50%",
-                    width: "40px",
-                    height: "40px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <FaArrowLeft />
-                </Button>
-              )}
-            </div>
-
-            <div
-          style={{
-            flex: 1,
-            padding: "20px",
-            overflowY: "auto",
-            backgroundColor: "#efeae2",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-            marginBottom: isMobileView ? "60px" : 0,
-          }}
-        >
+              {/* Existing message rendering code */}
               {groupedMessages.map((group) => (
-  <div key={group.date}>
-    {renderDateSeparator(group.timestamp)}
-    {group.messages.map((message) => {
-      if (message.isTemplate) {
-        return <TemplateMessage key={message._id} template={message} />;
-      }
-  const isReceived = message.from === selectedUser.phoneNumber;
-  return (
-    <div
-      key={message.messageId}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: isReceived ? "flex-start" : "flex-end",
-        marginBottom: "12px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "70%",
-          padding: "8px 12px",
-          backgroundColor: isReceived ? "#fff" : "#dcf8c6",
-          borderRadius: "8px",
-          position: "relative",
-        }}
-      >
-        <div style={{ fontSize: "14px", marginBottom: "4px" }}>
-          {message.messageBody}
-        </div>
-        <div
-          style={{
-            fontSize: "11px",
-            color: "#667781",
-            textAlign: "right",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "4px",
-          }}
-        >
-          <span>
-            {format12HourTime(message.sentTimestamp || message.currentStatusTimestamp)}
-          </span>
-          {!isReceived && (
-            <MessageStatusIcon
-              status={message.status}
-              failureReason={message.failureReason}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-})}
+                <div key={group.date}>
+                  {renderDateSeparator(group.timestamp)}
+                  {group.messages.map((message) => {
+                    const isReceived = message.from === selectedUser.phoneNumber;
+                    if (message.type === "template") {
+                      return renderTemplateMessage(message);
+                    } else {
+                      return (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: isReceived ? "flex-start" : "flex-end",
+                            marginBottom: "12px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              maxWidth: "70%",
+                              padding: "8px 12px",
+                              backgroundColor: isReceived ? "#fff" : "#dcf8c6",
+                              borderRadius: "8px",
+                              position: "relative",
+                            }}
+                          >
+                            <div style={{ fontSize: "14px", marginBottom: "4px" }}>
+                              {message.messageBody}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                color: "#667781",
+                                textAlign: "right",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "flex-end",
+                                gap: "4px",
+                              }}
+                            >
+                              <span>
+                                {format12HourTime(message.sentTimestamp || message.currentStatusTimestamp)}
+                              </span>
+                              {!isReceived && (
+                                <MessageStatusIcon
+                                  status={message.status}
+                                  failureReason={message.failureReason}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               ))}
               <div ref={chatEndRef} style={{ height: "1px" }} />
             </div>
-
+  
+            {/* Existing message input section */}
             <div
-  style={{
-    padding: "12px 16px",
-    backgroundColor: "#f0f0f0",
-    position: isMobileView ? "fixed" : "relative",
-    bottom: 0,
-    left: isMobileView ? 0 : "auto",
-    right: isMobileView ? 0 : "auto",
-    width: isMobileView ? "100%" : "auto",
-    zIndex: 2,
-    borderTop: "none" // Removed the border
-  }}
->
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      backgroundColor: "#fff",
-      padding: "6px 12px",
-      borderRadius: "24px",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-    }}
-  >
-    <Button
-      style={{
-        background: "transparent",
-        border: "none",
-        padding: "8px",
-        color: "#54656f",
-      }}
-    >
-      <FaPaperclip size={20} />
-    </Button>
-    <Input
-      type="text"
-      value={newMessage}
-      onChange={(e) => setNewMessage(e.target.value)}
-      onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-      placeholder="Type a message..."
-      style={{
-        border: "none",
-        padding: "8px",
-        flex: 1,
-        backgroundColor: "transparent",
-        boxShadow: "none", // Remove any default input shadow
-        outline: "none" // Remove outline on focus
-      }}
-    />
-    <Button
-      onClick={sendMessage}
-      disabled={!newMessage.trim()}
-      style={{
-        backgroundColor: newMessage.trim() ? "#00a884" : "#e9edef",
-        border: "none",
-        padding: "8px",
-        borderRadius: "50%",
-        color: newMessage.trim() ? "#fff" : "#8696a0",
-      }}
-    >
-      <FaPaperPlane size={18} />
-    </Button>
-  </div>
-</div>
+              style={{
+                padding: "12px 16px",
+                backgroundColor: "#f0f0f0",
+                position: isMobileView ? "fixed" : "relative",
+                bottom: 0,
+                left: isMobileView ? 0 : "auto",
+                right: isMobileView ? 0 : "auto",
+                width: isMobileView ? "100%" : "auto",
+                zIndex: 2,
+                borderTop: "none",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  backgroundColor: "#fff",
+                  padding: "6px 12px",
+                  borderRadius: "24px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                }}
+              >
+                <Button
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: "8px",
+                    color: "#54656f",
+                  }}
+                >
+                  <FaPaperclip size={20} />
+                </Button>
+                <Input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder="Type a message..."
+                  style={{
+                    border: "none",
+                    padding: "8px",
+                    flex: 1,
+                    backgroundColor: "transparent",
+                    boxShadow: "none",
+                    outline: "none",
+                  }}
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim()}
+                  style={{
+                    backgroundColor: newMessage.trim() ? "#00a884" : "#e9edef",
+                    border: "none",
+                    padding: "8px",
+                    borderRadius: "50%",
+                    color: newMessage.trim() ? "#fff" : "#8696a0",
+                  }}
+                >
+                  <FaPaperPlane size={18} />
+                </Button>
+              </div>
+            </div>
           </>
         ) : (
           <div

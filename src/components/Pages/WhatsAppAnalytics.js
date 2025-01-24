@@ -87,7 +87,7 @@ const WhatsAppAnalytics = () => {
         const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
   
         const response = await axios.post(
-          `http://192.168.0.108:25483/api/v1/analytics/fetchConversationAnalytics`,
+          `http://192.168.0.112:25483/api/v1/analytics/fetchConversationAnalytics`,
           { companyId },
           {
             headers: {
