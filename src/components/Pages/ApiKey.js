@@ -38,7 +38,7 @@ const ApiKey = () => {
 
     try {
       const response = await axios.post(
-        'http://192.168.0.112:25483/api/v1/apiKey/get-Api-Key',
+        'http://192.168.0.106:25483/api/v1/apiKey/get-Api-Key',
         { companyId },
         {
           headers: {
@@ -66,7 +66,7 @@ const ApiKey = () => {
     setIsGenerating(true);
     try {
       const response = await axios.post(
-        'http://192.168.0.112:25483/api/v1/apiKey/generate-Api-Key',
+        'http://192.168.0.106:25483/api/v1/apiKey/generate-Api-Key',
         { companyId },
         {
           headers: {
@@ -99,7 +99,7 @@ const ApiKey = () => {
   
     try {
       const response = await axios.post(
-        'http://192.168.0.112:25483/api/v1/apiKey/revoke-Api-Key',
+        'http://192.168.0.106:25483/api/v1/apiKey/revoke-Api-Key',
         { 
           id: apiKey._id,
           companyId 

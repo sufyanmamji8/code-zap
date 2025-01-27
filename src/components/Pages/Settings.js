@@ -365,7 +365,7 @@ const Settings = () => {
         }
 
         const response = await axios.post(
-          'http://192.168.0.112:25483/api/v1/configuration/check-configuration',
+          'http://192.168.0.106:25483/api/v1/configuration/check-configuration',
           { companyId },
           {
             headers: {
@@ -430,8 +430,8 @@ const Settings = () => {
         };
 
         const endpoint = hasExistingConfig 
-          ? 'http://192.168.0.112:25483/api/v1/configuration/update-configuration'
-          : 'http://192.168.0.112:25483/api/v1/configuration/save-configuration';
+          ? 'http://192.168.0.106:25483/api/v1/configuration/update-configuration'
+          : 'http://192.168.0.106:25483/api/v1/configuration/save-configuration';
           // ? 'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/update-configuration'
           // : 'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/save-configuration';
 

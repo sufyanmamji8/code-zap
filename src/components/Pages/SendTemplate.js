@@ -107,7 +107,7 @@ const SendTemplate = () => {
 
     try {
       const response = await axios.post(
-        'http://192.168.0.112:25483/api/v1/messages/fetchTemplates',
+        'http://192.168.0.106:25483/api/v1/messages/fetchTemplates',
         {
           companyId: formData.companyId
         },
@@ -172,7 +172,7 @@ const SendTemplate = () => {
 
     try {
       const response = await axios.post(
-        'http://192.168.0.101:25483/api/v1/apiKey/get-Api-Key',
+        'http://192.168.0.106:25483/api/v1/apiKey/get-Api-Key',
         { companyId: formData.companyId },
         {
           headers: {
@@ -204,7 +204,7 @@ const SendTemplate = () => {
       setIsLoading(true);
       try {
         const response = await axios.post(
-          'http://192.168.0.112:25483/api/v1/messages/fetchTemplates',
+          'http://192.168.0.106:25483/api/v1/messages/fetchTemplates',
           {
             companyId: formData.companyId
           },
@@ -411,7 +411,7 @@ const SendTemplate = () => {
       ? `--header 'Authorization: Bearer ${apiKey}'`
       : '# Please generate an API key first';
   
-    return `curl --location 'http://192.168.0.112:25483/api/v1/messages/sendTemplate' \\
+    return `curl --location 'http://192.168.0.106:25483/api/v1/messages/sendTemplate' \\
   ${authHeader} \\
   --header 'Content-Type: application/json' \\
   --data '${formattedJson}'`;
@@ -450,7 +450,7 @@ const SendTemplate = () => {
       };
   
       const response = await axios.post(
-        'http://192.168.0.112:25483/api/v1/messages/sendTemplate',
+        'http://192.168.0.106:25483/api/v1/messages/sendTemplate',
         payload,
         {
           headers: {

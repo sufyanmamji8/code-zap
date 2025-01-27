@@ -36,7 +36,7 @@ const Dashboard = () => {
   const checkConfiguration = async (companyId, token) => {
     try {
       const response = await axios.post(
-        `http://192.168.0.112:25483/api/v1/configuration/check-configuration`,
+        `http://192.168.0.106:25483/api/v1/configuration/check-configuration`,
         { companyId },
         {
           headers: {
@@ -115,7 +115,7 @@ const handleOpenWhatsApp = async (companyId, companyName) => {
     }
 
     const response = await axios.post(
-      `http://192.168.0.112:25483/api/v1/configuration/check-configuration`,
+      `http://192.168.0.106:25483/api/v1/configuration/check-configuration`,
       { companyId},
       {
         headers: {
