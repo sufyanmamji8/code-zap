@@ -229,7 +229,7 @@
 //   // Fetch messages for selected contact
 //   const fetchMessages = async (contactPhoneNumber) => {
 //     if (!businessId || !contactPhoneNumber) return;
-
+  
 //     try {
 //       setLoading(true);
 //       const response = await axios.post(
@@ -242,10 +242,10 @@
 //           headers: { Authorization: `Bearer ${token}` },
 //         }
 //       );
-
+  
 //       if (response.data.success) {
 //         setMessages(response.data.data);
-
+  
 //         // Extract sender name from messages
 //         const messages = response.data.data;
 //         if (messages.length > 0) {
@@ -259,32 +259,36 @@
 //             }));
 //           }
 //         }
-
-//         // Update contacts with sender name
+  
+//         // Update contacts with sender name and latest message
 //         setContacts((prevContacts) =>
 //           prevContacts.map((contact) => {
 //             if (contact.phoneNumber === contactPhoneNumber) {
 //               const latestMessage = messages.find(
 //                 (msg) => msg.senderName && msg.from === contactPhoneNumber
 //               );
+//               const lastMsg = messages[0];
+//               let lastMessageText = "";
+  
+//               if (lastMsg) {
+//                 if (lastMsg.type === "template") {
+//                   const bodyComponent = lastMsg.components?.find(c => c.type === "BODY");
+//                   lastMessageText = bodyComponent ? bodyComponent.text : "Template Message";
+//                 } else {
+//                   lastMessageText = lastMsg.messageBody;
+//                 }
+//               }
+  
 //               return {
 //                 ...contact,
 //                 name: latestMessage?.senderName || contact.name,
-//                 lastMessage: messages[0]?.messageBody || contact.lastMessage,
-//                 timestamp:
-//                   messages[0]?.currentStatusTimestamp || contact.timestamp,
+//                 lastMessage: lastMessageText,
+//                 timestamp: messages[0]?.currentStatusTimestamp || contact.timestamp,
 //               };
 //             }
 //             return contact;
 //           })
 //         );
-
-//         // Add this: Scroll to bottom after messages are loaded
-//         setTimeout(() => {
-//           if (chatEndRef.current) {
-//             chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-//           }
-//         }, 100);
 //       }
 //     } catch (error) {
 //       console.error("Error fetching messages:", error);
@@ -477,7 +481,7 @@
 
 //   const uniqueUsers = React.useMemo(() => {
 //     const users = new Map();
-
+  
 //     contacts.forEach((contact) => {
 //       if (contact && contact.phoneNumber) {
 //         users.set(contact.phoneNumber, {
@@ -487,36 +491,43 @@
 //         });
 //       }
 //     });
-
+  
 //     messages.forEach((msg) => {
 //       if (!msg) return;
-
+  
 //       const contactNumber =
 //         msg.from === config?.phoneNumber ? msg.to : msg.from;
-
+  
 //       if (!contactNumber) return;
-
+  
 //       const existingUser = users.get(contactNumber);
 //       const messageTimestamp = parseInt(msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp);
 //       const existingTimestamp = existingUser
 //         ? parseInt(existingUser.timestamp)
 //         : 0;
-
+  
 //       if (!existingUser || messageTimestamp > existingTimestamp) {
 //         const country = countryList.find(
 //           (c) => c && c.code && contactNumber.startsWith(c.code)
 //         );
-
+  
+//         // Add handling for template messages
+//         let lastMessage = msg.messageBody;
+//         if (msg.type === "template") {
+//           const bodyComponent = msg.components?.find(c => c.type === "BODY");
+//           lastMessage = bodyComponent ? bodyComponent.text : "Template Message";
+//         }
+  
 //         users.set(contactNumber, {
 //           ...(existingUser || {}),
 //           phoneNumber: contactNumber,
-//           lastMessage: msg.messageBody,
+//           lastMessage: lastMessage,
 //           timestamp: msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp,
 //           flag: country?.flag || "🌐",
 //         });
 //       }
 //     });
-
+  
 //     return Array.from(users.values())
 //       .filter((user) => user && user.phoneNumber)
 //       .sort((a, b) => {
@@ -929,7 +940,12 @@
 //           overflowY: "auto",
 //           flex: 1,
 //           marginTop: "5px",
-//           paddingRight: "5px"
+//           paddingRight: "5px",
+//           msOverflowStyle: "none", /* IE and Edge */
+//           scrollbarWidth: "none", /* Firefox */
+//           "&::-webkit-scrollbar": {
+//             display: "none" /* Chrome, Safari, Opera */
+//           }
 //         }}
 //       >
 //         {contacts.map((contact) => {
@@ -1025,6 +1041,25 @@
 //       </div>
 //     </Col>
 //   );
+//   const formatTemplateText = (text) => {
+//     // Split the text by star patterns
+//     const parts = text.split(/(\*[^*]+\*)/g);
+    
+//     // Map through parts and wrap starred content in bold tags
+//     return parts.map((part, index) => {
+//       if (part.startsWith('*') && part.endsWith('*')) {
+//         // Remove stars and wrap content in strong tag
+//         const boldContent = part.slice(1, -1);
+//         return `<strong>${boldContent}</strong>`;
+//       }
+//       return part;
+//     }).join('');
+//   };
+  
+//   // Function to safely render HTML content
+//   const createMarkup = (htmlContent) => {
+//     return { __html: htmlContent };
+//   };
 
 //   const renderTemplateMessage = (message) => {
 //     const { components } = message;
@@ -1058,19 +1093,18 @@
 //                     style={{ maxWidth: "100%", borderRadius: "6px 6px 0 0" }}
 //                   />
 //                 );
-//               case "BODY":
-//                 return (
-//                   <div
-//                     key={index}
-//                     style={{
-//                       fontSize: "12px",
-//                       marginBottom: "4px",
-//                       whiteSpace: "pre-wrap",
-//                     }}
-//                   >
-//                     {component.text}
-//                   </div>
-//                 );
+//                 case "BODY":
+//                   return (
+//                     <div
+//                       key={index}
+//                       style={{
+//                         fontSize: "12px",
+//                         marginBottom: "4px",
+//                         whiteSpace: "pre-wrap",
+//                       }}
+//                       dangerouslySetInnerHTML={createMarkup(formatTemplateText(component.text))}
+//                     />
+//                   );
 //               case "FOOTER":
 //                 return (
 //                   <div
@@ -1130,22 +1164,26 @@
 //         md="8"
 //         style={{
 //           height: "calc(100vh - 100px)",
+//           padding: 0,
 //           display: "flex",
 //           flexDirection: "column",
 //           backgroundColor: "#f4f8fb",
 //           position: "relative",
+//           backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+//           backgroundColor: "#efeae2"
 //         }}
 //       >
-//         {/* New Chat Header */}
+//         {/* Chat Header */}
 //         {selectedUser && (
 //           <div
 //             style={{
 //               display: "flex",
 //               alignItems: "center",
-//               padding: "10px 20px",
+//               padding: "10px 20px",              
 //               backgroundColor: "rgb(0, 168, 132)",
-//               borderBottom: "1px solidrgb(224, 224, 224)",
+//               borderBottom: "1px solid rgb(224, 224, 224)",
 //             }}
+//             className="user_select"
 //           >
 //             {isMobileView && (
 //               <Button
@@ -1162,7 +1200,6 @@
 //               </Button>
 //             )}
   
-//             {/* Avatar */}
 //             <div
 //               style={{
 //                 width: "40px",
@@ -1179,7 +1216,6 @@
 //               {selectedUser.flag || "👤"}
 //             </div>
   
-//             {/* User Info */}
 //             <div>
 //               <h6 style={{ margin: 0, fontWeight: "bold", color: "white", fontSize: "13px" }}>
 //                 {selectedUser.senderName || selectedUser.phoneNumber}
@@ -1196,12 +1232,14 @@
 //                 flex: 1,
 //                 padding: "20px",
 //                 overflowY: "auto",
-//                 backgroundColor: "#efeae2",
-//                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
 //                 marginBottom: isMobileView ? "60px" : 0,
+//                 msOverflowStyle: "none",
+//                 scrollbarWidth: "none",
+//                 "&::-webkit-scrollbar": {
+//                   display: "none"
+//                 }
 //               }}
 //             >
-//               {/* Existing message rendering code */}
 //               {groupedMessages.map((group) => (
 //                 <div key={group.date}>
 //                   {renderDateSeparator(group.timestamp)}
@@ -1262,18 +1300,17 @@
 //               <div ref={chatEndRef} style={{ height: "1px" }} />
 //             </div>
   
-//             {/* Existing message input section */}
+//             {/* Message Input Section */}
 //             <div
 //               style={{
 //                 padding: "12px 16px",
-//                 backgroundColor: "#f0f0f0",
 //                 position: isMobileView ? "fixed" : "relative",
 //                 bottom: 0,
 //                 left: isMobileView ? 0 : "auto",
 //                 right: isMobileView ? 0 : "auto",
 //                 width: isMobileView ? "100%" : "auto",
 //                 zIndex: 2,
-//                 borderTop: "none",
+//                 backgroundColor: "transparent"
 //               }}
 //             >
 //               <div
@@ -1417,6 +1454,20 @@
 //         position: "relative",
 //       }}
 //     >
+//       <style>
+//         {`
+//           /* Hide scrollbar for Chrome, Safari and Opera */
+//           *::-webkit-scrollbar {
+//             display: none;
+//           }
+
+//           /* Hide scrollbar for IE, Edge and Firefox */
+//           * {
+//             -ms-overflow-style: none;  /* IE and Edge */
+//             scrollbar-width: none;  /* Firefox */
+//           }
+//         `}
+//       </style>
 //       {renderNewChatModal()}
 //       <Container
 //         fluid
@@ -1436,6 +1487,11 @@
 //   );
 // };
 // export default WhatsAppChats;
+
+
+
+
+
 
 
 
@@ -1682,7 +1738,7 @@ useEffect(() => {
   // Fetch messages for selected contact
   const fetchMessages = async (contactPhoneNumber) => {
     if (!businessId || !contactPhoneNumber) return;
-
+  
     try {
       setLoading(true);
       const response = await axios.post(
@@ -1695,10 +1751,10 @@ useEffect(() => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
+  
       if (response.data.success) {
         setMessages(response.data.data);
-
+  
         // Extract sender name from messages
         const messages = response.data.data;
         if (messages.length > 0) {
@@ -1712,32 +1768,36 @@ useEffect(() => {
             }));
           }
         }
-
-        // Update contacts with sender name
+  
+        // Update contacts with sender name and latest message
         setContacts((prevContacts) =>
           prevContacts.map((contact) => {
             if (contact.phoneNumber === contactPhoneNumber) {
               const latestMessage = messages.find(
                 (msg) => msg.senderName && msg.from === contactPhoneNumber
               );
+              const lastMsg = messages[0];
+              let lastMessageText = "";
+  
+              if (lastMsg) {
+                if (lastMsg.type === "template") {
+                  const bodyComponent = lastMsg.components?.find(c => c.type === "BODY");
+                  lastMessageText = bodyComponent ? bodyComponent.text : "Template Message";
+                } else {
+                  lastMessageText = lastMsg.messageBody;
+                }
+              }
+  
               return {
                 ...contact,
                 name: latestMessage?.senderName || contact.name,
-                lastMessage: messages[0]?.messageBody || contact.lastMessage,
-                timestamp:
-                  messages[0]?.currentStatusTimestamp || contact.timestamp,
+                lastMessage: lastMessageText,
+                timestamp: messages[0]?.currentStatusTimestamp || contact.timestamp,
               };
             }
             return contact;
           })
         );
-
-        // Add this: Scroll to bottom after messages are loaded
-        setTimeout(() => {
-          if (chatEndRef.current) {
-            chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-          }
-        }, 100);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -1930,7 +1990,7 @@ useEffect(() => {
 
   const uniqueUsers = React.useMemo(() => {
     const users = new Map();
-
+  
     contacts.forEach((contact) => {
       if (contact && contact.phoneNumber) {
         users.set(contact.phoneNumber, {
@@ -1940,36 +2000,43 @@ useEffect(() => {
         });
       }
     });
-
+  
     messages.forEach((msg) => {
       if (!msg) return;
-
+  
       const contactNumber =
         msg.from === config?.phoneNumber ? msg.to : msg.from;
-
+  
       if (!contactNumber) return;
-
+  
       const existingUser = users.get(contactNumber);
       const messageTimestamp = parseInt(msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp);
       const existingTimestamp = existingUser
         ? parseInt(existingUser.timestamp)
         : 0;
-
+  
       if (!existingUser || messageTimestamp > existingTimestamp) {
         const country = countryList.find(
           (c) => c && c.code && contactNumber.startsWith(c.code)
         );
-
+  
+        // Add handling for template messages
+        let lastMessage = msg.messageBody;
+        if (msg.type === "template") {
+          const bodyComponent = msg.components?.find(c => c.type === "BODY");
+          lastMessage = bodyComponent ? bodyComponent.text : "Template Message";
+        }
+  
         users.set(contactNumber, {
           ...(existingUser || {}),
           phoneNumber: contactNumber,
-          lastMessage: msg.messageBody,
+          lastMessage: lastMessage,
           timestamp: msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp,
           flag: country?.flag || "🌐",
         });
       }
     });
-
+  
     return Array.from(users.values())
       .filter((user) => user && user.phoneNumber)
       .sort((a, b) => {
@@ -1996,9 +2063,9 @@ useEffect(() => {
       messageBody: newMessage,
       type: "text",
       status: "sending",
-      sentTimestamp: currentTimestamp,      // Original sent timestamp
-      currentStatusTimestamp: currentTimestamp,  // Will be updated with status changes
-      originalTimestamp: currentTimestamp,   // New field to store original time
+      sentTimestamp: currentTimestamp,      // Original sent time - never changes
+      currentStatusTimestamp: currentTimestamp,  // For status changes only
+      messageTimestamp: currentTimestamp,    // For message grouping/display - never changes
       senderName: config.companyName || config.phoneNumber,
     };
 
@@ -2046,8 +2113,8 @@ useEffect(() => {
                   ...msg,
                   messageId: actualMessageId,
                   status: "sent",
-                  currentStatusTimestamp: Date.now() / 1000, // Update status timestamp
-                  sentTimestamp: msg.originalTimestamp  // Keep original timestamp
+                  currentStatusTimestamp: Date.now() / 1000, // Only for status tracking
+                  messageTimestamp: msg.messageTimestamp  // Preserve original timestamp
                 }
               : msg
           )
@@ -2078,45 +2145,63 @@ useEffect(() => {
   };
 
   const formatDate = (timestamp) => {
-    const date = new Date(parseInt(timestamp) * 1000);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return "Today";
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday";
-    } else {
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
+    if (!timestamp) return "Date unavailable";
+    
+    try {
+      const date = new Date(parseInt(timestamp) * 1000);
+      if (isNaN(date.getTime())) return "Invalid date";
+  
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+  
+      if (date.toDateString() === today.toDateString()) {
+        return "Today";
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        return "Yesterday";
+      } else {
+        return date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid date";
     }
   };
 
   const groupMessagesByDate = (messages) => {
     const groups = {};
-
+  
     messages.forEach((message) => {
-      const date = new Date(
-        parseInt(message.currentStatusTimestamp) * 1000
-      ).toDateString();
+      // For template messages, use originalTimestamp if available
+      const timestamp = message.type === "template" 
+        ? message.originalTimestamp || message.sentTimestamp || message.currentStatusTimestamp
+        : message.sentTimestamp || message.currentStatusTimestamp;
+  
+      if (!timestamp) {
+        console.warn('Message missing timestamp:', message);
+        return; // Skip messages without any timestamp
+      }
+  
+      const date = new Date(parseInt(timestamp) * 1000).toDateString();
       if (!groups[date]) {
         groups[date] = [];
       }
       groups[date].push(message);
     });
-
+  
     return Object.entries(groups)
       .map(([date, messages]) => ({
         date,
-        timestamp: parseInt(messages[0].currentStatusTimestamp),
+        timestamp: parseInt(messages[0].sentTimestamp || messages[0].currentStatusTimestamp),
         messages,
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
   };
+  
 
   const renderTemplates = () => {
     if (loadingTemplates || templates.length === 0) return null;
@@ -2506,6 +2591,11 @@ useEffect(() => {
   const renderTemplateMessage = (message) => {
     const { components } = message;
     const isReceived = message.from === selectedUser.phoneNumber;
+    
+    // Use the first available timestamp
+    const messageTimestamp = message.sentTimestamp || 
+                            message.originalTimestamp || 
+                            message.currentStatusTimestamp;
   
     return (
       <div
@@ -2535,18 +2625,18 @@ useEffect(() => {
                     style={{ maxWidth: "100%", borderRadius: "6px 6px 0 0" }}
                   />
                 );
-                case "BODY":
-                  return (
-                    <div
-                      key={index}
-                      style={{
-                        fontSize: "12px",
-                        marginBottom: "4px",
-                        whiteSpace: "pre-wrap",
-                      }}
-                      dangerouslySetInnerHTML={createMarkup(formatTemplateText(component.text))}
-                    />
-                  );
+              case "BODY":
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      fontSize: "12px",
+                      marginBottom: "4px",
+                      whiteSpace: "pre-wrap",
+                    }}
+                    dangerouslySetInnerHTML={createMarkup(formatTemplateText(component.text))}
+                  />
+                );
               case "FOOTER":
                 return (
                   <div
@@ -2575,7 +2665,7 @@ useEffect(() => {
             }}
           >
             <span>
-              {format12HourTime(message.sentTimestamp || message.currentStatusTimestamp)}
+              {messageTimestamp ? format12HourTime(messageTimestamp) : 'Time unavailable'}
             </span>
             {!isReceived && (
               <MessageStatusIcon

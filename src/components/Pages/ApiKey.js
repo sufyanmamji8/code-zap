@@ -189,7 +189,7 @@ const ApiKey = () => {
                   </div>
                   <div className="d-flex justify-content-end gap-3 mt-2">
                     <i 
-                      className="fas fa-copy text-primary icon-hover"
+                      className="fas fa-copy text-primary icon-hover pr-2"
                       onClick={() => {
                         navigator.clipboard.writeText(apiKey.apiKey);
                         toast.success('API Key copied to clipboard!');
@@ -197,7 +197,7 @@ const ApiKey = () => {
                       title="Copy to Clipboard"
                     />
                     <i 
-                      className="fas fa-trash text-danger icon-hover"
+                      className="fas fa-trash text-danger icon-hover pr-2"
                       onClick={handleRevokeApiKey}
                       title="Revoke API Key"
                     />
