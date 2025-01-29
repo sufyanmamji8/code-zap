@@ -36,7 +36,7 @@ const Dashboard = () => {
   const checkConfiguration = async (companyId, token) => {
     try {
       const response = await axios.post(
-        `http://192.168.0.106:25483/api/v1/configuration/check-configuration`,
+        `https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/check-configuration`,
         { companyId },
         {
           headers: {
@@ -115,7 +115,7 @@ const handleOpenWhatsApp = async (companyId, companyName) => {
     }
 
     const response = await axios.post(
-      `http://192.168.0.106:25483/api/v1/configuration/check-configuration`,
+      `https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/check-configuration`,
       { companyId},
       {
         headers: {

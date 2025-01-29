@@ -107,7 +107,7 @@
 
 //     try {
 //       const response = await axios.post(
-//         'http://192.168.0.106:25483/api/v1/messages/fetchTemplates',
+//         'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates',
 //         {
 //           companyId: formData.companyId
 //         },
@@ -172,7 +172,7 @@
 
 //     try {
 //       const response = await axios.post(
-//         'http://192.168.0.106:25483/api/v1/apiKey/get-Api-Key',
+//         'https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/get-Api-Key',
 //         { companyId: formData.companyId },
 //         {
 //           headers: {
@@ -204,7 +204,7 @@
 //       setIsLoading(true);
 //       try {
 //         const response = await axios.post(
-//           'http://192.168.0.106:25483/api/v1/messages/fetchTemplates',
+//           'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates',
 //           {
 //             companyId: formData.companyId
 //           },
@@ -411,7 +411,7 @@
 //       ? `--header 'Authorization: Bearer ${apiKey}'`
 //       : '# Please generate an API key first';
 
-//     return `curl --location 'http://192.168.0.106:25483/api/v1/messages/sendTemplate' \\
+//     return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate' \\
 //   ${authHeader} \\
 //   --header 'Content-Type: application/json' \\
 //   --data '${formattedJson}'`;
@@ -450,7 +450,7 @@
 //       };
 
 //       const response = await axios.post(
-//         'http://192.168.0.106:25483/api/v1/messages/sendTemplate',
+//         'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate',
 //         payload,
 //         {
 //           headers: {
@@ -811,6 +811,7 @@ import {
   DropdownToggle,
   DropdownMenu,
   DropdownItem,
+  Fade,
 } from "reactstrap";
 import axios from "axios";
 import { toast } from "sonner";
@@ -903,7 +904,7 @@ const SendTemplate = () => {
 
     try {
       const response = await axios.post(
-        "http://192.168.0.106:25483/api/v1/messages/fetchTemplates",
+        "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates",
         {
           companyId: formData.companyId,
         },
@@ -972,7 +973,7 @@ const SendTemplate = () => {
 
     try {
       const response = await axios.post(
-        "http://192.168.0.106:25483/api/v1/apiKey/get-Api-Key",
+        "https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/get-Api-Key",
         { companyId: formData.companyId },
         {
           headers: {
@@ -1004,7 +1005,7 @@ const SendTemplate = () => {
       setIsLoading(true);
       try {
         const response = await axios.post(
-          "http://192.168.0.106:25483/api/v1/messages/fetchTemplates",
+          "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates",
           {
             companyId: formData.companyId,
           },
@@ -1225,7 +1226,7 @@ const SendTemplate = () => {
     // Always show 'api-key' in the authorization header
     const authHeader = "--header 'Authorization: Bearer api-key'";
 
-    return `curl --location 'http://192.168.0.106:25483/api/v1/messages/sendTemplate' \\
+    return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate' \\
     ${authHeader} \\
     --header 'Content-Type: application/json' \\
     --data '${formattedJson}'`;
@@ -1268,7 +1269,7 @@ const SendTemplate = () => {
       };
 
       const response = await axios.post(
-        "http://192.168.0.106:25483/api/v1/messages/sendTemplate",
+        "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate",
         payload,
         {
           headers: {
@@ -1447,165 +1448,207 @@ const SendTemplate = () => {
   }
 
   return (
-    <div className="container-fluid p-4">
-      <div className="row mb-4">
-        <div className="col-12">
-          <Card className="shadow">
-            <CardHeader>
-              <h4 className="mb-0">API Request</h4>
-            </CardHeader>
-            <CardBody>
-              <div className="bg-light p-3 rounded">
-                <div className="d-flex justify-content-end mb-2">
-                  <Button
-                    color="primary"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(getCurlCommand());
-                      toast.success("Curl command copied!");
-                    }}
-                  >
-                    <i className="fas fa-copy me-2"></i>
-                    Copy to Clipboard
-                  </Button>
-                </div>
-                <pre className="m-0">
-                  <code>{getCurlCommand()}</code>
-                </pre>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
+    <div className="template-container">
+      {/* Back Navigation */}
+      <div className="back-nav mb-4">
+        <Button
+          color="link"
+          className="d-flex align-items-center p-0"
+          onClick={() => window.history.back()}
+        >
+          <i className="fas fa-arrow-left me-2"></i>
+          <span>Back to Templates</span>
+        </Button>
       </div>
 
+      {/* API Section */}
+      <Fade>
+        <Card className="api-card mb-4">
+          <CardHeader className="d-flex justify-content-between align-items-center bg-light">
+            <h4 className="mb-0">
+              <i className="fas fa-code me-2"></i>
+              API Request
+            </h4>
+            <Button
+              color="primary"
+              size="sm"
+              className="copy-btn"
+              onClick={() => {
+                navigator.clipboard.writeText(getCurlCommand());
+                toast.success("Curl command copied!");
+              }}
+            >
+              <i className="fas fa-copy me-2"></i>
+              Copy CURL
+            </Button>
+          </CardHeader>
+          <CardBody className="p-0">
+            <div className="code-container">
+              <pre className="m-0 p-3">
+                <code>{getCurlCommand()}</code>
+              </pre>
+            </div>
+          </CardBody>
+        </Card>
+      </Fade>
+
       <div className="row">
+        {/* Form Section */}
         <div className="col-md-6">
-          <Card className="shadow">
-            <CardHeader>
-              <h4 className="mb-0">
-                <i
-                  className="fas fa-arrow-left me-3 cursor-pointer " 
-                  onClick={() => window.history.back()}
-                  style={{ cursor: "pointer" }}
-                />
-                {template.name} &nbsp;&nbsp;({template.language})
-              </h4>
-            </CardHeader>
-            <CardBody>
-              <form onSubmit={handleSubmit}>
-                <FormGroup>
-                  <Label>Recipient's Phone Number</Label>
-                  <InputGroup>
-                    <Dropdown
-                      isOpen={dropdownOpen}
-                      toggle={() => setDropdownOpen(!dropdownOpen)}
-                    >
-                      <DropdownToggle
-                        caret
-                        className="d-flex align-items-center"
-                        style={{ minWidth: "120px" }}
+          <Fade>
+            <Card className="template-form-card">
+              <CardHeader className="bg-white border-bottom-0">
+                <div className="d-flex align-items-center">
+                  <h4 className="mb-0">
+                    {/* <i className="fas fa-paper-plane me-2 text-primary"></i> */}
+                    {template.name}
+                  </h4>
+                  <span className="badge bg-info ms-2">
+                    {template.language}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardBody>
+                <form onSubmit={handleSubmit} className="template-form">
+                  {/* Phone Input Group */}
+                  <FormGroup className="phone-input-group">
+                    <Label className="form-label">
+                      {/* <i className="fas fa-phone me-2"></i> */}
+                      Recipient's Phone Number
+                    </Label>
+                    <InputGroup>
+                      <Dropdown
+                        isOpen={dropdownOpen}
+                        toggle={() => setDropdownOpen(!dropdownOpen)}
+                        className="country-dropdown"
                       >
-                        <span className="me-1">{selectedCountry.flag}</span>+
-                        {selectedCountry.code}
-                      </DropdownToggle>
-                      <DropdownMenu
-                        style={{ maxHeight: "200px", overflowY: "auto" }}
-                      >
-                        <Input
-                          type="text"
-                          placeholder="Search countries..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mx-2 mb-2"
-                          style={{ width: "90%" }}
-                        />
-                        {filteredCountries.map((country) => (
-                          <DropdownItem
-                            key={country.code}
-                            onClick={() => handleCountrySelect(country)}
-                            className="d-flex align-items-center"
-                          >
-                            <span className="me-2">{country.flag}</span>
-                            <span className="me-2">{country.country}</span>
-                            <span className="text-muted">+{country.code}</span>
-                          </DropdownItem>
-                        ))}
-                      </DropdownMenu>
-                    </Dropdown>
-                    <Input
-                      type="tel"
-                      placeholder="Enter phone number"
-                      value={formData.to}
-                      onChange={(e) => handlePhoneChange(e.target.value)}
-                      required
-                    />
-                  </InputGroup>
-                </FormGroup>
+                        <DropdownToggle caret className="country-toggle">
+                          <span className="me-1">{selectedCountry.flag}</span>
+                          +{selectedCountry.code}
+                        </DropdownToggle>
+                        <DropdownMenu className="country-menu">
+                          <div className="px-2 pb-2">
+                            <Input
+                              type="text"
+                              placeholder="Search countries..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="search-input"
+                            />
+                          </div>
+                          <div className="country-list">
+                            {filteredCountries.map((country) => (
+                              <DropdownItem
+                                key={country.code}
+                                onClick={() => handleCountrySelect(country)}
+                                className="country-item"
+                              >
+                                <span className="me-2">{country.flag}</span>
+                                <span className="country-name">{country.country}</span>
+                                <span className="country-code">+{country.code}</span>
+                              </DropdownItem>
+                            ))}
+                          </div>
+                        </DropdownMenu>
+                      </Dropdown>
+                      <Input
+                        type="tel"
+                        placeholder="Enter phone number"
+                        value={formData.to}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        className="phone-input"
+                        required
+                      />
+                    </InputGroup>
+                  </FormGroup>
 
-                {renderDynamicFields()}
-                {renderHeaderParams()}
+                  {/* Dynamic Fields */}
+                  <div className="dynamic-fields">
+                    {renderDynamicFields()}
+                  </div>
 
-                <Button
-                  color="primary"
-                  type="submit"
-                  className="mt-4 w-100"
-                  disabled={isSending || template.status !== "APPROVED"}
-                >
-                  {isSending ? <Spinner size="sm" /> : "Send Message"}
-                </Button>
+                  {/* Header Parameters */}
+                  <div className="header-params">
+                    {renderHeaderParams()}
+                  </div>
 
-                {template.status !== "APPROVED" && (
-                  <Alert color="warning" className="mt-3">
-                    This template is not approved and cannot be sent.
-                  </Alert>
-                )}
-              </form>
-            </CardBody>
-          </Card>
+                  {/* Submit Button */}
+                  <Button
+                    color="primary"
+                    type="submit"
+                    className="submit-btn"
+                    disabled={isSending || template.status !== "APPROVED"}
+                  >
+                    {isSending ? (
+                      <>
+                        <Spinner size="sm" className="me-2" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-paper-plane me-2"></i>
+                        Send Message
+                      </>
+                    )}
+                  </Button>
+
+                  {template.status !== "APPROVED" && (
+                    <Alert color="warning" className="status-alert">
+                      <i className="fas fa-exclamation-triangle me-2"></i>
+                      This template is not approved and cannot be sent.
+                    </Alert>
+                  )}
+                </form>
+              </CardBody>
+            </Card>
+          </Fade>
         </div>
 
+        {/* Preview Section */}
         <div className="col-md-6">
-          <Card className="shadow">
-            <CardHeader>
-              <h4 className="mb-0">Preview</h4>
-            </CardHeader>
-            <CardBody>
-              <div className="preview-container">
-                <div className="message-bubble">
-                  {template.components.find((c) => c.type === "HEADER")
-                    ?.format === "IMAGE" && (
-                    <div className="preview-image mb-3">
-                      {headerParams.mediaUrl ? (
-                        <img
-                          src={headerParams.mediaUrl}
-                          alt="Preview"
-                          className="rounded img-fluid"
-                          onError={(e) => (e.target.style.display = "none")}
-                        />
-                      ) : (
-                        <div className="placeholder-image">
-                          <i className="fas fa-image fa-2x text-muted"></i>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="message-text">{getPreviewText()}</div>
-                  {template.components.find((c) => c.type === "FOOTER") && (
-                    <div className="message-footer text-muted mt-3">
-                      {
-                        template.components.find((c) => c.type === "FOOTER")
-                          .text
-                      }
-                    </div>
-                  )}
+          <Fade>
+            <Card className="preview-card">
+              <CardHeader className="bg-white border-bottom-0">
+                <h4 className="mb-0">
+                  {/* <i className="fas fa-eye me-2 text-primary"></i> */}
+                  Message Preview
+                </h4>
+              </CardHeader>
+              <CardBody>
+                <div className="preview-container">
+                  <div className="message-bubble">
+                    {template.components.find((c) => c.type === "HEADER")?.format === "IMAGE" && (
+                      <div className="preview-image">
+                        {headerParams.mediaUrl ? (
+                          <img
+                            src={headerParams.mediaUrl}
+                            alt="Preview"
+                            className="preview-img"
+                            onError={(e) => (e.target.style.display = "none")}
+                          />
+                        ) : (
+                          <div className="placeholder-image">
+                            <i className="fas fa-image"></i>
+                            <span>Add an image</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="message-text">{getPreviewText()}</div>
+                    {template.components.find((c) => c.type === "FOOTER") && (
+                      <div className="message-footer">
+                        {template.components.find((c) => c.type === "FOOTER").text}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </CardBody>
-          </Card>
+              </CardBody>
+            </Card>
+          </Fade>
         </div>
       </div>
     </div>
   );
 };
+
 export default SendTemplate;

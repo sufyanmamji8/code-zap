@@ -146,7 +146,7 @@
 //           contactNumber: contactPhoneNumber
 //         },
 //         {
-//           headers: { 
+//           headers: {
 //             Authorization: `Bearer ${token}`,
 //             'Content-Type': 'application/json'
 //           }
@@ -229,7 +229,7 @@
 //   // Fetch messages for selected contact
 //   const fetchMessages = async (contactPhoneNumber) => {
 //     if (!businessId || !contactPhoneNumber) return;
-  
+
 //     try {
 //       setLoading(true);
 //       const response = await axios.post(
@@ -242,10 +242,10 @@
 //           headers: { Authorization: `Bearer ${token}` },
 //         }
 //       );
-  
+
 //       if (response.data.success) {
 //         setMessages(response.data.data);
-  
+
 //         // Extract sender name from messages
 //         const messages = response.data.data;
 //         if (messages.length > 0) {
@@ -259,7 +259,7 @@
 //             }));
 //           }
 //         }
-  
+
 //         // Update contacts with sender name and latest message
 //         setContacts((prevContacts) =>
 //           prevContacts.map((contact) => {
@@ -269,7 +269,7 @@
 //               );
 //               const lastMsg = messages[0];
 //               let lastMessageText = "";
-  
+
 //               if (lastMsg) {
 //                 if (lastMsg.type === "template") {
 //                   const bodyComponent = lastMsg.components?.find(c => c.type === "BODY");
@@ -278,7 +278,7 @@
 //                   lastMessageText = lastMsg.messageBody;
 //                 }
 //               }
-  
+
 //               return {
 //                 ...contact,
 //                 name: latestMessage?.senderName || contact.name,
@@ -481,7 +481,7 @@
 
 //   const uniqueUsers = React.useMemo(() => {
 //     const users = new Map();
-  
+
 //     contacts.forEach((contact) => {
 //       if (contact && contact.phoneNumber) {
 //         users.set(contact.phoneNumber, {
@@ -491,33 +491,33 @@
 //         });
 //       }
 //     });
-  
+
 //     messages.forEach((msg) => {
 //       if (!msg) return;
-  
+
 //       const contactNumber =
 //         msg.from === config?.phoneNumber ? msg.to : msg.from;
-  
+
 //       if (!contactNumber) return;
-  
+
 //       const existingUser = users.get(contactNumber);
 //       const messageTimestamp = parseInt(msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp);
 //       const existingTimestamp = existingUser
 //         ? parseInt(existingUser.timestamp)
 //         : 0;
-  
+
 //       if (!existingUser || messageTimestamp > existingTimestamp) {
 //         const country = countryList.find(
 //           (c) => c && c.code && contactNumber.startsWith(c.code)
 //         );
-  
+
 //         // Add handling for template messages
 //         let lastMessage = msg.messageBody;
 //         if (msg.type === "template") {
 //           const bodyComponent = msg.components?.find(c => c.type === "BODY");
 //           lastMessage = bodyComponent ? bodyComponent.text : "Template Message";
 //         }
-  
+
 //         users.set(contactNumber, {
 //           ...(existingUser || {}),
 //           phoneNumber: contactNumber,
@@ -527,7 +527,7 @@
 //         });
 //       }
 //     });
-  
+
 //     return Array.from(users.values())
 //       .filter((user) => user && user.phoneNumber)
 //       .sort((a, b) => {
@@ -680,22 +680,22 @@
 //     if (loadingTemplates || templates.length === 0) return null;
 
 //     return (
-//       <div 
+//       <div
 //         style={{
-//           backgroundColor: '#f0f0f0', 
-//           padding: '10px', 
-//           borderRadius: '8px', 
+//           backgroundColor: '#f0f0f0',
+//           padding: '10px',
+//           borderRadius: '8px',
 //           margin: '10px 0'
 //         }}
 //       >
 //         <h5>Available Templates</h5>
 //         {templates.map((template) => (
-//           <div 
-//             key={template._id} 
+//           <div
+//             key={template._id}
 //             style={{
-//               backgroundColor: 'white', 
-//               margin: '5px 0', 
-//               padding: '10px', 
+//               backgroundColor: 'white',
+//               margin: '5px 0',
+//               padding: '10px',
 //               borderRadius: '5px',
 //               cursor: 'pointer'
 //             }}
@@ -1044,7 +1044,7 @@
 //   const formatTemplateText = (text) => {
 //     // Split the text by star patterns
 //     const parts = text.split(/(\*[^*]+\*)/g);
-    
+
 //     // Map through parts and wrap starred content in bold tags
 //     return parts.map((part, index) => {
 //       if (part.startsWith('*') && part.endsWith('*')) {
@@ -1055,7 +1055,7 @@
 //       return part;
 //     }).join('');
 //   };
-  
+
 //   // Function to safely render HTML content
 //   const createMarkup = (htmlContent) => {
 //     return { __html: htmlContent };
@@ -1064,7 +1064,7 @@
 //   const renderTemplateMessage = (message) => {
 //     const { components } = message;
 //     const isReceived = message.from === selectedUser.phoneNumber;
-  
+
 //     return (
 //       <div
 //         style={{
@@ -1155,9 +1155,9 @@
 //             msg.to === selectedUser.phoneNumber
 //         )
 //       : [];
-  
+
 //     const groupedMessages = groupMessagesByDate(chatMessages);
-  
+
 //     return (
 //       <Col
 //         xs="12"
@@ -1179,7 +1179,7 @@
 //             style={{
 //               display: "flex",
 //               alignItems: "center",
-//               padding: "10px 20px",              
+//               padding: "10px 20px",
 //               backgroundColor: "rgb(0, 168, 132)",
 //               borderBottom: "1px solid rgb(224, 224, 224)",
 //             }}
@@ -1199,7 +1199,7 @@
 //                 <FaArrowLeft size={20} />
 //               </Button>
 //             )}
-  
+
 //             <div
 //               style={{
 //                 width: "40px",
@@ -1215,7 +1215,7 @@
 //             >
 //               {selectedUser.flag || "👤"}
 //             </div>
-  
+
 //             <div>
 //               <h6 style={{ margin: 0, fontWeight: "bold", color: "white", fontSize: "13px" }}>
 //                 {selectedUser.senderName || selectedUser.phoneNumber}
@@ -1223,7 +1223,7 @@
 //             </div>
 //           </div>
 //         )}
-  
+
 //         {initialLoading && <LoaderOverlay />}
 //         {selectedUser ? (
 //           <>
@@ -1299,7 +1299,7 @@
 //               ))}
 //               <div ref={chatEndRef} style={{ height: "1px" }} />
 //             </div>
-  
+
 //             {/* Message Input Section */}
 //             <div
 //               style={{
@@ -1488,25 +1488,6 @@
 // };
 // export default WhatsAppChats;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   FaArrowLeft,
@@ -1569,7 +1550,9 @@ const WhatsAppChats = () => {
   const contactListRef = useRef(null);
   const isMobileView = window.innerWidth <= 768;
   const token = localStorage.getItem("token");
-  const [contactsPerPage, setContactsPerPage] = useState(calculateContactsPerPage());
+  const [contactsPerPage, setContactsPerPage] = useState(
+    calculateContactsPerPage()
+  );
   const [countrySearchTerm, setCountrySearchTerm] = useState("");
   const [filteredCountries, setFilteredCountries] = useState(countryList);
   const [templates, setTemplates] = useState([]);
@@ -1580,8 +1563,8 @@ const WhatsAppChats = () => {
       setContactsPerPage(calculateContactsPerPage());
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
@@ -1622,11 +1605,13 @@ const WhatsAppChats = () => {
               : "",
           }));
 
-          setContacts(prevContacts => {
+          setContacts((prevContacts) => {
             const existingContactsNotInFirstPage = prevContacts.filter(
-              existingContact => !newContacts.some(
-                newContact => newContact.phoneNumber === existingContact.phoneNumber
-              )
+              (existingContact) =>
+                !newContacts.some(
+                  (newContact) =>
+                    newContact.phoneNumber === existingContact.phoneNumber
+                )
             );
 
             return [...newContacts, ...existingContactsNotInFirstPage];
@@ -1652,13 +1637,13 @@ const WhatsAppChats = () => {
         {
           businessId,
           companyId,
-          contactNumber: contactPhoneNumber
+          contactNumber: contactPhoneNumber,
         },
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            "Content-Type": "application/json",
+          },
         }
       );
 
@@ -1674,71 +1659,71 @@ const WhatsAppChats = () => {
 
   // Fetch contacts with pagination
   const fetchContacts = async (pageNum = 1, isInitial = false) => {
-  if (!businessId || (!isInitial && !hasMore) || loadingMore) return;
+    if (!businessId || (!isInitial && !hasMore) || loadingMore) return;
 
-  try {
-    setLoadingMore(true);
+    try {
+      setLoadingMore(true);
 
-    const response = await axios.post(
-      `${MESSAGE_API_ENDPOINT}/getContact`,
-      {
-        companyId,
-      },
-      {
-        params: {
-          page: pageNum,
-          limit: contactsPerPage, // Use dynamic contactsPerPage instead of fixed 5
+      const response = await axios.post(
+        `${MESSAGE_API_ENDPOINT}/getContact`,
+        {
+          companyId,
         },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (response.data.success) {
-      const newContacts = response.data.contacts.map((contact) => ({
-        ...contact,
-        phoneNumber: contact._id,
-        name: contact.senderName || contact.name || contact._id,
-        lastMessage: contact.recentMessage || "",
-        timestamp: contact.latestChat
-          ? new Date(contact.latestChat).getTime() / 1000
-          : "",
-      }));
-
-      setContacts((prev) => {
-        if (pageNum === 1) {
-          return newContacts;
-        } else {
-          const existingPhoneNumbers = prev.map((c) => c.phoneNumber);
-          const uniqueNewContacts = newContacts.filter(
-            (contact) => !existingPhoneNumbers.includes(contact.phoneNumber)
-          );
-          return [...prev, ...uniqueNewContacts];
+        {
+          params: {
+            page: pageNum,
+            limit: contactsPerPage, // Use dynamic contactsPerPage instead of fixed 5
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
 
-      setHasMore(pageNum < response.data.pagination.totalPages);
-      setPage(pageNum);
+      if (response.data.success) {
+        const newContacts = response.data.contacts.map((contact) => ({
+          ...contact,
+          phoneNumber: contact._id,
+          name: contact.senderName || contact.name || contact._id,
+          lastMessage: contact.recentMessage || "",
+          timestamp: contact.latestChat
+            ? new Date(contact.latestChat).getTime() / 1000
+            : "",
+        }));
+
+        setContacts((prev) => {
+          if (pageNum === 1) {
+            return newContacts;
+          } else {
+            const existingPhoneNumbers = prev.map((c) => c.phoneNumber);
+            const uniqueNewContacts = newContacts.filter(
+              (contact) => !existingPhoneNumbers.includes(contact.phoneNumber)
+            );
+            return [...prev, ...uniqueNewContacts];
+          }
+        });
+
+        setHasMore(pageNum < response.data.pagination.totalPages);
+        setPage(pageNum);
+      }
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+    } finally {
+      setLoadingMore(false);
+      if (isInitial) setInitialLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching contacts:", error);
-  } finally {
-    setLoadingMore(false);
-    if (isInitial) setInitialLoading(false);
-  }
-};
+  };
 
-useEffect(() => {
-  if (selectedUser && chatEndRef.current) {
-    chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-  }
-}, [messages, selectedUser]);
+  useEffect(() => {
+    if (selectedUser && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, selectedUser]);
 
   // Fetch messages for selected contact
   const fetchMessages = async (contactPhoneNumber) => {
     if (!businessId || !contactPhoneNumber) return;
-  
+
     try {
       setLoading(true);
       const response = await axios.post(
@@ -1751,10 +1736,10 @@ useEffect(() => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-  
+
       if (response.data.success) {
         setMessages(response.data.data);
-  
+
         // Extract sender name from messages
         const messages = response.data.data;
         if (messages.length > 0) {
@@ -1768,7 +1753,7 @@ useEffect(() => {
             }));
           }
         }
-  
+
         // Update contacts with sender name and latest message
         setContacts((prevContacts) =>
           prevContacts.map((contact) => {
@@ -1778,21 +1763,26 @@ useEffect(() => {
               );
               const lastMsg = messages[0];
               let lastMessageText = "";
-  
+
               if (lastMsg) {
                 if (lastMsg.type === "template") {
-                  const bodyComponent = lastMsg.components?.find(c => c.type === "BODY");
-                  lastMessageText = bodyComponent ? bodyComponent.text : "Template Message";
+                  const bodyComponent = lastMsg.components?.find(
+                    (c) => c.type === "BODY"
+                  );
+                  lastMessageText = bodyComponent
+                    ? bodyComponent.text
+                    : "Template Message";
                 } else {
                   lastMessageText = lastMsg.messageBody;
                 }
               }
-  
+
               return {
                 ...contact,
                 name: latestMessage?.senderName || contact.name,
                 lastMessage: lastMessageText,
-                timestamp: messages[0]?.currentStatusTimestamp || contact.timestamp,
+                timestamp:
+                  messages[0]?.currentStatusTimestamp || contact.timestamp,
               };
             }
             return contact;
@@ -1817,15 +1807,13 @@ useEffect(() => {
   useEffect(() => {
     if (selectedUser?.phoneNumber) {
       // First fetch contacts
-      fetchContacts(1, true)
-        .then(() => {
-          // Then fetch messages
-          fetchMessages(selectedUser.phoneNumber)
-            .then(() => {
-              // Finally fetch user-specific templates
-              fetchUserTemplates(selectedUser.phoneNumber);
-            });
+      fetchContacts(1, true).then(() => {
+        // Then fetch messages
+        fetchMessages(selectedUser.phoneNumber).then(() => {
+          // Finally fetch user-specific templates
+          fetchUserTemplates(selectedUser.phoneNumber);
         });
+      });
     }
   }, [selectedUser]);
 
@@ -1990,7 +1978,7 @@ useEffect(() => {
 
   const uniqueUsers = React.useMemo(() => {
     const users = new Map();
-  
+
     contacts.forEach((contact) => {
       if (contact && contact.phoneNumber) {
         users.set(contact.phoneNumber, {
@@ -2000,43 +1988,48 @@ useEffect(() => {
         });
       }
     });
-  
+
     messages.forEach((msg) => {
       if (!msg) return;
-  
+
       const contactNumber =
         msg.from === config?.phoneNumber ? msg.to : msg.from;
-  
+
       if (!contactNumber) return;
-  
+
       const existingUser = users.get(contactNumber);
-      const messageTimestamp = parseInt(msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp);
+      const messageTimestamp = parseInt(
+        msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp
+      );
       const existingTimestamp = existingUser
         ? parseInt(existingUser.timestamp)
         : 0;
-  
+
       if (!existingUser || messageTimestamp > existingTimestamp) {
         const country = countryList.find(
           (c) => c && c.code && contactNumber.startsWith(c.code)
         );
-  
+
         // Add handling for template messages
         let lastMessage = msg.messageBody;
         if (msg.type === "template") {
-          const bodyComponent = msg.components?.find(c => c.type === "BODY");
+          const bodyComponent = msg.components?.find((c) => c.type === "BODY");
           lastMessage = bodyComponent ? bodyComponent.text : "Template Message";
         }
-  
+
         users.set(contactNumber, {
           ...(existingUser || {}),
           phoneNumber: contactNumber,
           lastMessage: lastMessage,
-          timestamp: msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp,
+          timestamp:
+            msg.sentTimestamp ||
+            msg.originalTimestamp ||
+            msg.currentStatusTimestamp,
           flag: country?.flag || "🌐",
         });
       }
     });
-  
+
     return Array.from(users.values())
       .filter((user) => user && user.phoneNumber)
       .sort((a, b) => {
@@ -2047,7 +2040,12 @@ useEffect(() => {
   }, [messages, contacts, config?.phoneNumber]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedUser || !config?.phoneNumber || !companyId) {
+    if (
+      !newMessage.trim() ||
+      !selectedUser ||
+      !config?.phoneNumber ||
+      !companyId
+    ) {
       console.warn("Missing required data for sending message");
       return;
     }
@@ -2063,9 +2061,9 @@ useEffect(() => {
       messageBody: newMessage,
       type: "text",
       status: "sending",
-      sentTimestamp: currentTimestamp,      // Original sent time - never changes
-      currentStatusTimestamp: currentTimestamp,  // For status changes only
-      messageTimestamp: currentTimestamp,    // For message grouping/display - never changes
+      sentTimestamp: currentTimestamp, // Original sent time - never changes
+      currentStatusTimestamp: currentTimestamp, // For status changes only
+      messageTimestamp: currentTimestamp, // For message grouping/display - never changes
       senderName: config.companyName || config.phoneNumber,
     };
 
@@ -2114,7 +2112,7 @@ useEffect(() => {
                   messageId: actualMessageId,
                   status: "sent",
                   currentStatusTimestamp: Date.now() / 1000, // Only for status tracking
-                  messageTimestamp: msg.messageTimestamp  // Preserve original timestamp
+                  messageTimestamp: msg.messageTimestamp, // Preserve original timestamp
                 }
               : msg
           )
@@ -2130,8 +2128,8 @@ useEffect(() => {
             ? {
                 ...msg,
                 status: "failed",
-                currentStatusTimestamp: Date.now() / 1000,  // Update status timestamp
-                sentTimestamp: msg.originalTimestamp,       // Keep original timestamp
+                currentStatusTimestamp: Date.now() / 1000, // Update status timestamp
+                sentTimestamp: msg.originalTimestamp, // Keep original timestamp
                 failureReason:
                   error.response?.data?.message || "Failed to send message",
               }
@@ -2146,15 +2144,15 @@ useEffect(() => {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return "Date unavailable";
-    
+
     try {
       const date = new Date(parseInt(timestamp) * 1000);
       if (isNaN(date.getTime())) return "Invalid date";
-  
+
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-  
+
       if (date.toDateString() === today.toDateString()) {
         return "Today";
       } else if (date.toDateString() === yesterday.toDateString()) {
@@ -2174,66 +2172,71 @@ useEffect(() => {
 
   const groupMessagesByDate = (messages) => {
     const groups = {};
-  
+
     messages.forEach((message) => {
       // For template messages, use originalTimestamp if available
-      const timestamp = message.type === "template" 
-        ? message.originalTimestamp || message.sentTimestamp || message.currentStatusTimestamp
-        : message.sentTimestamp || message.currentStatusTimestamp;
-  
+      const timestamp =
+        message.type === "template"
+          ? message.originalTimestamp ||
+            message.sentTimestamp ||
+            message.currentStatusTimestamp
+          : message.sentTimestamp || message.currentStatusTimestamp;
+
       if (!timestamp) {
-        console.warn('Message missing timestamp:', message);
+        console.warn("Message missing timestamp:", message);
         return; // Skip messages without any timestamp
       }
-  
+
       const date = new Date(parseInt(timestamp) * 1000).toDateString();
       if (!groups[date]) {
         groups[date] = [];
       }
       groups[date].push(message);
     });
-  
+
     return Object.entries(groups)
       .map(([date, messages]) => ({
         date,
-        timestamp: parseInt(messages[0].sentTimestamp || messages[0].currentStatusTimestamp),
+        timestamp: parseInt(
+          messages[0].sentTimestamp || messages[0].currentStatusTimestamp
+        ),
         messages,
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
   };
-  
 
   const renderTemplates = () => {
     if (loadingTemplates || templates.length === 0) return null;
 
     return (
-      <div 
+      <div
         style={{
-          backgroundColor: '#f0f0f0', 
-          padding: '10px', 
-          borderRadius: '8px', 
-          margin: '10px 0'
+          backgroundColor: "#f0f0f0",
+          padding: "10px",
+          borderRadius: "8px",
+          margin: "10px 0",
         }}
       >
         <h5>Available Templates</h5>
         {templates.map((template) => (
-          <div 
-            key={template._id} 
+          <div
+            key={template._id}
             style={{
-              backgroundColor: 'white', 
-              margin: '5px 0', 
-              padding: '10px', 
-              borderRadius: '5px',
-              cursor: 'pointer'
+              backgroundColor: "white",
+              margin: "5px 0",
+              padding: "10px",
+              borderRadius: "5px",
+              cursor: "pointer",
             }}
             onClick={() => {
               // Logic to use template message
-              const templateBody = template.components.find(c => c.type === 'BODY')?.text || '';
+              const templateBody =
+                template.components.find((c) => c.type === "BODY")?.text || "";
               setNewMessage(templateBody);
             }}
           >
             <strong>{template.templateName}</strong>
-            <p>{template.components.find(c => c.type === 'BODY')?.text}</p>
+            <p>{template.components.find((c) => c.type === "BODY")?.text}</p>
           </div>
         ))}
       </div>
@@ -2263,18 +2266,19 @@ useEffect(() => {
   );
 
   const format12HourTime = (timestamp) => {
-    return new Date(parseInt(timestamp) * 1000).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
+    return new Date(parseInt(timestamp) * 1000).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
     });
   };
 
   const renderNewChatModal = () => {
     const filterCountries = (searchTerm) => {
-      return countryList.filter(country =>
-        country.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        country.code.includes(searchTerm)
+      return countryList.filter(
+        (country) =>
+          country.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          country.code.includes(searchTerm)
       );
     };
 
@@ -2296,7 +2300,9 @@ useEffect(() => {
         >
           New Chat
         </ModalHeader>
-        <ModalBody className="p-2"> {/* Reducing body padding */}
+        <ModalBody className="p-2">
+          {" "}
+          {/* Reducing body padding */}
           <div className="d-flex flex-column gap-2">
             <Input
               type="text"
@@ -2307,12 +2313,14 @@ useEffect(() => {
               size="sm" // Smaller input
             />
 
-            <div style={{
-              maxHeight: "150px", // Reduced height
-              overflowY: "auto",
-              border: "1px solid #ddd",
-              borderRadius: "4px"
-            }}>
+            <div
+              style={{
+                maxHeight: "150px", // Reduced height
+                overflowY: "auto",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+              }}
+            >
               {filteredCountries.map((country) => (
                 <div
                   key={country.code}
@@ -2323,19 +2331,31 @@ useEffect(() => {
                   style={{
                     padding: "6px 8px", // Reduced padding
                     cursor: "pointer",
-                    backgroundColor: selectedCountry.code === country.code ? "#e8f5ff" : "white",
+                    backgroundColor:
+                      selectedCountry.code === country.code
+                        ? "#e8f5ff"
+                        : "white",
                     display: "flex",
                     alignItems: "center",
                     gap: "6px",
                     borderBottom: "1px solid #eee",
-                    fontSize: "0.9rem" // Smaller font
+                    fontSize: "0.9rem", // Smaller font
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = "#f5f5f5"}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = selectedCountry.code === country.code ? "#e8f5ff" : "white"}
+                  onMouseEnter={(e) =>
+                    (e.target.style.backgroundColor = "#f5f5f5")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.target.style.backgroundColor =
+                      selectedCountry.code === country.code
+                        ? "#e8f5ff"
+                        : "white")
+                  }
                 >
                   <span>{country.flag}</span>
                   <span style={{ flex: 1 }}>{country.country}</span>
-                  <span style={{ color: "#666", fontSize: "0.8rem" }}>+{country.code}</span>
+                  <span style={{ color: "#666", fontSize: "0.8rem" }}>
+                    +{country.code}
+                  </span>
                 </div>
               ))}
             </div>
@@ -2347,7 +2367,9 @@ useEffect(() => {
               <Input
                 type="text"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) =>
+                  setPhoneNumber(e.target.value.replace(/\D/g, ""))
+                }
                 placeholder="Phone number"
                 size="sm" // Smaller input
                 style={{ flex: 1 }}
@@ -2355,7 +2377,9 @@ useEffect(() => {
             </div>
           </div>
         </ModalBody>
-        <ModalFooter className="py-2 px-2"> {/* Reducing footer padding */}
+        <ModalFooter className="py-2 px-2">
+          {" "}
+          {/* Reducing footer padding */}
           <Button
             color="secondary"
             size="sm" // Smaller button
@@ -2390,7 +2414,7 @@ useEffect(() => {
         height: "100%",
         padding: "10px",
         position: "relative",
-        overflow: "hidden"
+        overflow: "hidden",
       }}
     >
       {initialLoading && <LoaderOverlay />}
@@ -2406,10 +2430,16 @@ useEffect(() => {
               <i className="fab fa-whatsapp fa-lg text-white"></i>
             </div>
             <div>
-              <small className="font-weight-bold" style={{ marginLeft: "10px" }}>
+              <small
+                className="font-weight-bold"
+                style={{ marginLeft: "10px" }}
+              >
                 {config?.companyName}
               </small>
-              <h5 className="mb-1 font-weight-bold" style={{ marginLeft: "10px" }}>
+              <h5
+                className="mb-1 font-weight-bold"
+                style={{ marginLeft: "10px" }}
+              >
                 {config?.phoneNumber}
               </h5>
             </div>
@@ -2425,7 +2455,7 @@ useEffect(() => {
           justifyContent: "space-between",
           alignItems: "center",
           gap: "10px",
-          flexShrink: 0
+          flexShrink: 0,
         }}
       >
         <Button
@@ -2468,11 +2498,11 @@ useEffect(() => {
           flex: 1,
           marginTop: "5px",
           paddingRight: "5px",
-          msOverflowStyle: "none", /* IE and Edge */
-          scrollbarWidth: "none", /* Firefox */
+          msOverflowStyle: "none" /* IE and Edge */,
+          scrollbarWidth: "none" /* Firefox */,
           "&::-webkit-scrollbar": {
-            display: "none" /* Chrome, Safari, Opera */
-          }
+            display: "none" /* Chrome, Safari, Opera */,
+          },
         }}
       >
         {contacts.map((contact) => {
@@ -2561,7 +2591,13 @@ useEffect(() => {
           );
         })}
         {loadingMore && (
-          <div style={{ textAlign: "center", padding: "10px", marginBottom: "5px" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "10px",
+              marginBottom: "5px",
+            }}
+          >
             Loading more contacts...
           </div>
         )}
@@ -2571,18 +2607,20 @@ useEffect(() => {
   const formatTemplateText = (text) => {
     // Split the text by star patterns
     const parts = text.split(/(\*[^*]+\*)/g);
-    
+
     // Map through parts and wrap starred content in bold tags
-    return parts.map((part, index) => {
-      if (part.startsWith('*') && part.endsWith('*')) {
-        // Remove stars and wrap content in strong tag
-        const boldContent = part.slice(1, -1);
-        return `<strong>${boldContent}</strong>`;
-      }
-      return part;
-    }).join('');
+    return parts
+      .map((part, index) => {
+        if (part.startsWith("*") && part.endsWith("*")) {
+          // Remove stars and wrap content in strong tag
+          const boldContent = part.slice(1, -1);
+          return `<strong>${boldContent}</strong>`;
+        }
+        return part;
+      })
+      .join("");
   };
-  
+
   // Function to safely render HTML content
   const createMarkup = (htmlContent) => {
     return { __html: htmlContent };
@@ -2591,12 +2629,13 @@ useEffect(() => {
   const renderTemplateMessage = (message) => {
     const { components } = message;
     const isReceived = message.from === selectedUser.phoneNumber;
-    
+
     // Use the first available timestamp
-    const messageTimestamp = message.sentTimestamp || 
-                            message.originalTimestamp || 
-                            message.currentStatusTimestamp;
-  
+    const messageTimestamp =
+      message.sentTimestamp ||
+      message.originalTimestamp ||
+      message.currentStatusTimestamp;
+
     return (
       <div
         style={{
@@ -2634,7 +2673,9 @@ useEffect(() => {
                       marginBottom: "4px",
                       whiteSpace: "pre-wrap",
                     }}
-                    dangerouslySetInnerHTML={createMarkup(formatTemplateText(component.text))}
+                    dangerouslySetInnerHTML={createMarkup(
+                      formatTemplateText(component.text)
+                    )}
                   />
                 );
               case "FOOTER":
@@ -2665,7 +2706,9 @@ useEffect(() => {
             }}
           >
             <span>
-              {messageTimestamp ? format12HourTime(messageTimestamp) : 'Time unavailable'}
+              {messageTimestamp
+                ? format12HourTime(messageTimestamp)
+                : "Time unavailable"}
             </span>
             {!isReceived && (
               <MessageStatusIcon
@@ -2687,9 +2730,9 @@ useEffect(() => {
             msg.to === selectedUser.phoneNumber
         )
       : [];
-  
+
     const groupedMessages = groupMessagesByDate(chatMessages);
-  
+
     return (
       <Col
         xs="12"
@@ -2702,7 +2745,7 @@ useEffect(() => {
           backgroundColor: "#f4f8fb",
           position: "relative",
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-          backgroundColor: "#efeae2"
+          backgroundColor: "#efeae2",
         }}
       >
         {/* Chat Header */}
@@ -2711,7 +2754,7 @@ useEffect(() => {
             style={{
               display: "flex",
               alignItems: "center",
-              padding: "10px 20px",              
+              padding: "10px 20px",
               backgroundColor: "rgb(0, 168, 132)",
               borderBottom: "1px solid rgb(224, 224, 224)",
             }}
@@ -2731,7 +2774,7 @@ useEffect(() => {
                 <FaArrowLeft size={20} />
               </Button>
             )}
-  
+
             <div
               style={{
                 width: "40px",
@@ -2747,15 +2790,22 @@ useEffect(() => {
             >
               {selectedUser.flag || "👤"}
             </div>
-  
+
             <div>
-              <h6 style={{ margin: 0, fontWeight: "bold", color: "white", fontSize: "13px" }}>
+              <h6
+                style={{
+                  margin: 0,
+                  fontWeight: "bold",
+                  color: "white",
+                  fontSize: "13px",
+                }}
+              >
                 {selectedUser.senderName || selectedUser.phoneNumber}
               </h6>
             </div>
           </div>
         )}
-  
+
         {initialLoading && <LoaderOverlay />}
         {selectedUser ? (
           <>
@@ -2768,15 +2818,16 @@ useEffect(() => {
                 msOverflowStyle: "none",
                 scrollbarWidth: "none",
                 "&::-webkit-scrollbar": {
-                  display: "none"
-                }
+                  display: "none",
+                },
               }}
             >
               {groupedMessages.map((group) => (
                 <div key={group.date}>
                   {renderDateSeparator(group.timestamp)}
                   {group.messages.map((message) => {
-                    const isReceived = message.from === selectedUser.phoneNumber;
+                    const isReceived =
+                      message.from === selectedUser.phoneNumber;
                     if (message.type === "template") {
                       return renderTemplateMessage(message);
                     } else {
@@ -2798,7 +2849,14 @@ useEffect(() => {
                               position: "relative",
                             }}
                           >
-                            <div style={{ fontSize: "14px", marginBottom: "4px" }}>
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                marginBottom: "4px",
+                                wordWrap: "break-word",
+                                whiteSpace: "pre-wrap",
+                              }}
+                            >
                               {message.messageBody}
                             </div>
                             <div
@@ -2813,7 +2871,10 @@ useEffect(() => {
                               }}
                             >
                               <span>
-                                {format12HourTime(message.sentTimestamp || message.currentStatusTimestamp)}
+                                {format12HourTime(
+                                  message.sentTimestamp ||
+                                    message.currentStatusTimestamp
+                                )}
                               </span>
                               {!isReceived && (
                                 <MessageStatusIcon
@@ -2831,7 +2892,7 @@ useEffect(() => {
               ))}
               <div ref={chatEndRef} style={{ height: "1px" }} />
             </div>
-  
+
             {/* Message Input Section */}
             <div
               style={{
@@ -2842,7 +2903,7 @@ useEffect(() => {
                 right: isMobileView ? 0 : "auto",
                 width: isMobileView ? "100%" : "auto",
                 zIndex: 2,
-                backgroundColor: "transparent"
+                backgroundColor: "transparent",
               }}
             >
               <div
@@ -2866,21 +2927,29 @@ useEffect(() => {
                 >
                   <FaPaperclip size={20} />
                 </Button>
-                <Input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                  placeholder="Type a message..."
-                  style={{
-                    border: "none",
-                    padding: "8px",
-                    flex: 1,
-                    backgroundColor: "transparent",
-                    boxShadow: "none",
-                    outline: "none",
-                  }}
-                />
+                <textarea
+  value={newMessage}
+  onChange={(e) => setNewMessage(e.target.value)}
+  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+  placeholder="Type a message..."
+  style={{
+    border: "none", 
+    padding: "4px",       // Reduced from 8px to 4px
+    flex: 1,
+    backgroundColor: "transparent",
+    boxShadow: "none",
+    outline: "none",
+    resize: "none",
+    wordWrap: "break-word",
+    whiteSpace: "pre-wrap",
+    height: "auto",
+    minHeight: "24px",    // Reduced from 40px to 24px
+    maxHeight: "100px",
+    overflowY: "auto",
+    fontFamily: "inherit",
+    fontSize: "inherit"
+  }}
+/>
                 <Button
                   onClick={sendMessage}
                   disabled={!newMessage.trim()}

@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardBody, Spinner } from 'reactstrap';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  Spinner,
+  Button,
+  Input,
+  InputGroup,
+  InputGroupText,
+  Badge,
+  Alert,
+  Container,
+  Row,
+  Col,
+  UncontrolledTooltip
+} from 'reactstrap';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -11,6 +26,7 @@ const ApiKey = () => {
   const [isKeyVisible, setIsKeyVisible] = useState(false);
   const [companyId, setCompanyId] = useState(null);
   const [companyName, setCompanyName] = useState("");
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
   const token = localStorage.getItem('token');
   const location = useLocation();
@@ -38,7 +54,7 @@ const ApiKey = () => {
 
     try {
       const response = await axios.post(
-        'http://192.168.0.106:25483/api/v1/apiKey/get-Api-Key',
+        'https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/get-Api-Key',
         { companyId },
         {
           headers: {
@@ -66,7 +82,7 @@ const ApiKey = () => {
     setIsGenerating(true);
     try {
       const response = await axios.post(
-        'http://192.168.0.106:25483/api/v1/apiKey/generate-Api-Key',
+        'https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/generate-Api-Key',
         { companyId },
         {
           headers: {
@@ -99,7 +115,7 @@ const ApiKey = () => {
   
     try {
       const response = await axios.post(
-        'http://192.168.0.106:25483/api/v1/apiKey/revoke-Api-Key',
+        'https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/revoke-Api-Key',
         { 
           id: apiKey._id,
           companyId 
@@ -114,6 +130,7 @@ const ApiKey = () => {
       if (response.data.success) {
         setApiKey(null);
         setIsKeyVisible(false);
+        setShowRevokeConfirm(false);
         toast.success('API Key revoked successfully!');
       }
     } catch (error) {
@@ -132,157 +149,180 @@ const ApiKey = () => {
   if (isLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-75">
-        <Spinner />
+        <Spinner color="primary" />
       </div>
     );
   }
 
   if (!companyId) {
     return (
-      <div className="container-fluid p-4">
-        <Card className="shadow-sm border-0">
-          <CardBody>
-            <div className="text-center py-4">
-              <i className="fas fa-building text-muted mb-3" style={{ fontSize: '2rem' }}></i>
-              <p className="mb-0">Please select a company to manage API keys.</p>
-            </div>
+      <Container fluid className="p-4">
+        <Card className="shadow border-0">
+          <CardBody className="text-center p-5">
+            <i className="fas fa-building text-muted mb-4" style={{ fontSize: '3rem' }}></i>
+            <h4 className="mb-3">No Company Selected</h4>
+            <p className="text-muted mb-0">Please select a company to manage API keys</p>
           </CardBody>
         </Card>
-      </div>
+      </Container>
     );
   }
 
   return (
-    <div className="container-fluid p-4">
-      <Card className="shadow-sm border-0">
-        <CardHeader className="bg-white border-bottom-0">
-          <div className="d-flex align-items-center">
-            <div>
-              <h4 className="mb-0">API Key Management</h4>
+    <Container fluid className="p-4">
+      <Card className="shadow border-0">
+        <CardHeader className="bg-white border-0 py-4">
+          <Row className="align-items-center">
+            <Col>
+              <h3 className="mb-1">API Key Management</h3>
               {companyName && (
-                <small className="text-muted">{companyName}</small>
+                <Badge color="light" className="text-primary px-3 py-2">
+                  {/* <i className="fas fa-building me-2"></i> */}
+                  {companyName}
+                </Badge>
               )}
-            </div>
-          </div>
+            </Col>
+          </Row>
         </CardHeader>
-        <CardBody>
+        
+        <CardBody className="p-4">
           {apiKey ? (
-            <div className="p-3">
-              <div className="key-container bg-light rounded p-4">
-                <div className="mb-3">
-                  <label className="text-uppercase small fw-bold text-muted mb-2">API Key</label>
-                  <div className="input-group mb-2">
-                    <input
+            <div className="api-key-section">
+              <Row>
+                <Col>
+                  <label className="text-uppercase small fw-bold mb-3">Your API Key</label>
+                  <InputGroup size="lg" className="mb-3">
+                    <Input
                       type={isKeyVisible ? "text" : "password"}
-                      className="form-control form-control-lg bg-white"
                       value={apiKey.apiKey}
                       readOnly
+                      className="border-end-0 bg-light"
                     />
-                    <span className="input-group-text bg-white border-start-0">
-                      <i
-                        className={`fas fa-eye${isKeyVisible ? '-slash' : ''} text-muted`}
-                        onClick={() => setIsKeyVisible(!isKeyVisible)}
-                        style={{ cursor: 'pointer' }}
-                        title={isKeyVisible ? "Hide API Key" : "Show API Key"}
-                      />
-                    </span>
-                  </div>
-                  <div className="d-flex justify-content-end gap-3 mt-2">
-                    <i 
-                      className="fas fa-copy text-primary icon-hover pr-2"
+                    <InputGroupText 
+                      className="bg-light cursor-pointer"
+                      onClick={() => setIsKeyVisible(!isKeyVisible)}
+                      id="toggleVisibility"
+                    >
+                      <i className={`fas fa-eye${isKeyVisible ? '-slash' : ''}`} />
+                    </InputGroupText>
+                    <InputGroupText 
+                      className="bg-light cursor-pointer"
                       onClick={() => {
                         navigator.clipboard.writeText(apiKey.apiKey);
                         toast.success('API Key copied to clipboard!');
                       }}
-                      title="Copy to Clipboard"
-                    />
-                    <i 
-                      className="fas fa-trash text-danger icon-hover pr-2"
-                      onClick={handleRevokeApiKey}
-                      title="Revoke API Key"
-                    />
-                  </div>
-                </div>
-                <div className="security-notice mt-3 d-flex align-items-center bg-white rounded p-3">
-                  <i className="fas fa-shield-alt text-warning me-2"></i>
-                  <small className="text-muted">
-                    Keep your API key secure and never share it publicly. This key provides access to your account.
-                  </small>
-                </div>
-              </div>
+                      id="copyKey"
+                    >
+                      <i className="fas fa-copy" />
+                    </InputGroupText>
+                    <InputGroupText 
+                      className="bg-light cursor-pointer text-danger"
+                      onClick={() => setShowRevokeConfirm(true)}
+                      id="revokeKey"
+                    >
+                      <i className="fas fa-trash" />
+                    </InputGroupText>
+                  </InputGroup>
+                  
+                  <UncontrolledTooltip target="toggleVisibility">
+                    {isKeyVisible ? 'Hide API Key' : 'Show API Key'}
+                  </UncontrolledTooltip>
+                  <UncontrolledTooltip target="copyKey">
+                    Copy to Clipboard
+                  </UncontrolledTooltip>
+                  <UncontrolledTooltip target="revokeKey">
+                    Revoke API Key
+                  </UncontrolledTooltip>
+
+                  {showRevokeConfirm && (
+                    <Alert color="danger" className="mt-4">
+                      <h5 className="alert-heading">
+                        <i className="fas fa-exclamation-triangle me-2"></i>
+                        Revoke API Key?
+                      </h5>
+                      <p className="mb-3">This action cannot be undone. All applications using this API key will stop working immediately.</p>
+                      <div className="d-flex gap-2">
+                        <Button color="danger" size="sm" onClick={handleRevokeApiKey}>
+                          Yes, Revoke Key
+                        </Button>
+                        <Button color="secondary" size="sm" onClick={() => setShowRevokeConfirm(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </Alert>
+                  )}
+
+                  <Alert color="warning" className="mt-4">
+                    <div className="d-flex align-items-center">
+                      <i className="fas fa-shield-alt fs-4 me-3"></i>
+                      <div>
+                        <h5 className="alert-heading mb-1">Security Notice</h5>
+                        <p className="mb-0 ">
+                          Keep your API key secure and never share it publicly. This key provides full access to your account's API capabilities.
+                        </p>
+                      </div>
+                    </div>
+                  </Alert>
+                </Col>
+              </Row>
             </div>
           ) : (
             <div className="text-center py-5">
-              <div className="mb-3">
-                <i className="fas fa-key text-primary" style={{ fontSize: '2.5rem' }}></i>
+              <div className="mb-4">
+                <i className="fas fa-key text-primary" style={{ fontSize: '3rem' }}></i>
               </div>
-              <h5 className="mb-3">No API Key Found</h5>
+              <h3 className="mb-3">No API Key Found</h3>
               <p className="text-muted mb-4">Generate an API key to start integrating with our services</p>
-              <div
-                className="generate-button d-inline-flex align-items-center gap-2 text-primary"
+              <Button
+                color="primary"
+                size="lg"
+                className="px-4 py-2"
                 onClick={handleGenerateApiKey}
-                style={{ cursor: 'pointer' }}
+                disabled={isGenerating}
               >
                 {isGenerating ? (
                   <>
-                    <Spinner size="sm" />
-                    <span>Generating...</span>
+                    <Spinner size="sm" className="me-2" />
+                    Generating...
                   </>
                 ) : (
                   <>
-                    <i className="fas fa-plus-circle fs-5"></i>
-                    <span className="fw-medium">Generate New API Key</span>
+                    <i className="fas fa-plus-circle me-2"></i>
+                    Generate New API Key
                   </>
                 )}
-              </div>
+              </Button>
             </div>
           )}
         </CardBody>
       </Card>
 
       <style jsx>{`
-        .key-container {
-          background-color: #f8f9fa;
-          border-radius: 8px;
-          transition: all 0.3s ease;
-        }
-        
-        .key-container:hover {
-          box-shadow: 0 0 15px rgba(0,0,0,0.1);
-        }
-
-        .input-group-text {
-          border-radius: 0 6px 6px 0;
-        }
-
-        .form-control {
-          border-right: none;
-        }
-
-        .form-control:read-only {
-          background-color: white !important;
-          cursor: default;
-        }
-
-        .generate-button {
+        .cursor-pointer {
+          cursor: pointer;
           transition: all 0.2s ease;
         }
-
-        .generate-button:hover {
+        
+        .cursor-pointer:hover {
           opacity: 0.8;
         }
 
-        .icon-hover {
-          cursor: pointer;
-          font-size: 1.2rem;
-          transition: all 0.2s ease;
+        .api-key-section {
+          animation: fadeIn 0.3s ease;
         }
 
-        .icon-hover:hover {
-          transform: scale(1.1);
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
-    </div>
+    </Container>
   );
 };
 

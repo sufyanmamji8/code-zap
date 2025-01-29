@@ -186,21 +186,25 @@ import {
   Dropdown,
   DropdownToggle,
   DropdownMenu,
-  DropdownItem
+  DropdownItem,
+  Progress,
 } from "reactstrap";
-import axios from "axios";
-import { COMPANY_API_ENDPOINT } from "Api/Constant";
-import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "sonner";
+import { COMPANY_API_ENDPOINT } from "Api/Constant";
 import { countryList } from "./countryList";
-import '../../assets/css/AddWhatsapp.css'; 
 
 const AddWhatsapp = () => {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState(countryList.find(c => c.country === "Pakistan") || countryList[0]);
-  
+  const [formProgress, setFormProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(
+    countryList.find((c) => c.country === "Pakistan") || countryList[0]
+  );
+
   const [formData, setFormData] = useState({
     name: "",
     phoneNumber: "",
@@ -208,36 +212,38 @@ const AddWhatsapp = () => {
     description: "",
   });
 
-  const toggle = () => setDropdownOpen(prevState => !prevState);
-
-  const filteredCountries = countryList.filter(country =>
-    country.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    country.code.includes(searchQuery)
-  );
+  // Calculate form completion progress
+  useEffect(() => {
+    let progress = 0;
+    if (formData.name) progress += 25;
+    if (formData.phoneNumber.length > 5) progress += 25;
+    if (formData.status) progress += 25;
+    if (formData.description) progress += 25;
+    setFormProgress(progress);
+  }, [formData]);
 
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
     setDropdownOpen(false);
-    
-    // Update phone number with new country code
-    const phoneWithoutCode = formData.phoneNumber.replace(/^\+\d+/, '');
-    setFormData(prev => ({
+    const phoneWithoutCode = formData.phoneNumber.replace(/^\+\d+/, "");
+    setFormData((prev) => ({
       ...prev,
-      phoneNumber: `+${country.code}${phoneWithoutCode}`
+      phoneNumber: `+${country.code}${phoneWithoutCode}`,
     }));
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === "phoneNumber") {
-      // Keep the country code when updating phone number
-      const phoneNumber = value.startsWith('+') ? value : `+${selectedCountry.code}${value.replace(/^\+?\d+/, '')}`;
-      setFormData(prev => ({
+      const phoneNumber = value.startsWith("+")
+        ? value
+        : `+${selectedCountry.code}${value.replace(/^\+?\d+/, "")}`;
+      setFormData((prev) => ({
         ...prev,
-        phoneNumber
+        phoneNumber,
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
@@ -246,6 +252,7 @@ const AddWhatsapp = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     const token = localStorage.getItem("token");
     if (!token) {
@@ -257,122 +264,118 @@ const AddWhatsapp = () => {
     const phoneRegex = /^\+[0-9]{10,14}$/;
     if (!phoneRegex.test(formData.phoneNumber)) {
       toast.error("Please enter a valid phone number.");
+      setIsSubmitting(false);
       return;
     }
 
     try {
-      const res = await axios.post(
-        `${COMPANY_API_ENDPOINT}/create`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          withCredentials: true,
-        }
-      );
-      
-      if (res.data.success === false && res.data.message) {
-        toast.error(res.data.message);  
-        return;
-      }
+      const res = await axios.post(`${COMPANY_API_ENDPOINT}/create`, formData, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      });
 
       if (res.data.success) {
-        toast.success("Company created successfully!");
-        setFormData({
-          name: "",
-          phoneNumber: "",
-          status: "active",
-          description: "",
-        });
+        toast.success("✨ Company profile created successfully!");
         navigate("/admin/dashboard", { state: { refresh: true } });
       } else {
-        toast.error("Failed to create company.");
+        toast.error(res.data.message || "Failed to create company.");
       }
     } catch (error) {
       console.error("Error creating company:", error);
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
-      }
+      toast.error(error.response?.data?.message || "An error occurred");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  useEffect(() => {
-    // Initialize phone number with selected country code
-    setFormData(prev => ({
-      ...prev,
-      phoneNumber: `+${selectedCountry.code}`
-    }));
-  }, []);
-
   return (
-    <div className="add-whatsapp-container">
-      <div className="form-container">
-        <Card className="form-card">
-          {/* Modern Header with Icon */}
-          <CardHeader className="modern-header">
-            <div className="header-icon">🏢</div>
-            <h2>Add New Company</h2>
-            <p>Create a new business profile</p>
+    <div className="p-4 bg-gray-100 min-h-screen">
+      <div className="max-w-2xl mx-auto">
+        <Card className="shadow-lg border-0">
+          <CardHeader className="bg-white border-0 p-4">
+            <div className="text-center">
+              {/* <div className="text-4xl mb-2">🏢</div> */}
+              <h2 className="text-2xl font-bold mb-1">Create New Company</h2>
+              <p className="text-gray-600">Let's set up your business profile</p>
+              <Progress
+                value={formProgress}
+                className="mt-4"
+                style={{
+                  height: "8px",
+                  backgroundColor: "#f0f0f0",
+                }}
+                color="info"
+              />
+            </div>
           </CardHeader>
 
-          <CardBody className="modern-body">
+          <CardBody className="p-4">
             <Form onSubmit={handleSubmit}>
-              {/* Company Name Field */}
-              <FormGroup className="modern-form-group">
-                <Label className="modern-label">
-                  <span className="label-icon">💼</span>
+              <FormGroup className="mb-4">
+                <Label className="font-semibold mb-2 flex items-center">
+                  {/* <span className="mr-2">💼</span> */}
                   Company Name
                 </Label>
                 <Input
                   name="name"
                   type="text"
-                  placeholder="Enter company name"
+                  placeholder="Enter your company name"
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  className="modern-input"
+                  className="border-2 p-2 rounded-lg focus:border-blue-500 transition-all"
                 />
               </FormGroup>
 
-              {/* Phone Number Field with Country Selector */}
-              <FormGroup className="modern-form-group">
-                <Label className="modern-label">
-                  <span className="label-icon">📱</span>
+              <FormGroup className="mb-4">
+                <Label className="font-semibold mb-2 flex items-center">
+                  {/* <span className="mr-2">📱</span> */}
                   Phone Number
                 </Label>
-                <InputGroup className="modern-input-group">
-                  <Dropdown isOpen={dropdownOpen} toggle={() => setDropdownOpen(!dropdownOpen)} className="country-dropdown">
-                    <DropdownToggle caret className="country-toggle">
-                      <span className="country-flag">{selectedCountry.flag}</span>
-                      <span className="country-code">+{selectedCountry.code}</span>
+                <InputGroup>
+                  <Dropdown
+                    isOpen={dropdownOpen}
+                    toggle={() => setDropdownOpen(!dropdownOpen)}
+                  >
+                    <DropdownToggle
+                      caret
+                      className="bg-white text-dark border-2 rounded-l-lg px-3"
+                    >
+                      {selectedCountry.flag} +{selectedCountry.code}
                     </DropdownToggle>
-                    <DropdownMenu className="modern-dropdown-menu">
-                      <div className="search-container">
+                    <DropdownMenu className="p-0 border-2">
+                      <div className="p-2 border-b">
                         <Input
                           type="text"
                           placeholder="🔍 Search countries..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="search-input"
+                          className="border rounded"
                         />
                       </div>
-                      <div className="countries-list">
+                      <div style={{ maxHeight: "200px", overflowY: "auto" }}>
                         {countryList
-                          .filter(country =>
-                            country.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            country.code.includes(searchQuery)
+                          .filter(
+                            (country) =>
+                              country.country
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase()) ||
+                              country.code.includes(searchQuery)
                           )
                           .map((country) => (
-                            <DropdownItem 
+                            <DropdownItem
                               key={country.code}
                               onClick={() => handleCountrySelect(country)}
-                              className="country-item"
+                              className="p-2 hover:bg-gray-100"
                             >
-                              <span className="country-flag">{country.flag}</span>
-                              <span className="country-name">{country.country}</span>
-                              <span className="country-code">+{country.code}</span>
+                              <span className="mr-2">{country.flag}</span>
+                              <span className="mr-2">{country.country}</span>
+                              <span className="text-gray-600">
+                                +{country.code}
+                              </span>
                             </DropdownItem>
                           ))}
                       </div>
@@ -385,15 +388,14 @@ const AddWhatsapp = () => {
                     value={formData.phoneNumber}
                     onChange={handleInputChange}
                     required
-                    className="phone-input"
+                    className="border-2 rounded-r-lg"
                   />
                 </InputGroup>
               </FormGroup>
 
-              {/* Status Field */}
-              <FormGroup className="modern-form-group">
-                <Label className="modern-label">
-                  <span className="label-icon">🔄</span>
+              <FormGroup className="mb-4">
+                <Label className="font-semibold mb-2 flex items-center">
+                  {/* <span className="mr-2">🔄</span> */}
                   Status
                 </Label>
                 <Input
@@ -401,36 +403,40 @@ const AddWhatsapp = () => {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="modern-select"
+                  className="border-2 rounded-lg"
                 >
-                  <option value="active">✅ Active</option>
-                  <option value="inactive">⭕ Inactive</option>
+                  <option value="active"> Active</option>
+                  <option value="inactive"> Inactive</option>
                 </Input>
               </FormGroup>
 
-              {/* Description Field */}
-              <FormGroup className="modern-form-group">
-                <Label className="modern-label">
-                  <span className="label-icon">📝</span>
+              <FormGroup className="mb-4">
+                <Label className="font-semibold mb-2 flex items-center">
+                  {/* <span className="mr-2">📝</span> */}
                   Description
                 </Label>
                 <Input
                   name="description"
                   type="textarea"
-                  placeholder="Tell us about the company..."
+                  placeholder="Tell us about your company..."
                   value={formData.description}
                   onChange={handleInputChange}
-                  className="modern-textarea"
+                  className="border-2 rounded-lg"
                   rows="4"
                 />
               </FormGroup>
 
-              {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="modern-button"
+              <Button
+                type="submit"
+                color="primary"
+                className=" p-3 rounded-lg"
+                disabled={isSubmitting || formProgress < 100}
               >
-                Create Company Profile
+                {isSubmitting ? (
+                  <span>Creating Profile...</span>
+                ) : (
+                  <span>Create Company Profile</span>
+                )}
               </Button>
             </Form>
           </CardBody>
