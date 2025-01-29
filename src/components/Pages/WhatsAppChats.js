@@ -1488,6 +1488,21 @@
 // };
 // export default WhatsAppChats;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import React, { useState, useEffect, useRef } from "react";
 import {
   FaArrowLeft,
@@ -1520,7 +1535,18 @@ import io from "socket.io-client";
 
 const WhatsAppChats = () => {
   const location = useLocation();
-  const { config, companyId } = location.state || {};
+
+  useEffect(() => {
+    if (location.state?.config) {
+        localStorage.setItem('whatsappConfig', JSON.stringify(location.state.config));
+        localStorage.setItem('whatsappCompanyId', location.state.companyId);
+    }
+  }, [location.state]);
+  
+  const { config, companyId } = location.state || {
+    config: JSON.parse(localStorage.getItem('whatsappConfig')),
+    companyId: localStorage.getItem('whatsappCompanyId')
+  };
   const businessId = config?.whatsappBusinessAccountId;
 
   const calculateContactsPerPage = () => {
@@ -1714,6 +1740,8 @@ const WhatsAppChats = () => {
     }
   };
 
+  
+
   useEffect(() => {
     if (selectedUser && chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -1740,7 +1768,7 @@ const WhatsAppChats = () => {
       if (response.data.success) {
         setMessages(response.data.data);
 
-        // Extract sender name from messages
+        // Extract sender name from messages and update senderNames state
         const messages = response.data.data;
         if (messages.length > 0) {
           const latestMessage = messages.find(
@@ -1753,41 +1781,6 @@ const WhatsAppChats = () => {
             }));
           }
         }
-
-        // Update contacts with sender name and latest message
-        setContacts((prevContacts) =>
-          prevContacts.map((contact) => {
-            if (contact.phoneNumber === contactPhoneNumber) {
-              const latestMessage = messages.find(
-                (msg) => msg.senderName && msg.from === contactPhoneNumber
-              );
-              const lastMsg = messages[0];
-              let lastMessageText = "";
-
-              if (lastMsg) {
-                if (lastMsg.type === "template") {
-                  const bodyComponent = lastMsg.components?.find(
-                    (c) => c.type === "BODY"
-                  );
-                  lastMessageText = bodyComponent
-                    ? bodyComponent.text
-                    : "Template Message";
-                } else {
-                  lastMessageText = lastMsg.messageBody;
-                }
-              }
-
-              return {
-                ...contact,
-                name: latestMessage?.senderName || contact.name,
-                lastMessage: lastMessageText,
-                timestamp:
-                  messages[0]?.currentStatusTimestamp || contact.timestamp,
-              };
-            }
-            return contact;
-          })
-        );
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -1981,50 +1974,14 @@ const WhatsAppChats = () => {
 
     contacts.forEach((contact) => {
       if (contact && contact.phoneNumber) {
-        users.set(contact.phoneNumber, {
-          ...contact,
-          lastMessage: contact.lastMessage || "",
-          timestamp: contact.timestamp || (Date.now() / 1000).toString(),
-        });
-      }
-    });
-
-    messages.forEach((msg) => {
-      if (!msg) return;
-
-      const contactNumber =
-        msg.from === config?.phoneNumber ? msg.to : msg.from;
-
-      if (!contactNumber) return;
-
-      const existingUser = users.get(contactNumber);
-      const messageTimestamp = parseInt(
-        msg.sentTimestamp || msg.originalTimestamp || msg.currentStatusTimestamp
-      );
-      const existingTimestamp = existingUser
-        ? parseInt(existingUser.timestamp)
-        : 0;
-
-      if (!existingUser || messageTimestamp > existingTimestamp) {
         const country = countryList.find(
-          (c) => c && c.code && contactNumber.startsWith(c.code)
+          (c) => c && c.code && contact.phoneNumber.startsWith(c.code)
         );
 
-        // Add handling for template messages
-        let lastMessage = msg.messageBody;
-        if (msg.type === "template") {
-          const bodyComponent = msg.components?.find((c) => c.type === "BODY");
-          lastMessage = bodyComponent ? bodyComponent.text : "Template Message";
-        }
-
-        users.set(contactNumber, {
-          ...(existingUser || {}),
-          phoneNumber: contactNumber,
-          lastMessage: lastMessage,
-          timestamp:
-            msg.sentTimestamp ||
-            msg.originalTimestamp ||
-            msg.currentStatusTimestamp,
+        users.set(contact.phoneNumber, {
+          ...contact,
+          lastMessage: contact.lastMessage || contact.recentMessage || "",
+          timestamp: contact.timestamp || contact.latestChat || (Date.now() / 1000).toString(),
           flag: country?.flag || "🌐",
         });
       }
@@ -2037,15 +1994,10 @@ const WhatsAppChats = () => {
         const timestampB = parseInt(b.timestamp) || 0;
         return timestampB - timestampA;
       });
-  }, [messages, contacts, config?.phoneNumber]);
+  }, [contacts]);
 
   const sendMessage = async () => {
-    if (
-      !newMessage.trim() ||
-      !selectedUser ||
-      !config?.phoneNumber ||
-      !companyId
-    ) {
+    if (!newMessage.trim() || !selectedUser || !config?.phoneNumber || !companyId) {
       console.warn("Missing required data for sending message");
       return;
     }
@@ -2061,22 +2013,25 @@ const WhatsAppChats = () => {
       messageBody: newMessage,
       type: "text",
       status: "sending",
-      sentTimestamp: currentTimestamp, // Original sent time - never changes
-      currentStatusTimestamp: currentTimestamp, // For status changes only
-      messageTimestamp: currentTimestamp, // For message grouping/display - never changes
+      sentTimestamp: currentTimestamp,
+      currentStatusTimestamp: currentTimestamp,
+      messageTimestamp: currentTimestamp,
       senderName: config.companyName || config.phoneNumber,
     };
 
     try {
       setMessages((prev) => [...prev, tempMessage]);
 
+      // Update contacts immediately with new message
       setContacts((prev) => {
         const updatedContacts = prev.map((contact) => {
           if (contact.phoneNumber === selectedUser.phoneNumber) {
             return {
               ...contact,
               lastMessage: newMessage,
-              timestamp: currentTimestamp, // Using the original send timestamp
+              recentMessage: newMessage,
+              timestamp: currentTimestamp,
+              latestChat: new Date(parseInt(currentTimestamp) * 1000).toISOString(),
             };
           }
           return contact;
@@ -2111,14 +2066,12 @@ const WhatsAppChats = () => {
                   ...msg,
                   messageId: actualMessageId,
                   status: "sent",
-                  currentStatusTimestamp: Date.now() / 1000, // Only for status tracking
-                  messageTimestamp: msg.messageTimestamp, // Preserve original timestamp
+                  currentStatusTimestamp: Date.now() / 1000,
+                  messageTimestamp: msg.messageTimestamp,
                 }
               : msg
           )
         );
-
-        fetchContacts(1, false);
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -2128,10 +2081,9 @@ const WhatsAppChats = () => {
             ? {
                 ...msg,
                 status: "failed",
-                currentStatusTimestamp: Date.now() / 1000, // Update status timestamp
-                sentTimestamp: msg.originalTimestamp, // Keep original timestamp
-                failureReason:
-                  error.response?.data?.message || "Failed to send message",
+                currentStatusTimestamp: Date.now() / 1000,
+                sentTimestamp: msg.originalTimestamp,
+                failureReason: error.response?.data?.message || "Failed to send message",
               }
             : msg
         )

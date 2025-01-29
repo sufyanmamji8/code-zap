@@ -899,6 +899,37 @@ const SendTemplate = () => {
     }));
   };
 
+  const copyToClipboard = async (text) => {
+    try {
+      // Try using the modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      
+      // Fallback for older browsers or HTTP
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        textArea.remove();
+        return true;
+      } catch (err) {
+        textArea.remove();
+        return false;
+      }
+    } catch (err) {
+      return false;
+    }
+  };
+
   const fetchTemplateDetails = async () => {
     if (!formData.companyId || !token) return;
 
@@ -1148,9 +1179,7 @@ const SendTemplate = () => {
     if (!template) return "";
 
     const bodyComponent = formData.components.find((c) => c.type === "body");
-    const headerComponent = formData.components.find(
-      (c) => c.type === "header"
-    );
+    const headerComponent = formData.components.find((c) => c.type === "header");
     const bodyParams = extractTemplateParameters(template);
 
     const data = {
@@ -1166,6 +1195,8 @@ const SendTemplate = () => {
         components: [],
       },
     };
+
+    
 
     // Add header parameters if they exist
     if (headerComponent) {
@@ -1224,86 +1255,124 @@ const SendTemplate = () => {
     const formattedJson = JSON.stringify(data, null, 2);
 
     // Always show 'api-key' in the authorization header
-    const authHeader = "--header 'Authorization: Bearer api-key'";
+    const authHeader = apiKey 
+    ? `--header 'Authorization: Bearer api-key'`
+    : "--header 'Authorization: Bearer generate api first'";
 
-    return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate' \\
-    ${authHeader} \\
-    --header 'Content-Type: application/json' \\
-    --data '${formattedJson}'`;
-  };
+  return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate' \\
+  ${authHeader} \\
+  --header 'Content-Type: application/json' \\
+  --data '${formattedJson}'`;
+};
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.companyId || !token) {
-      toast.error("Missing required information");
-      return;
-    }
 
-    setIsSending(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!formData.companyId || !token) {
+    toast.error("Missing required information");
+    return;
+  }
 
-    try {
-      const payload = {
-        to: formData.to,
-        templateName: formData.templateName,
-        templateLanguage: formData.templateLanguage,
-        companyId: formData.companyId,
-        components: formData.components.map((component) => {
-          if (component.type === "header") {
-            const headerFormat = template.components
-              .find((c) => c.type === "HEADER")
-              ?.format.toLowerCase();
-            return {
-              type: "header",
-              parameters: [
-                {
-                  type: headerFormat,
-                  [headerFormat]: {
-                    link: headerParams.mediaUrl,
-                  },
+  setIsSending(true);
+
+  try {
+    const payload = {
+      to: formData.to,
+      templateName: formData.templateName,
+      templateLanguage: formData.templateLanguage,
+      companyId: formData.companyId,
+      components: formData.components.map((component) => {
+        if (component.type === "header") {
+          const headerFormat = template.components
+            .find((c) => c.type === "HEADER")
+            ?.format.toLowerCase();
+          return {
+            type: "header",
+            parameters: [
+              {
+                type: headerFormat,
+                [headerFormat]: {
+                  link: headerParams.mediaUrl,
                 },
-              ],
-            };
-          }
-          return component;
-        }),
+              },
+            ],
+          };
+        }
+        return component;
+      }),
+    };
+
+    const response = await axios.post(
+      "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (response.data.success) {
+      toast.success("Template message sent successfully!");
+      
+      // Get existing WhatsApp config from localStorage if available
+      const existingConfig = localStorage.getItem('whatsappConfig');
+      const existingCompanyId = localStorage.getItem('whatsappCompanyId');
+      
+      // Prepare navigation state with WhatsApp config
+      const navigationState = {
+        companyId: formData.companyId,
+        config: existingConfig ? JSON.parse(existingConfig) : null,
+        refresh: true,
+        timestamp: new Date().getTime()
       };
 
-      const response = await axios.post(
-        "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate",
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+      // If we don't have config in localStorage, try to fetch it
+      if (!existingConfig) {
+        try {
+          // You'll need to implement this endpoint
+          const configResponse = await axios.get(
+            `https://codozap-e04e12b02929.herokuapp.com/api/v1/whatsapp/config/${formData.companyId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          
+          if (configResponse.data.success) {
+            navigationState.config = configResponse.data.config;
+          }
+        } catch (error) {
+          console.error("Error fetching WhatsApp config:", error);
+          // Continue with navigation even if config fetch fails
         }
-      );
+      }
 
-      if (response.data.success) {
-        toast.success("Template message sent successfully!");
-        navigate("/admin/dashboard", {
-          state: { companyId: formData.companyId },
-        });
-      } else {
-        // Stay on the same page and show error toast
-        toast.error(response.data.message || "Failed to send template");
-      }
-    } catch (error) {
-      console.error("Error sending template:", error);
-      if (error.response?.status === 401) {
-        navigate("/auth/login");
-      } else {
-        // Stay on the same page and show detailed error message
-        const errorMessage =
-          error.response?.data?.message || "Error sending template message";
-        toast.error(errorMessage, {
-          duration: 5000, // Show for 5 seconds to ensure user sees it
-        });
-      }
-    } finally {
-      setIsSending(false);
+      // Navigate to chats with all necessary data
+      navigate("/admin/chats", { 
+        state: navigationState,
+        replace: true
+      });
+    } else {
+      toast.error(response.data.message || "Failed to send template");
     }
-  };
+  } catch (error) {
+    console.error("Error sending template:", error);
+    if (error.response?.status === 401) {
+      navigate("/auth/login");
+    } else {
+      const errorMessage =
+        error.response?.data?.message || "Error sending template message";
+      toast.error(errorMessage, {
+        duration: 5000,
+      });
+    }
+  } finally {
+    setIsSending(false);
+  }
+};
 
   const renderHeaderParams = () => {
     if (!template) return null;
@@ -1470,17 +1539,21 @@ const SendTemplate = () => {
               API Request
             </h4>
             <Button
-              color="primary"
-              size="sm"
-              className="copy-btn"
-              onClick={() => {
-                navigator.clipboard.writeText(getCurlCommand());
-                toast.success("Curl command copied!");
-              }}
-            >
-              <i className="fas fa-copy me-2"></i>
-              Copy CURL
-            </Button>
+  color="primary"
+  size="sm"
+  className="copy-btn"
+  onClick={async () => {
+    const success = await copyToClipboard(getCurlCommand());
+    if (success) {
+      toast.success("Curl command copied!");
+    } else {
+      toast.error("Failed to copy. Please try selecting and copying manually.");
+    }
+  }}
+>
+  <i className="fas fa-copy me-2"></i>
+  Copy CURL
+</Button>
           </CardHeader>
           <CardBody className="p-0">
             <div className="code-container">

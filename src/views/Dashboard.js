@@ -67,6 +67,7 @@ const Dashboard = () => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000, // 10 second timeout
       });
   
       if (res.data.success) {
@@ -89,7 +90,17 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Error fetching accounts:", error);
-      if (error.response?.status === 401) {
+      
+      // Network error handling
+      if (!error.response) {
+        if (error.code === 'ECONNABORTED') {
+          setError("Request timed out. Please check your internet connection.");
+        } else if (error.message.includes('Network Error')) {
+          setError("Network error. Please check your internet connection.");
+        } else {
+          setError("Unable to connect to the server. Please check your network connection.");
+        }
+      } else if (error.response?.status === 401) {
         toast.error("Session expired. Please login again.");
         navigate('/auth/login');
       } else {
@@ -281,20 +292,20 @@ const handleOpenWhatsApp = async (companyId, companyName) => {
           <div className="loading-emoji">
             <span role="img" aria-label="loading" className="loading-bounce">⏳</span>
           </div>
-          <p className="text-muted mt-3 h5">Loading your  Whatsapp accounts...</p>
+          <p className="text-muted mt-3 h5">Loading your Whatsapp accounts...</p>
         </div>
       ) : (
         <Row className="g-4">
-          {whatsappAccounts.length > 0 ? (
+          {!error && whatsappAccounts.length === 0 ? (
+            <Col xs={12}>
+              <EmptyState />
+            </Col>
+          ) : (
             whatsappAccounts.map((account) => (
               <Col key={account._id} lg={4} md={6} sm={12}>
                 <AccountCard account={account} />
               </Col>
             ))
-          ) : (
-            <Col xs={12}>
-              <EmptyState />
-            </Col>
           )}
         </Row>
       )}
