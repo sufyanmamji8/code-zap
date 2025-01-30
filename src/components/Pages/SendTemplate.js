@@ -107,7 +107,7 @@
 
 //     try {
 //       const response = await axios.post(
-//         'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates',
+//         'http://192.168.0.106:25483/api/v1/messages/fetchTemplates',
 //         {
 //           companyId: formData.companyId
 //         },
@@ -172,7 +172,7 @@
 
 //     try {
 //       const response = await axios.post(
-//         'https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/get-Api-Key',
+//         'http://192.168.0.106:25483/api/v1/apiKey/get-Api-Key',
 //         { companyId: formData.companyId },
 //         {
 //           headers: {
@@ -204,7 +204,7 @@
 //       setIsLoading(true);
 //       try {
 //         const response = await axios.post(
-//           'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates',
+//           'http://192.168.0.106:25483/api/v1/messages/fetchTemplates',
 //           {
 //             companyId: formData.companyId
 //           },
@@ -411,7 +411,7 @@
 //       ? `--header 'Authorization: Bearer ${apiKey}'`
 //       : '# Please generate an API key first';
 
-//     return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate' \\
+//     return `curl --location 'http://192.168.0.106:25483/api/v1/messages/sendTemplate' \\
 //   ${authHeader} \\
 //   --header 'Content-Type: application/json' \\
 //   --data '${formattedJson}'`;
@@ -450,7 +450,7 @@
 //       };
 
 //       const response = await axios.post(
-//         'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate',
+//         'http://192.168.0.106:25483/api/v1/messages/sendTemplate',
 //         payload,
 //         {
 //           headers: {
@@ -817,6 +817,9 @@ import axios from "axios";
 import { toast } from "sonner";
 import { countryList } from "./countryList";
 import "../../assets/css/SendTemplate.css"; // Import the CSS file
+import { TEMPLATE_ENDPOINTS } from "Api/Constant";
+import { API_KEY_ENDPOINTS } from "Api/Constant";
+import { MESSAGE_API_ENDPOINT } from "Api/Constant";
 
 const SendTemplate = () => {
   const location = useLocation();
@@ -935,7 +938,7 @@ const SendTemplate = () => {
 
     try {
       const response = await axios.post(
-        "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates",
+        TEMPLATE_ENDPOINTS.FETCH,
         {
           companyId: formData.companyId,
         },
@@ -1004,7 +1007,7 @@ const SendTemplate = () => {
 
     try {
       const response = await axios.post(
-        "https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/get-Api-Key",
+        API_KEY_ENDPOINTS.GET,
         { companyId: formData.companyId },
         {
           headers: {
@@ -1036,7 +1039,7 @@ const SendTemplate = () => {
       setIsLoading(true);
       try {
         const response = await axios.post(
-          "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates",
+          TEMPLATE_ENDPOINTS.FETCH,
           {
             companyId: formData.companyId,
           },
@@ -1257,7 +1260,7 @@ const SendTemplate = () => {
     // Always show 'api-key' in the authorization header
     const authHeader = apiKey 
     ? `--header 'Authorization: Bearer api-key'`
-    : "--header 'Authorization: Bearer generate api first'";
+    : "--header 'Authorization: Bearer generate an api key first'";
 
   return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate' \\
   ${authHeader} \\
@@ -1303,7 +1306,7 @@ const handleSubmit = async (e) => {
     };
 
     const response = await axios.post(
-      "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate",
+      `${MESSAGE_API_ENDPOINT}/sendTemplate`,
       payload,
       {
         headers: {
@@ -1333,7 +1336,7 @@ const handleSubmit = async (e) => {
         try {
           // You'll need to implement this endpoint
           const configResponse = await axios.get(
-            `https://codozap-e04e12b02929.herokuapp.com/api/v1/whatsapp/config/${formData.companyId}`,
+            `http://192.168.0.106:25483/api/v1/whatsapp/config/${formData.companyId}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,

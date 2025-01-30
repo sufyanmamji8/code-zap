@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { COMPANY_API_ENDPOINT } from "Api/Constant";
+import { CONFIGURATION_ENDPOINTS } from "Api/Constant";
 
 const Dashboard = () => {
   const [whatsappAccounts, setWhatsappAccounts] = useState([]);
@@ -36,7 +37,7 @@ const Dashboard = () => {
   const checkConfiguration = async (companyId, token) => {
     try {
       const response = await axios.post(
-        `https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/check-configuration`,
+        CONFIGURATION_ENDPOINTS.CHECK,
         { companyId },
         {
           headers: {
@@ -115,25 +116,25 @@ const Dashboard = () => {
     fetchWhatsappAccounts();
   }, []);
 
-const handleOpenWhatsApp = async (companyId, companyName) => {
-  console.log('Received values:', { companyId, companyName });// Add companyName parameter
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Please log in first.");
-      navigate('/auth/login');
-      return;
-    }
-
-    const response = await axios.post(
-      `https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/check-configuration`,
-      { companyId},
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+  const handleOpenWhatsApp = async (companyId, companyName) => {
+    console.log('Received values:', { companyId, companyName });
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Please log in first.");
+        navigate('/auth/login');
+        return;
       }
-    );
+  
+      const response = await axios.post(
+        CONFIGURATION_ENDPOINTS.CHECK,
+        { companyId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
     if (response.data.success) {
       // Store both companyId and companyName in localStorage

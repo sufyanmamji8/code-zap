@@ -5,7 +5,6 @@ import Dashboard from "views/Dashboard.js";
 import Campaign from "views/examples/Campaign.js";
 import EditCompany from "components/Pages/EditWhatsappAccount";
 import WhatsAppAccountList from "components/Pages/WhatsAppAccountList";
-import WhatsAppStats from "components/Pages/WhatsAppStats";
 import WhatsAppChats from "components/Pages/WhatsAppChats";
 import WhatsAppAgents from "components/Pages/WhatsAppAgents";
 import AddWhatsapp from "components/Pages/AddWhatsapp";
@@ -19,6 +18,7 @@ import WhatsAppAnalytics from "components/Pages/WhatsAppAnalytics";
 import Users from "views/examples/Users";
 import SendTemplate from "components/Pages/SendTemplate";
 import ApiKey from "components/Pages/ApiKey";
+import WhatsAppMenus from "components/Pages/WhatsAppMenus";
 
 var routes = [
   {
@@ -81,10 +81,10 @@ var routes = [
     showInSidebar: false,
   },
   {
-    path: "/stats",
-    name: "WhatsAppStats",
-    icon: "ni ni-circle-08 text-gray",
-    component: <WhatsAppStats />,
+    path: "/menus",
+    name: "WhatsAppMenus",
+    icon: "ni ni-bullet-list-67 ",
+    component: <WhatsAppMenus />,
     layout: "/admin",
     showInSidebar: false,
   },

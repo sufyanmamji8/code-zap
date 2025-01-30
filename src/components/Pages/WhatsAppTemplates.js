@@ -53,7 +53,7 @@
 //       try {
 //         setIsLoading(true);
 //         const response = await axios.post(
-//           "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates",
+//           "http://192.168.0.106:25483/api/v1/messages/fetchTemplates",
 //           { companyId },
 //           {
 //             headers: {
@@ -335,6 +335,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { BarChart2, Send, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { TEMPLATE_ENDPOINTS } from "Api/Constant";
 
 const WhatsAppTemplates = () => {
   const [templates, setTemplates] = useState([]);
@@ -373,7 +374,7 @@ const WhatsAppTemplates = () => {
       try {
         setIsLoading(true);
         const response = await axios.post(
-          "https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/fetchTemplates",
+          TEMPLATE_ENDPOINTS.FETCH,
           { companyId },
           {
             headers: {

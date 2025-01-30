@@ -103,7 +103,7 @@ const Sidebar = (props) => {
   // WhatsApp specific routes
   const whatsAppRoutes = [
     { name: "Back to Owner", icon: "ni ni-bold-left", path: "/dashboard", layout: "/admin" },
-    { name: "Stats", icon: "ni ni-chart-bar-32", path: "/stats", layout: "/admin" },
+    { name: "Menus", icon: "ni ni-bullet-list-67 ", path: "/menus", layout: "/admin" },
     { name: "Chats", icon: "ni ni-chat-round", path: "/chats", layout: "/admin" },
     { name: "Agents", icon: "ni ni-circle-08", path: "/agents", layout: "/admin", dropdown: true, subRoutes: [
       { name: "List", path: "/agentslist" },

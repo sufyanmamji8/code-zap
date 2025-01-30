@@ -51,7 +51,7 @@
 //         }
 
 //         const response = await axios.post(
-//           // 'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/save-configuration',
+//           // 'http://192.168.0.106:25483/api/v1/configuration/save-configuration',
 //           'http://192.168.0.103:25483/api/v1/configuration/save-configuration',
 //           {
 //             companyId,
@@ -333,6 +333,7 @@ import { Button } from 'reactstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';  
 import { toast } from 'sonner';
+import { CONFIGURATION_ENDPOINTS } from 'Api/Constant';
 
 const Settings = () => {
   const [activeAccordion, setActiveAccordion] = useState(1);
@@ -365,7 +366,7 @@ const Settings = () => {
         }
 
         const response = await axios.post(
-          'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/check-configuration',
+          CONFIGURATION_ENDPOINTS.CHECK,
           { companyId },
           {
             headers: {
@@ -430,10 +431,8 @@ const Settings = () => {
         };
 
         const endpoint = hasExistingConfig 
-          ? 'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/update-configuration'
-          : 'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/save-configuration';
-          // ? 'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/update-configuration'
-          // : 'https://codozap-e04e12b02929.herokuapp.com/api/v1/configuration/save-configuration';
+          ? CONFIGURATION_ENDPOINTS.UPDATE
+          : CONFIGURATION_ENDPOINTS.SAVE;
 
         const method = hasExistingConfig ? 'put' : 'post';
 

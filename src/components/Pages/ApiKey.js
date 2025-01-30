@@ -18,6 +18,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { API_KEY_ENDPOINTS } from 'Api/Constant';
 
 const ApiKey = () => {
   const [apiKey, setApiKey] = useState(null);
@@ -46,6 +47,7 @@ const ApiKey = () => {
     }
   }, [location]);
 
+  
   const fetchExistingApiKey = async () => {
     if (!companyId || !token) {
       setIsLoading(false);
@@ -54,7 +56,7 @@ const ApiKey = () => {
 
     try {
       const response = await axios.post(
-        'https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/get-Api-Key',
+        API_KEY_ENDPOINTS.GET,
         { companyId },
         {
           headers: {
@@ -78,11 +80,12 @@ const ApiKey = () => {
     }
   };
 
+
   const handleGenerateApiKey = async () => {
     setIsGenerating(true);
     try {
       const response = await axios.post(
-        'https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/generate-Api-Key',
+        API_KEY_ENDPOINTS.GENERATE,
         { companyId },
         {
           headers: {
@@ -115,7 +118,7 @@ const ApiKey = () => {
   
     try {
       const response = await axios.post(
-        'https://codozap-e04e12b02929.herokuapp.com/api/v1/apiKey/revoke-Api-Key',
+        API_KEY_ENDPOINTS.REVOKE,
         { 
           id: apiKey._id,
           companyId 

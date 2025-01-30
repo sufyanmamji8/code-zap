@@ -26,6 +26,7 @@ import {
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { TrendingUp, MessageCircle, DollarSign, FileQuestion, Search } from 'lucide-react';
+import { ANALYTICS_ENDPOINTS } from 'Api/Constant';
 
 // Define consistent colors
 const CONVERSATION_COLOR = 'rgba(54, 162, 235, 0.6)';
@@ -87,7 +88,7 @@ const WhatsAppAnalytics = () => {
         const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
   
         const response = await axios.post(
-          `https://codozap-e04e12b02929.herokuapp.com/api/v1/analytics/fetchConversationAnalytics`,
+          ANALYTICS_ENDPOINTS.FETCH_CONVERSATION,
           { companyId },
           {
             headers: {
