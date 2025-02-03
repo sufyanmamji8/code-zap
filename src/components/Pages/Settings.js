@@ -1,9 +1,9 @@
-
 // import React, { useState, useEffect } from 'react';
 // import { Button } from 'reactstrap';
 // import { useNavigate, useLocation } from 'react-router-dom';
 // import axios from 'axios';  
 // import { toast } from 'sonner';
+// import { CONFIGURATION_ENDPOINTS } from 'Api/Constant';
 
 // const Settings = () => {
 //   const [activeAccordion, setActiveAccordion] = useState(1);
@@ -11,18 +11,60 @@
 //   const [accountId, setAccountId] = useState('');
 //   const [callbackUrl, setCallbackUrl] = useState('');
 //   const [accessToken, setAccessToken] = useState('');
+//   const [hasExistingConfig, setHasExistingConfig] = useState(false);
 //   const navigate = useNavigate();
 //   const location = useLocation();
 
 //   // Extract companyId from location state
 //   const companyId = location.state?.companyId;
 
-//   // Check if companyId exists on component mount
+//   // Fetch existing configuration on component mount
 //   useEffect(() => {
-//     if (!companyId) {
-//       toast.error('Company ID is missing. Please select a company first.');
-//       navigate('/admin/dashboard');
-//     }
+//     const fetchConfiguration = async () => {
+//       if (!companyId) {
+//         toast.error('Company ID is missing. Please select a company first.');
+//         navigate('/admin/dashboard');
+//         return;
+//       }
+
+//       try {
+//         const token = localStorage.getItem('token');
+//         if (!token) {
+//           toast.error('Authorization token is missing. Please log in again.');
+//           navigate('/auth/login');
+//           return;
+//         }
+
+//         const response = await axios.post(
+//           CONFIGURATION_ENDPOINTS.CHECK,
+//           { companyId },
+//           {
+//             headers: {
+//               Authorization: `Bearer ${token}`
+//             }
+//           }
+//         );
+
+//         if (response.data.success && response.data.data) {
+//           const config = response.data.data;
+//           setPhoneId(config.phoneNumberId || '');
+//           setAccountId(config.whatsappBusinessAccountId || '');
+//           setCallbackUrl(config.callbackUrl || '');
+//           setAccessToken(config.accessToken || '');
+//           setHasExistingConfig(true);
+//         }
+//       } catch (error) {
+//         console.error('Error fetching configuration:', error);
+//         if (error.response?.status === 401) {
+//           toast.error('Session expired. Please login again.');
+//           navigate('/auth/login');
+//         } else {
+//           toast.error('Failed to fetch configuration. Please try again.');
+//         }
+//       }
+//     };
+
+//     fetchConfiguration();
 //   }, [companyId, navigate]);
 
 //   const toggleAccordion = (index) => {
@@ -50,22 +92,29 @@
 //           return;
 //         }
 
-//         const response = await axios.post(
-//           // 'http://192.168.0.106:25483/api/v1/configuration/save-configuration',
-//           'http://192.168.0.103:25483/api/v1/configuration/save-configuration',
-//           {
-//             companyId,
-//             phoneNumberId: phoneId,
-//             whatsappBusinessAccountId: accountId,
-//             callbackUrl: callbackUrl,
-//             accessToken: accessToken,
-//           },
-//           {
-//             headers: {
-//               Authorization: `Bearer ${token}`
-//             }
+//         const configData = {
+//           companyId,
+//           phoneNumberId: phoneId,
+//           whatsappBusinessAccountId: accountId,
+//           callbackUrl: callbackUrl,
+//           accessToken: accessToken,
+//         };
+
+//         const endpoint = hasExistingConfig 
+//           ? CONFIGURATION_ENDPOINTS.UPDATE
+//           : CONFIGURATION_ENDPOINTS.SAVE;
+
+//         const method = hasExistingConfig ? 'put' : 'post';
+
+//         const response = await axios({
+//           method,
+//           url: endpoint,
+//           data: configData,
+//           headers: {
+//             Authorization: `Bearer ${token}`,
+//             'Content-Type': 'application/json'
 //           }
-//         );
+//         });
 
 //         if (response.data.success) {
 //           navigate('/admin/chats', { 
@@ -75,9 +124,9 @@
 //               config: response.data.data
 //             } 
 //           });
-//           toast.success("Configuration saved successfully!");
+//           toast.success(`Configuration ${hasExistingConfig ? 'updated' : 'saved'} successfully!`);
 //         } else {
-//           toast.error(response.data.message || 'Configuration failed. Please try again.');
+//           toast.error(response.data.message || `Configuration ${hasExistingConfig ? 'update' : 'save'} failed. Please try again.`);
 //         }
 //       } catch (error) {
 //         console.error('Error saving configuration:', error);
@@ -85,7 +134,7 @@
 //           toast.error('Session expired. Please login again.');
 //           navigate('/auth/login');
 //         } else {
-//           toast.error(error.response?.data?.message || 'Configuration failed. Please try again.');
+//           toast.error(error.response?.data?.message || `Configuration ${hasExistingConfig ? 'update' : 'save'} failed. Please try again.`);
 //         }
 //       }
 //     } else {
@@ -95,7 +144,6 @@
 
 //   return (
 //     <div>
-//       {/* <Header /> */}
 //       <div className="settings-header">
 //         <h2>WhatsApp Configuration</h2>
 //         <h4>Configure your WhatsApp Business Account</h4>
@@ -323,17 +371,13 @@
 
 
 
-
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import { Button } from 'reactstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';  
 import { toast } from 'sonner';
 import { CONFIGURATION_ENDPOINTS } from 'Api/Constant';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 const Settings = () => {
   const [activeAccordion, setActiveAccordion] = useState(1);
@@ -342,6 +386,7 @@ const Settings = () => {
   const [callbackUrl, setCallbackUrl] = useState('');
   const [accessToken, setAccessToken] = useState('');
   const [hasExistingConfig, setHasExistingConfig] = useState(false);
+  const [loading, setLoading] = useState(true); // Add loading state
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -354,6 +399,7 @@ const Settings = () => {
       if (!companyId) {
         toast.error('Company ID is missing. Please select a company first.');
         navigate('/admin/dashboard');
+        setLoading(false);
         return;
       }
 
@@ -362,6 +408,7 @@ const Settings = () => {
         if (!token) {
           toast.error('Authorization token is missing. Please log in again.');
           navigate('/auth/login');
+          setLoading(false);
           return;
         }
 
@@ -391,6 +438,8 @@ const Settings = () => {
         } else {
           toast.error('Failed to fetch configuration. Please try again.');
         }
+      } finally {
+        setLoading(false); // Ensure loading is set to false
       }
     };
 
@@ -471,6 +520,32 @@ const Settings = () => {
       toast.error('Please fill in all fields.');
     }
   };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "rgba(255, 255, 255, 0.8)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 9999,
+        }}
+      >
+        <DotLottieReact
+          src="https://lottie.host/5060de43-85ac-474a-a85b-892f9730e17a/b3jJ1vGkWh.lottie"
+          loop
+          autoplay
+          style={{ width: "150px", height: "150px" }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -694,5 +769,3 @@ const Settings = () => {
 };
 
 export default Settings;
-
-
