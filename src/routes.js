@@ -19,6 +19,7 @@ import Users from "views/examples/Users";
 import SendTemplate from "components/Pages/SendTemplate";
 import ApiKey from "components/Pages/ApiKey";
 import WhatsAppMenus from "components/Pages/WhatsAppMenus";
+import WhatsAppCampaigns from "components/Pages/WhatsAppCampaigns";
 
 var routes = [
   {
@@ -172,6 +173,14 @@ var routes = [
     name: "SendTemplate",
     icon: "ni ni-single-02",
     component: <SendTemplate />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/campaign",
+    name: "WhatsAppCompaign",
+    icon: "ni ni-single-02",
+    component: <WhatsAppCampaigns />,
     layout: "/admin",
     showInSidebar: false,
   },
