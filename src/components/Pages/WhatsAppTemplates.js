@@ -121,6 +121,10 @@ const WhatsAppTemplates = () => {
 
   const handleAnalyticsClick = (e, template) => {
     e.stopPropagation();
+    if (template.status === "REJECTED") {
+      toast.error("Analytics are not available for rejected templates.");
+      return;
+    }
     navigate("/admin/analytics", {
       state: {
         companyId,
@@ -146,7 +150,9 @@ const WhatsAppTemplates = () => {
 
   const formatCategory = (category) => {
     if (!category) return '';
-    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+    const formatted = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+    console.log('Original:', category, 'Formatted:', formatted);
+    return formatted;
   };
   
 
@@ -166,13 +172,14 @@ const WhatsAppTemplates = () => {
               </div>
               
               <div className="mb-3">
-              <Badge 
-  color="primary" 
-  pill 
-  className="me-2"
->
-  {formatCategory(template.category)}
-</Badge>
+                <Badge 
+                  color="primary" 
+                  pill 
+                  className="me-2"
+                  style={{ textTransform: 'none' }}
+                >
+                  {template.category && formatCategory(template.category)}
+                </Badge>
 
                 <Badge 
                   color="info" 
@@ -211,6 +218,7 @@ const WhatsAppTemplates = () => {
                   size="sm"
                   className="rounded-pill"
                   onClick={(e) => handleAnalyticsClick(e, template)}
+                  disabled={template.status === "REJECTED"}
                 >
                   <BarChart2 size={14} className="me-1" />
                   Analytics
@@ -393,10 +401,15 @@ const WhatsAppTemplates = () => {
                               <span className="fw-medium">{template.name}</span>
                             </td>
                             <td>
-  <Badge color="primary" pill className="px-3">
-    {template.category.charAt(0).toUpperCase() + template.category.slice(1).toLowerCase()}
-  </Badge>
-</td>
+                              <Badge 
+                                color="primary" 
+                                pill 
+                                className="px-3"
+                                style={{ textTransform: 'none' }}
+                              >
+                                {template.category && formatCategory(template.category)}
+                              </Badge>
+                            </td>
                             <td>
                               <Badge color="info" pill className="px-3">
                                 {template.language}
@@ -428,17 +441,19 @@ const WhatsAppTemplates = () => {
                               </div>
                             </td>
                             <td>
-                              <div className="d-flex gap-2"><Button
+                              <div className="d-flex gap-2">
+                                <Button
                                   color="light"
                                   size="sm"
                                   className="rounded-pill"
                                   onClick={(e) => handleAnalyticsClick(e, template)}
+                                  disabled={template.status === "REJECTED"}
                                   id={`analytics-${template.id}`}
                                 >
                                   <BarChart2 size={14} />
                                 </Button>
                                 <UncontrolledTooltip target={`analytics-${template.id}`}>
-                                  View Analytics
+                                  {template.status === "REJECTED" ? "Analytics not available" : "View Analytics"}
                                 </UncontrolledTooltip>
                                 <Button
                                   color="primary"
@@ -451,7 +466,7 @@ const WhatsAppTemplates = () => {
                                   <Send size={14} />
                                 </Button>
                                 <UncontrolledTooltip target={`send-${template.id}`}>
-                                  Send Template
+                                  {template.status === "REJECTED" ? "Cannot send rejected template" : "Send Template"}
                                 </UncontrolledTooltip>
                               </div>
                             </td>
