@@ -91,7 +91,6 @@ const styles = {
   
 };
 
-
 const Sidebar = (props) => {
   const [collapseOpen, setCollapseOpen] = useState(false);
   const [isWhatsAppView, setIsWhatsAppView] = useState(false);
@@ -100,10 +99,14 @@ const Sidebar = (props) => {
   const navigate = useNavigate();
   
   
+  
   // WhatsApp specific routes
   const whatsAppRoutes = [
     { name: "Back to Owner", icon: "ni ni-bold-left", path: "/dashboard", layout: "/admin" },
-    { name: "Menus", icon: "ni ni-bullet-list-67 ", path: "/menus", layout: "/admin" },
+    { name: "Menus", icon: "ni ni-app", path: "/menus", layout: "/admin", dropdown: true, subRoutes: [
+      { name: "Menus Access", path: "/Menus-access", icon: "ni ni-key-25" },
+      { name: "Create Menus", path: "/Create-menus", icon: "ni ni-fat-add" }
+    ]},
     { name: "Chats", icon: "ni ni-chat-round", path: "/chats", layout: "/admin" },
     { name: "Agents", icon: "ni ni-circle-08", path: "/agents", layout: "/admin", dropdown: true, subRoutes: [
       { name: "List", path: "/agentslist" },
@@ -118,9 +121,8 @@ const Sidebar = (props) => {
     { name: "Templates", icon: "ni ni-single-copy-04", path: "/templates", layout: "/admin" },
     { name: "Campaign", icon: "ni ni-notification-70", path: "/campaign", layout: "/admin" },
     { name: "Generate Api Key", icon: "ni ni-key-25 text-gray", path: "/Api-key", layout: "/admin" },
-
-    // { name: "Settings", icon: "fa fa-cog", path: "/settings", layout: "/admin" },
   ];
+
 
   // Default routes
   const defaultRoutes = [

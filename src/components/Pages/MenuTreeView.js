@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { MENU_ENDPOINTS } from 'Api/Constant';
@@ -461,68 +459,87 @@ const WhatsAppMenus = () => {
               <div key={menu.menuId} className="menu-flow-item">
                  <Card className="menu-card-new">
       <CardBody>
-        <div className="menu-card-header">
-          <div className="d-flex align-items-center gap-2">
-            {childMenus.length > 0 && (
-              <Button
-                color="link"
-                className="p-0 me-2"
-                onClick={() => toggleExpandMenu(menu.menuId)}
-              >
-                <ChevronRight
-                  size={20}
-                  className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                />
-              </Button>
-            )}
-            <h4 className="mb-0">{menu.menuTitle}</h4>
-            <Button
-              color="link"
-              className="add-submenu-btn p-0 ms-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                createSubMenu(menu);
-              }}
-              title="Add Sub-menu"
-            >
-              <Plus size={16} className="text-primary" />
-            </Button>
-          </div>
-          <Badge 
-            color={menu.menuType === 'options' ? 'success' : 'warning'}
-            className="menu-type-badge"
-          >
-            {menu.menuType === 'options' ? 'Multiple Choice' : 'User Input'}
-          </Badge>
-        </div>
+      <div className="menu-card-header">
+  <div className="d-flex align-items-center gap-2">
+    {childMenus.length > 0 && (
+      <Button
+        color="link"
+        className="p-0 me-2"
+        onClick={() => toggleExpandMenu(menu.menuId)}
+      >
+        <ChevronRight
+          size={20}
+          className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+        />
+      </Button>
+    )}
+    <h4 className="mb-0">{menu.menuTitle}</h4>
+  </div>
+  <Badge 
+    color={menu.menuType === 'options' ? 'success' : 'warning'}
+    className="menu-type-badge"
+  >
+    {menu.menuType === 'options' ? 'Multiple Choice' : 'User Input'}
+  </Badge>
+</div>
 
-                    <div className="menu-id-section">
-                      <MenuIcon size={16} className="me-2" />
-                      <span className="menu-id-text">{menu.menuId}</span>
-                    </div>
+<div className="menu-id-section">
+  <MenuIcon size={16} className="me-2" />
+  <span className="menu-id-text">{menu.menuId}</span>
+  {menu.menuId === 'main-menu' && (
+    <Plus 
+      size={14} 
+      className="ms-2 text-primary cursor-pointer" 
+      onClick={(e) => {
+        e.stopPropagation();
+        createSubMenu({
+          menuId: menu.menuId,
+          menuTitle: menu.menuTitle
+        });
+      }}
+    />
+  )}
+</div>
 
                     {menu.menuType === 'options' && (
-                      <div className="menu-options-new">
-                        {menu.menuOptions.map((option, idx) => (
-                          <div 
-                            key={idx} 
-                            className="option-item-new cursor-pointer"
-                            onClick={() => option.nextMenuId && handleMenuSelect(option.nextMenuId)}
-                          >
-                            <div className="option-number">{option.id}</div>
-                            <div className="option-content">
-                              <div className="option-title">{option.title}</div>
-                              {option.nextMenuId && (
-                                <div className="option-flow">
-                                  <ArrowRight size={14} />
-                                  <span className="next-menu-id">{option.nextMenuId}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+  <div className="menu-options-new">
+    {menu.menuOptions.map((option, idx) => (
+      <div 
+        key={idx} 
+        className="option-item-new cursor-pointer"
+        onClick={() => option.nextMenuId && handleMenuSelect(option.nextMenuId)}
+      >
+        <div className="option-number">{option.id}</div>
+        <div className="option-content">
+          <div className="option-title">{option.title}</div>
+          {option.nextMenuId && (
+            <div className="option-flow">
+              <ArrowRight size={14} />
+              <span className="next-menu-id">{option.nextMenuId}</span>
+              <Plus 
+                size={14} 
+                className="ms-2 text-primary cursor-pointer" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const parentMenu = menus.find(m => m.menuId === option.nextMenuId);
+                  if (parentMenu) {
+                    createSubMenu(parentMenu);
+                  } else {
+                    // If menu doesn't exist yet, create a dummy menu object
+                    createSubMenu({
+                      menuId: option.nextMenuId,
+                      menuTitle: option.title
+                    });
+                  }
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
 
                     {menu.menuType === 'prompt' && (
                       <div className="prompt-content">

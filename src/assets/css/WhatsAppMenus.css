@@ -373,6 +373,16 @@
   margin-bottom: 1rem;
 }
 
+.menu-id-section .plus-icon {
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.menu-id-section .plus-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
 .menu-id-text {
   font-family: monospace;
   color: #666;
@@ -607,4 +617,14 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.option-flow .plus-icon {
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.option-flow .plus-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }

@@ -18,8 +18,9 @@ import WhatsAppAnalytics from "components/Pages/WhatsAppAnalytics";
 import Users from "views/examples/Users";
 import SendTemplate from "components/Pages/SendTemplate";
 import ApiKey from "components/Pages/ApiKey";
-import WhatsAppMenus from "components/Pages/WhatsAppMenus";
 import WhatsAppCampaigns from "components/Pages/WhatsAppCampaigns";
+import WhatsAppCreateMenus from "components/Pages/WhatsAppCreateMenus";
+import WhatsAppMenusAccess from "components/Pages/WhatsAppMenusAccess";
 
 var routes = [
   {
@@ -82,10 +83,18 @@ var routes = [
     showInSidebar: false,
   },
   {
-    path: "/menus",
-    name: "WhatsAppMenus",
+    path: "/Create-menus",
+    name: "WhatsAppCreateMenus",
     icon: "ni ni-bullet-list-67 ",
-    component: <WhatsAppMenus />,
+    component: <WhatsAppCreateMenus />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/Menus-access",
+    name: "WhatsAppMenusAccess",
+    icon: "ni ni-bullet-list-67 ",
+    component: <WhatsAppMenusAccess />,
     layout: "/admin",
     showInSidebar: false,
   },
