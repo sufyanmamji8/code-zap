@@ -778,6 +778,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import "../../assets/css/WhatsAppMenus.css";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 const WhatsAppCreateMenus = () => {
   const [menus, setMenus] = useState([]);
@@ -790,6 +791,7 @@ const WhatsAppCreateMenus = () => {
   const [menuPath, setMenuPath] = useState([]);
   const [expandedMenus, setExpandedMenus] = useState({});
   const [activeMenu, setActiveMenu] = useState(null);
+  const [loading, setLoading] = useState(false);
   
   
   
@@ -848,7 +850,8 @@ const WhatsAppCreateMenus = () => {
       format: '',
       required: true
     },
-    menuOptions: []
+    menuOptions: [],
+    isMainMenu: false  // Add this line
   });
 
   const [formData, setFormData] = useState(createInitialMenuState());
@@ -915,22 +918,19 @@ const WhatsAppCreateMenus = () => {
     }
   };
 
-
   const fetchMenus = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(MENU_ENDPOINTS.GET_ALL);
       const allMenus = response.data.data || [];
+      setMenus(allMenus);
       
-      // Get only the main-menu
-      const mainMenu = allMenus.find(menu => menu.menuId === 'main-menu');
-      setMenus(allMenus); // Keep all menus in state for other operations
-      setActiveMenu(mainMenu); // Set main menu as active
-      setSelectedMenuId(mainMenu?.menuId); // Set main menu as selected
-      
-      const mainMenuExists = allMenus.some(menu => menu.menuId === 'main-menu');
+      const mainMenuExists = allMenus.some(menu => menu.isMainMenu === true);
       setIsFirstMenu(!mainMenuExists);
     } catch (error) {
       setError('Failed to fetch menus');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -938,8 +938,8 @@ const WhatsAppCreateMenus = () => {
     fetchMenus();
   }, []);
 
-  const handleInputChange = (e, field, isOption = false, optionIndex = null) => {
-    const { value } = e.target;
+  const handleInputChange = (e, field, isOption = false, optionIndex = null, isBoolean = false) => {
+    const value = isBoolean ? e.target.value === 'true' : e.target.value;
     
     setFormData(prevData => {
       const newData = { ...prevData };
@@ -989,9 +989,10 @@ const WhatsAppCreateMenus = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
+   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
   
     try {
       const endpoint = currentMenu 
@@ -1000,7 +1001,6 @@ const WhatsAppCreateMenus = () => {
       
       const method = currentMenu ? 'put' : 'post';
       
-      // Format menu ID: convert title to lowercase, replace spaces with hyphens
       if (!currentMenu && !isFirstMenu) {
         const formattedId = formData.menuTitle.toLowerCase().replace(/\s+/g, '-');
         formData.menuId = formattedId;
@@ -1028,20 +1028,23 @@ const WhatsAppCreateMenus = () => {
       setModalOpen(false);
       setCurrentMenu(null);
       
-      // Refresh menus to get updated hierarchy
       fetchMenus();
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to save menu');
-      console.error(error.response);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (menuId) => {
+    setLoading(true);
     try {
       await axios.delete(MENU_ENDPOINTS.DELETE(menuId));
       setMenus(prevMenus => prevMenus.filter(menu => menu.menuId !== menuId));
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to delete menu');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1120,13 +1123,10 @@ const WhatsAppCreateMenus = () => {
   };
 
   const renderSidebarMenus = () => {
-    // Filter to only show Report menus
-    const reportMenus = menus.filter(menu => 
-      menu.menuId === 'main-menu' || 
-      menu.menuTitle.toLowerCase().includes('report')
-    );
-
-    return reportMenus.map((menu) => (
+    // Filter to show all menus where isMainMenu is true
+    const mainMenus = menus.filter(menu => menu.isMainMenu === true);
+  
+    return mainMenus.map((menu) => (
       <div
         key={menu.menuId}
         className={`menu-item p-3 mb-2 rounded cursor-pointer ${activeMenu?.menuId === menu.menuId ? 'bg-light' : ''}`}
@@ -1147,6 +1147,32 @@ const WhatsAppCreateMenus = () => {
   };
 
   return (
+    <>
+    {/* Loading Overlay */}
+    {loading && (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "rgba(255, 255, 255, 0.8)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 9999,
+        }}
+      >
+        <DotLottieReact
+          src="https://lottie.host/5060de43-85ac-474a-a85b-892f9730e17a/b3jJ1vGkWh.lottie"
+          loop
+          autoplay
+          style={{ width: "150px", height: "150px" }}
+        />
+      </div>
+    )}
+
     <Container fluid className="d-flex p-0">
       {/* Left Sidebar */}
       <div className="menu-sidebar" style={{
@@ -1157,7 +1183,10 @@ const WhatsAppCreateMenus = () => {
         padding: '1rem'
       }}>
         <div className="sidebar-header mb-4">
-          <h5 className="mb-3">Available Menus</h5>
+          <h5 className="mb-3">Main Menus</h5>
+        </div>
+        <div className="menu-list">
+          {renderSidebarMenus()}
         </div>
         
         <div className="menu-list">
@@ -1213,166 +1242,162 @@ const WhatsAppCreateMenus = () => {
 
           {/* Menu Cards */}
           <div className="menu-flow-container">
-            {(selectedMenuId ? [menus.find(m => m.menuId === selectedMenuId)] : [])
-              .filter(Boolean)
-              .map(menu => {
-                const childMenus = getChildMenus(menu.menuId);
-                const isExpanded = expandedMenus[menu.menuId];
+            {selectedMenuId ? (
+              menus.filter(m => m.menuId === selectedMenuId)
+                .map(menu => {
+                  const childMenus = getChildMenus(menu.menuId);
+                  const isExpanded = expandedMenus[menu.menuId];
 
-            return (
-              <div key={menu.menuId} className="menu-flow-item">
-                 <Card className="menu-card-new">
-      <CardBody>
-      <div className="menu-card-header">
-  <div className="d-flex align-items-center gap-2">
-    {childMenus.length > 0 && (
-      <Button
-        color="link"
-        className="p-0 me-2"
-        onClick={() => toggleExpandMenu(menu.menuId)}
-      >
-        <ChevronRight
-          size={20}
-          className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-        />
-      </Button>
-    )}
-    <h4 className="mb-0">{menu.menuTitle}</h4>
-  </div>
-  <Badge 
-    color={menu.menuType === 'options' ? 'success' : 'warning'}
-    className="menu-type-badge"
-  >
-    {menu.menuType === 'options' ? 'Multiple Choice' : 'User Input'}
-  </Badge>
-</div>
-
-<div className="menu-id-section">
-  <MenuIcon size={16} className="me-2" />
-  <span className="menu-id-text">{menu.menuId}</span>
-  {menu.menuId === 'main-menu' && (
-    <Plus 
-      size={14} 
-      className="ms-2 text-primary cursor-pointer" 
-      onClick={(e) => {
-        e.stopPropagation();
-        createSubMenu({
-          menuId: menu.menuId,
-          menuTitle: menu.menuTitle
-        });
-      }}
-    />
-  )}
-</div>
-
-                    {menu.menuType === 'options' && (
-  <div className="menu-options-new">
-    {menu.menuOptions.map((option, idx) => (
-      <div 
-        key={idx} 
-        className="option-item-new cursor-pointer"
-        onClick={() => option.nextMenuId && handleMenuSelect(option.nextMenuId)}
-      >
-        <div className="option-number">{option.id}</div>
-        <div className="option-content">
-          <div className="option-title">{option.title}</div>
-          {option.nextMenuId && (
-            <div className="option-flow">
-              <ArrowRight size={14} />
-              <span className="next-menu-id">{option.nextMenuId}</span>
-              <Plus 
-                size={14} 
-                className="ms-2 text-primary cursor-pointer" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const parentMenu = menus.find(m => m.menuId === option.nextMenuId);
-                  if (parentMenu) {
-                    createSubMenu(parentMenu);
-                  } else {
-                    // If menu doesn't exist yet, create a dummy menu object
-                    createSubMenu({
-                      menuId: option.nextMenuId,
-                      menuTitle: option.title
-                    });
-                  }
-                }}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    ))}
-  </div>
-)}
-
-                    {menu.menuType === 'prompt' && (
-                      <div className="prompt-content">
-                        <div className="prompt-text">
-                          <FileText size={16} className="me-2" />
-                          {menu.prompt}
-                        </div>
-                        <div className="validation-type">
-                          <AlertTriangle size={16} className="me-2" />
-                          Validates: {menu.validationType}
-                        </div>
-                        {menu.nextMenuId && (
-                          <div 
-                            className="next-menu-flow cursor-pointer"
-                            onClick={() => handleMenuSelect(menu.nextMenuId)}
-                          >
-                            <ChevronRight size={16} className="me-2" />
-                            Next: {menu.nextMenuId}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-<div className="menu-actions-new">
-          <Button 
-            color="light"
-            className="edit-btn"
-            onClick={() => editMenu(menu)}
-          >
-            <Edit2 size={16} /> Edit
-          </Button>
-          <Button 
-            color="danger"
-            className="delete-btn"
-            onClick={() => handleDelete(menu.menuId)}
-          >
-            <Trash2 size={16} /> Delete
-          </Button>
-        </div>
-
-
-                    {/* Expanded Child Menus */}
-                    {isExpanded && childMenus.length > 0 && (
-                      <div className="child-menus mt-4">
-                        <div className="ps-4 border-start">
-                          {childMenus.map(childMenu => (
-                            <div 
-                              key={childMenu.menuId}
-                              className="child-menu-item mb-3 cursor-pointer"
-                              onClick={() => handleMenuSelect(childMenu.menuId)}
-                            >
-                              <Badge color="light" className="mb-2">
-                                {childMenu.menuType === 'options' ? 'Multiple Choice' : 'User Input'}
-                              </Badge>
-                              <h5>{childMenu.menuTitle}</h5>
-                              <small className="text-muted">{childMenu.menuId}</small>
+                  return (
+                    <div key={menu.menuId} className="menu-flow-item">
+                      <Card className="menu-card-new">
+                        <CardBody>
+                          <div className="menu-card-header">
+                            <div className="d-flex align-items-center gap-2">
+                              {childMenus.length > 0 && (
+                                <Button
+                                  color="link"
+                                  className="p-0 me-2"
+                                  onClick={() => toggleExpandMenu(menu.menuId)}
+                                >
+                                  <ChevronRight
+                                    size={20}
+                                    className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                  />
+                                </Button>
+                              )}
+                              <h4 className="mb-0">{menu.menuTitle}</h4>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardBody>
-                </Card>
-              </div>
-            );
-        })}
-      </div>
+                            <Badge 
+                              color={menu.menuType === 'options' ? 'success' : 'warning'}
+                              className="menu-type-badge"
+                            >
+                              {menu.menuType === 'options' ? 'Multiple Choice' : 'User Input'}
+                            </Badge>
+                          </div>
 
-      <Modal isOpen={modalOpen} toggle={toggleModal} size="lg" className="menu-modal">
+                          <div className="menu-id-section">
+                            <MenuIcon size={16} className="me-2" />
+                            <span className="menu-id-text">{menu.menuId}</span>
+                            {menu.isMainMenu && (
+                              <Badge color="primary" className="ms-2">
+                                Main Menu
+                              </Badge>
+                            )}
+                          </div>
+
+                          {menu.menuType === 'options' && (
+                            <div className="menu-options-new">
+                              {menu.menuOptions.map((option, idx) => (
+                                <div 
+                                  key={idx} 
+                                  className="option-item-new cursor-pointer"
+                                  onClick={() => option.nextMenuId && handleMenuSelect(option.nextMenuId)}
+                                >
+                                  <div className="option-number">{option.id}</div>
+                                  <div className="option-content">
+                                    <div className="option-title">{option.title}</div>
+                                    {option.nextMenuId && (
+                                      <div className="option-flow">
+                                        <ArrowRight size={14} />
+                                        <span className="next-menu-id">{option.nextMenuId}</span>
+                                        <Plus 
+                                          size={14} 
+                                          className="ms-2 text-primary cursor-pointer" 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const parentMenu = menus.find(m => m.menuId === option.nextMenuId);
+                                            if (parentMenu) {
+                                              createSubMenu(parentMenu);
+                                            } else {
+                                              createSubMenu({
+                                                menuId: option.nextMenuId,
+                                                menuTitle: option.title
+                                              });
+                                            }
+                                          }}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {menu.menuType === 'prompt' && (
+                            <div className="prompt-content">
+                              <div className="prompt-text">
+                                <FileText size={16} className="me-2" />
+                                {menu.prompt}
+                              </div>
+                              <div className="validation-type">
+                                <AlertTriangle size={16} className="me-2" />
+                                Validates: {menu.validationType}
+                              </div>
+                              {menu.nextMenuId && (
+                                <div 
+                                  className="next-menu-flow cursor-pointer"
+                                  onClick={() => handleMenuSelect(menu.nextMenuId)}
+                                >
+                                  <ChevronRight size={16} className="me-2" />
+                                  Next: {menu.nextMenuId}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="menu-actions-new">
+                            <Button 
+                              color="light"
+                              className="edit-btn"
+                              onClick={() => editMenu(menu)}
+                            >
+                              <Edit2 size={16} /> Edit
+                            </Button>
+                            <Button 
+                              color="danger"
+                              className="delete-btn"
+                              onClick={() => handleDelete(menu.menuId)}
+                            >
+                              <Trash2 size={16} /> Delete
+                            </Button>
+                          </div>
+
+                          {/* Expanded Child Menus */}
+                          {isExpanded && childMenus.length > 0 && (
+                            <div className="child-menus mt-4">
+                              <div className="ps-4 border-start">
+                                {childMenus.map(childMenu => (
+                                  <div 
+                                    key={childMenu.menuId}
+                                    className="child-menu-item mb-3 cursor-pointer"
+                                    onClick={() => handleMenuSelect(childMenu.menuId)}
+                                  >
+                                    <Badge color="light" className="mb-2">
+                                      {childMenu.menuType === 'options' ? 'Multiple Choice' : 'User Input'}
+                                    </Badge>
+                                    <h5>{childMenu.menuTitle}</h5>
+                                    <small className="text-muted">{childMenu.menuId}</small>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </CardBody>
+                      </Card>
+                    </div>
+                  );
+                })
+            ) : (
+              <div className="text-center p-5">
+                <MenuIcon size={48} className="text-muted mb-3" />
+                <h4 className="text-muted">Select a menu from the sidebar to view its details</h4>
+              </div>
+            )}
+          </div>
+
+          <Modal isOpen={modalOpen} toggle={toggleModal} size="lg" className="menu-modal">
             <ModalHeader toggle={toggleModal} className="bg-primary text-white border-0">
               <h4 className="mb-0 text-white">
                 {currentMenu ? 'Edit Menu' : 'Create Menu'}
@@ -1380,32 +1405,46 @@ const WhatsAppCreateMenus = () => {
             </ModalHeader>
             <ModalBody className="p-4">
               <Form onSubmit={handleSubmit}>
-      <div className="bg-light p-4 rounded mb-4">
-        <Row>
-          <Col md={6}>
-            <FormGroup>
-              <Label className="fw-bold">Menu ID</Label>
-              <Input
-                className="rounded-3 border-2"
-                value={formData.menuId}
-                onChange={(e) => handleInputChange(e, 'menuId')}
-                disabled={isFirstMenu}
-                required
-              />
-            </FormGroup>
-          </Col>
-          <Col md={6}>
-            <FormGroup>
-              <Label className="fw-bold">Menu Title</Label>
-              <Input
-                className="rounded-3 border-2"
-                value={formData.menuTitle}
-                onChange={(e) => handleInputChange(e, 'menuTitle')}
-                required
-              />
-            </FormGroup>
-          </Col>
-        </Row>
+                <div className="bg-light p-4 rounded mb-4">
+                  <Row>
+                    <Col md={6}>
+                      <FormGroup>
+                        <Label className="fw-bold">Menu ID</Label>
+                        <Input
+                          className="rounded-3 border-2"
+                          value={formData.menuId}
+                          onChange={(e) => handleInputChange(e, 'menuId')}
+                          disabled={isFirstMenu}
+                          required
+                        />
+                      </FormGroup>
+                    </Col>
+                    <Col md={6}>
+                      <FormGroup>
+                        <Label className="fw-bold">Menu Title</Label>
+                        <Input
+                          className="rounded-3 border-2"
+                          value={formData.menuTitle}
+                          onChange={(e) => handleInputChange(e, 'menuTitle')}
+                          required
+                        />
+                      </FormGroup>
+                    </Col>
+                    <Col md={6}>
+                      <FormGroup>
+                        <Label className="fw-bold">Is Main Menu</Label>
+                        <Input
+                          type="select"
+                          className="rounded-3 border-2"
+                          value={formData.isMainMenu}
+                          onChange={(e) => handleInputChange(e, 'isMainMenu', false, null, true)}
+                        >
+                          <option value={false}>No</option>
+                          <option value={true}>Yes</option>
+                        </Input>
+                      </FormGroup>
+                    </Col>
+                  </Row>
 
         {formData.menuType === 'prompt' && formData.validationType === 'date' && (
             <div className="validation-rules mb-3">
@@ -1701,6 +1740,7 @@ const WhatsAppCreateMenus = () => {
         </div>
       </div>
     </Container>
+    </>
   );
 };
 
