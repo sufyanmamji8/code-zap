@@ -25,7 +25,7 @@ import {
 import axios from "axios";
 import { toast } from "sonner";
 import { countryList } from "./countryList";
-import "../../assets/css/SendTemplate.css"; // Import the CSS file
+import "../../assets/css/SendTemplate.css"; 
 import { TEMPLATE_ENDPOINTS } from "Api/Constant";
 import { API_KEY_ENDPOINTS } from "Api/Constant";
 import { MESSAGE_API_ENDPOINT } from "Api/Constant";
@@ -37,10 +37,12 @@ const SendTemplate = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
-const [scheduleDateTime, setScheduleDateTime] = useState("");
-const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleDateTime, setScheduleDateTime] = useState("");
+  const [isScheduling, setIsScheduling] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [apiKey, setApiKey] = useState(null);
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+  const [copyDropdownOpen, setCopyDropdownOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(
     countryList.find((country) => country.code === "92") || countryList[0]
   );
@@ -82,11 +84,9 @@ const [isScheduling, setIsScheduling] = useState(false);
     while ((match = paramRegex.exec(fullText)) !== null) {
       const paramNumber = match[1];
 
-      // Find context by analyzing surrounding text
       let startPos = Math.max(0, match.index - 50);
       let contextText = fullText.substring(startPos, match.index).trim();
 
-      // Try to find the nearest sentence or phrase before the parameter
       let contextWords = contextText.split(/[.,!?]\s*/).pop() || "";
       if (contextWords.includes(":")) {
         contextWords = contextWords.split(":").pop().trim();
@@ -116,13 +116,11 @@ const [isScheduling, setIsScheduling] = useState(false);
 
   const copyToClipboard = async (text) => {
     try {
-      // Try using the modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
         return true;
       }
-      
-      // Fallback for older browsers or HTTP
+
       const textArea = document.createElement("textarea");
       textArea.value = text;
       textArea.style.position = "fixed";
@@ -131,9 +129,9 @@ const [isScheduling, setIsScheduling] = useState(false);
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
-      
+
       try {
-        document.execCommand('copy');
+        document.execCommand("copy");
         textArea.remove();
         return true;
       } catch (err) {
@@ -150,12 +148,12 @@ const [isScheduling, setIsScheduling] = useState(false);
       toast.error("Please select a date and time");
       return;
     }
-  
+
     setIsScheduling(true);
-  
+
     try {
       const scheduledTime = new Date(scheduleDateTime).getTime();
-      
+
       const payload = {
         to: formData.to,
         templateName: formData.templateName,
@@ -180,9 +178,9 @@ const [isScheduling, setIsScheduling] = useState(false);
           }
           return component;
         }),
-        scheduledTime: scheduledTime
+        scheduledTime: scheduledTime,
       };
-  
+
       const response = await axios.post(
         `${MESSAGE_API_ENDPOINT}/scheduleTemplate`,
         payload,
@@ -193,17 +191,17 @@ const [isScheduling, setIsScheduling] = useState(false);
           },
         }
       );
-  
+
       if (response.data.success) {
         toast.success("Message scheduled successfully!");
         setScheduleModalOpen(false);
-        navigate("/admin/chats", { 
+        navigate("/admin/chats", {
           state: {
             companyId: formData.companyId,
             refresh: true,
-            timestamp: new Date().getTime()
+            timestamp: new Date().getTime(),
           },
-          replace: true
+          replace: true,
         });
       } else {
         toast.error(response.data.message || "Failed to schedule message");
@@ -471,7 +469,9 @@ const [isScheduling, setIsScheduling] = useState(false);
     if (!template) return "";
 
     const bodyComponent = formData.components.find((c) => c.type === "body");
-    const headerComponent = formData.components.find((c) => c.type === "header");
+    const headerComponent = formData.components.find(
+      (c) => c.type === "header"
+    );
     const bodyParams = extractTemplateParameters(template);
 
     const data = {
@@ -488,9 +488,6 @@ const [isScheduling, setIsScheduling] = useState(false);
       },
     };
 
-    
-
-    // Add header parameters if they exist
     if (headerComponent) {
       const headerFormat = template.components.find(
         (c) => c.type === "HEADER"
@@ -532,7 +529,6 @@ const [isScheduling, setIsScheduling] = useState(false);
       }
     }
 
-    // Add body parameters
     if (bodyComponent && bodyParams.length > 0) {
       const bodyParam = {
         type: "body",
@@ -546,125 +542,117 @@ const [isScheduling, setIsScheduling] = useState(false);
 
     const formattedJson = JSON.stringify(data, null, 2);
 
-    // Always show 'api-key' in the authorization header
-    const authHeader = apiKey 
-    ? `--header 'Authorization: Bearer api-key'`
-    : "--header 'Authorization: Bearer generate an api key first'";
+    const authHeader = apiKey
+      ? `--header 'Authorization: Bearer api-key'`
+      : "--header 'Authorization: Bearer generate an api key first'";
 
-  return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate' \\
+    return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/api/v1/messages/sendTemplate' \\
   ${authHeader} \\
   --header 'Content-Type: application/json' \\
   --data '${formattedJson}'`;
-};
+  };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.companyId || !token) {
+      toast.error("Missing required information");
+      return;
+    }
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!formData.companyId || !token) {
-    toast.error("Missing required information");
-    return;
-  }
+    setIsSending(true);
 
-  setIsSending(true);
-
-  try {
-    const payload = {
-      to: formData.to,
-      templateName: formData.templateName,
-      templateLanguage: formData.templateLanguage,
-      companyId: formData.companyId,
-      components: formData.components.map((component) => {
-        if (component.type === "header") {
-          const headerFormat = template.components
-            .find((c) => c.type === "HEADER")
-            ?.format.toLowerCase();
-          return {
-            type: "header",
-            parameters: [
-              {
-                type: headerFormat,
-                [headerFormat]: {
-                  link: headerParams.mediaUrl,
-                },
-              },
-            ],
-          };
-        }
-        return component;
-      }),
-    };
-
-    const response = await axios.post(
-      `${MESSAGE_API_ENDPOINT}/sendTemplate`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (response.data.success) {
-      toast.success("Template message sent successfully!");
-      
-      // Get existing WhatsApp config from localStorage if available
-      const existingConfig = localStorage.getItem('whatsappConfig');
-      const existingCompanyId = localStorage.getItem('whatsappCompanyId');
-      
-      // Prepare navigation state with WhatsApp config
-      const navigationState = {
+    try {
+      const payload = {
+        to: formData.to,
+        templateName: formData.templateName,
+        templateLanguage: formData.templateLanguage,
         companyId: formData.companyId,
-        config: existingConfig ? JSON.parse(existingConfig) : null,
-        refresh: true,
-        timestamp: new Date().getTime()
+        components: formData.components.map((component) => {
+          if (component.type === "header") {
+            const headerFormat = template.components
+              .find((c) => c.type === "HEADER")
+              ?.format.toLowerCase();
+            return {
+              type: "header",
+              parameters: [
+                {
+                  type: headerFormat,
+                  [headerFormat]: {
+                    link: headerParams.mediaUrl,
+                  },
+                },
+              ],
+            };
+          }
+          return component;
+        }),
       };
 
-      // If we don't have config in localStorage, try to fetch it
-      if (!existingConfig) {
-        try {
-          // You'll need to implement this endpoint
-          const configResponse = await axios.get(
-            `http://192.168.0.106:25483/api/v1/whatsapp/config/${formData.companyId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          
-          if (configResponse.data.success) {
-            navigationState.config = configResponse.data.config;
-          }
-        } catch (error) {
-          console.error("Error fetching WhatsApp config:", error);
-          // Continue with navigation even if config fetch fails
+      const response = await axios.post(
+        `${MESSAGE_API_ENDPOINT}/sendTemplate`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
-      }
+      );
 
-      // Navigate to chats with all necessary data
-      navigate("/admin/chats", { 
-        state: navigationState,
-        replace: true
-      });
-    } else {
-      toast.error(response.data.message || "Failed to send template");
+      if (response.data.success) {
+        toast.success("Template message sent successfully!");
+
+        const existingConfig = localStorage.getItem("whatsappConfig");
+        const existingCompanyId = localStorage.getItem("whatsappCompanyId");
+
+        const navigationState = {
+          companyId: formData.companyId,
+          config: existingConfig ? JSON.parse(existingConfig) : null,
+          refresh: true,
+          timestamp: new Date().getTime(),
+        };
+
+        if (!existingConfig) {
+          try {
+            const configResponse = await axios.get(
+              `http://192.168.0.106:25483/api/v1/whatsapp/config/${formData.companyId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (configResponse.data.success) {
+              navigationState.config = configResponse.data.config;
+            }
+          } catch (error) {
+            console.error("Error fetching WhatsApp config:", error);
+          }
+        }
+
+        navigate("/admin/chats", {
+          state: navigationState,
+          replace: true,
+        });
+      } else {
+        toast.error(response.data.message || "Failed to send template");
+      }
+    } catch (error) {
+      console.error("Error sending template:", error);
+      if (error.response?.status === 401) {
+        navigate("/auth/login");
+      } else {
+        const errorMessage =
+          error.response?.data?.message || "Error sending template message";
+        toast.error(errorMessage, {
+          duration: 5000,
+        });
+      }
+    } finally {
+      setIsSending(false);
     }
-  } catch (error) {
-    console.error("Error sending template:", error);
-    if (error.response?.status === 401) {
-      navigate("/auth/login");
-    } else {
-      const errorMessage =
-        error.response?.data?.message || "Error sending template message";
-      toast.error(errorMessage, {
-        duration: 5000,
-      });
-    }
-  } finally {
-    setIsSending(false);
-  }
-};
+  };
 
   const renderHeaderParams = () => {
     if (!template) return null;
@@ -830,22 +818,106 @@ const handleSubmit = async (e) => {
               <i className="fas fa-code me-2"></i>
               API Request
             </h4>
-            <Button
-  color="primary"
-  size="sm"
-  className="copy-btn"
-  onClick={async () => {
-    const success = await copyToClipboard(getCurlCommand());
-    if (success) {
-      toast.success("Curl command copied!");
-    } else {
-      toast.error("Failed to copy. Please try selecting and copying manually.");
-    }
-  }}
->
-  <i className="fas fa-copy me-2"></i>
-  Copy CURL
-</Button>
+            <Dropdown
+              isOpen={copyDropdownOpen}
+              toggle={() => setCopyDropdownOpen(!copyDropdownOpen)}
+            >
+              <DropdownToggle caret color="primary" size="sm">
+                <i className="fas fa-copy me-2"></i>
+                Copy CURL
+              </DropdownToggle>
+              <DropdownMenu end className="mt-2">
+                <DropdownItem
+                  onClick={async () => {
+                    const curlCommand = getCurlCommand();
+                    try {
+                      await navigator.clipboard.writeText(curlCommand);
+                      toast.success(
+                        "Curl command copied for immediate sending!"
+                      );
+                      setCopyDropdownOpen(false);
+                    } catch (err) {
+                      const textArea = document.createElement("textarea");
+                      textArea.value = curlCommand;
+                      document.body.appendChild(textArea);
+                      textArea.select();
+                      try {
+                        document.execCommand("copy");
+                        toast.success(
+                          "Curl command copied for immediate sending!"
+                        );
+                      } catch (err) {
+                        toast.error(
+                          "Failed to copy. Please try selecting and copying manually."
+                        );
+                      }
+                      document.body.removeChild(textArea);
+                      setCopyDropdownOpen(false);
+                    }
+                  }}
+                  className="d-flex align-items-center"
+                >
+                  <i className="fas fa-bolt me-2"></i>
+                  Copy Now
+                </DropdownItem>
+                <DropdownItem
+                  onClick={async () => {
+                    let scheduledCurl = getCurlCommand().replace(
+                      "/sendTemplate",
+                      "/scheduleTemplate"
+                    );
+
+                    const jsonStart = scheduledCurl.lastIndexOf("{");
+                    const jsonEnd = scheduledCurl.lastIndexOf("}");
+                    const scheduledTime = new Date();
+                    scheduledTime.setHours(scheduledTime.getHours() + 1);
+
+                    const currentJson = scheduledCurl.substring(
+                      jsonStart,
+                      jsonEnd + 1
+                    );
+                    const updatedJson = currentJson.replace(
+                      "}",
+                      `, "scheduledTime": ${scheduledTime.getTime()}}`
+                    );
+
+                    scheduledCurl =
+                      scheduledCurl.substring(0, jsonStart) +
+                      updatedJson +
+                      scheduledCurl.substring(jsonEnd + 1);
+
+                    try {
+                      await navigator.clipboard.writeText(scheduledCurl);
+                      toast.success(
+                        "Curl command copied for scheduled sending!"
+                      );
+                      setCopyDropdownOpen(false);
+                    } catch (err) {
+                      const textArea = document.createElement("textarea");
+                      textArea.value = scheduledCurl;
+                      document.body.appendChild(textArea);
+                      textArea.select();
+                      try {
+                        document.execCommand("copy");
+                        toast.success(
+                          "Curl command copied for scheduled sending!"
+                        );
+                      } catch (err) {
+                        toast.error(
+                          "Failed to copy. Please try selecting and copying manually."
+                        );
+                      }
+                      document.body.removeChild(textArea);
+                      setCopyDropdownOpen(false);
+                    }
+                  }}
+                  className="d-flex align-items-center"
+                >
+                  <i className="fas fa-clock me-2"></i>
+                  Copy Later
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
           </CardHeader>
           <CardBody className="p-0">
             <div className="code-container">
@@ -883,13 +955,15 @@ const handleSubmit = async (e) => {
                     </Label>
                     <InputGroup>
                       <Dropdown
-                        isOpen={dropdownOpen}
-                        toggle={() => setDropdownOpen(!dropdownOpen)}
+                        isOpen={countryDropdownOpen}
+                        toggle={() =>
+                          setCountryDropdownOpen(!countryDropdownOpen)
+                        }
                         className="country-dropdown"
                       >
                         <DropdownToggle caret className="country-toggle">
-                          <span className="me-1">{selectedCountry.flag}</span>
-                          +{selectedCountry.code}
+                          <span className="me-1">{selectedCountry.flag}</span>+
+                          {selectedCountry.code}
                         </DropdownToggle>
                         <DropdownMenu className="country-menu">
                           <div className="px-2 pb-2">
@@ -909,8 +983,12 @@ const handleSubmit = async (e) => {
                                 className="country-item"
                               >
                                 <span className="me-2">{country.flag}</span>
-                                <span className="country-name">{country.country}</span>
-                                <span className="country-code">+{country.code}</span>
+                                <span className="country-name">
+                                  {country.country}
+                                </span>
+                                <span className="country-code">
+                                  +{country.code}
+                                </span>
                               </DropdownItem>
                             ))}
                           </div>
@@ -928,84 +1006,88 @@ const handleSubmit = async (e) => {
                   </FormGroup>
 
                   {/* Dynamic Fields */}
-                  <div className="dynamic-fields">
-                    {renderDynamicFields()}
-                  </div>
+                  <div className="dynamic-fields">{renderDynamicFields()}</div>
 
                   {/* Header Parameters */}
-                  <div className="header-params">
-                    {renderHeaderParams()}
-                  </div>
+                  <div className="header-params">{renderHeaderParams()}</div>
 
                   {/* Submit Button */}
                   <div className="d-flex gap-3">
-  <Button
-    color="primary"
-    type="submit"
-    className="flex-grow-1"
-    disabled={isSending || template.status !== "APPROVED"}
-  >
-    {isSending ? (
-      <>
-        <Spinner size="sm" className="me-2" />
-        Sending...
-      </>
-    ) : (
-      <>
-        <i className="fas fa-paper-plane me-2"></i>
-        Send Now
-      </>
-    )}
-  </Button>
-  <Button
-    color="secondary"
-    type="button"
-    className="flex-grow-1"
-    onClick={() => setScheduleModalOpen(true)}
-    disabled={template.status !== "APPROVED"}
-  >
-    <i className="fas fa-clock me-2"></i>
-    Send Later
-  </Button>
-</div>
+                    <Button
+                      color="primary"
+                      type="submit"
+                      className="flex-grow-1"
+                      disabled={isSending || template.status !== "APPROVED"}
+                    >
+                      {isSending ? (
+                        <>
+                          <Spinner size="sm" className="me-2" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-paper-plane me-2"></i>
+                          Send Now
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      color="secondary"
+                      type="button"
+                      className="flex-grow-1"
+                      onClick={() => setScheduleModalOpen(true)}
+                      disabled={template.status !== "APPROVED"}
+                    >
+                      <i className="fas fa-clock me-2"></i>
+                      Send Later
+                    </Button>
+                  </div>
 
-<Modal isOpen={scheduleModalOpen} toggle={() => setScheduleModalOpen(false)}>
-  <ModalHeader toggle={() => setScheduleModalOpen(false)}>
-    Schedule Message
-  </ModalHeader>
-  <ModalBody>
-    <FormGroup>
-      <Label for="scheduleDateTime">Select Date and Time</Label>
-      <Input
-        type="datetime-local"
-        id="scheduleDateTime"
-        value={scheduleDateTime}
-        onChange={(e) => setScheduleDateTime(e.target.value)}
-        min={getMinDateTime()}
-        className="form-control"
-      />
-    </FormGroup>
-  </ModalBody>
-  <ModalFooter>
-    <Button color="secondary" onClick={() => setScheduleModalOpen(false)}>
-      Cancel
-    </Button>
-    <Button
-      color="primary"
-      onClick={handleScheduleSend}
-      disabled={isScheduling || !scheduleDateTime}
-    >
-      {isScheduling ? (
-        <>
-          <Spinner size="sm" className="me-2" />
-          Scheduling...
-        </>
-      ) : (
-        "Schedule Send"
-      )}
-    </Button>
-  </ModalFooter>
-</Modal>
+                  <Modal
+                    isOpen={scheduleModalOpen}
+                    toggle={() => setScheduleModalOpen(false)}
+                  >
+                    <ModalHeader toggle={() => setScheduleModalOpen(false)}>
+                      Schedule Message
+                    </ModalHeader>
+                    <ModalBody>
+                      <FormGroup>
+                        <Label for="scheduleDateTime">
+                          Select Date and Time
+                        </Label>
+                        <Input
+                          type="datetime-local"
+                          id="scheduleDateTime"
+                          value={scheduleDateTime}
+                          onChange={(e) => setScheduleDateTime(e.target.value)}
+                          min={getMinDateTime()}
+                          className="form-control"
+                        />
+                      </FormGroup>
+                    </ModalBody>
+                    <ModalFooter>
+                      <Button
+                        color="secondary"
+                        onClick={() => setScheduleModalOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        color="primary"
+                        onClick={handleScheduleSend}
+                        disabled={isScheduling || !scheduleDateTime}
+                      >
+                        {isScheduling ? (
+                          <>
+                            <Spinner size="sm" className="me-2" />
+                            Scheduling...
+                          </>
+                        ) : (
+                          "Schedule Send"
+                        )}
+                      </Button>
+                    </ModalFooter>
+                  </Modal>
 
                   {template.status !== "APPROVED" && (
                     <Alert color="warning" className="status-alert">
@@ -1032,7 +1114,8 @@ const handleSubmit = async (e) => {
               <CardBody>
                 <div className="preview-container">
                   <div className="message-bubble">
-                    {template.components.find((c) => c.type === "HEADER")?.format === "IMAGE" && (
+                    {template.components.find((c) => c.type === "HEADER")
+                      ?.format === "IMAGE" && (
                       <div className="preview-image">
                         {headerParams.mediaUrl ? (
                           <img
@@ -1052,7 +1135,10 @@ const handleSubmit = async (e) => {
                     <div className="message-text">{getPreviewText()}</div>
                     {template.components.find((c) => c.type === "FOOTER") && (
                       <div className="message-footer">
-                        {template.components.find((c) => c.type === "FOOTER").text}
+                        {
+                          template.components.find((c) => c.type === "FOOTER")
+                            .text
+                        }
                       </div>
                     )}
                   </div>

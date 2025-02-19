@@ -263,3 +263,28 @@ input[type="datetime-local"]:focus {
   box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
   outline: none;
 }
+.dropdown-menu {
+  min-width: 160px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  border: none;
+  border-radius: 0.375rem;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  color: #495057;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.dropdown-item i {
+  width: 20px;
+  text-align: center;
+}
+
+.dropdown-toggle.btn-sm {
+  padding: 0.375rem 0.75rem;
+}
