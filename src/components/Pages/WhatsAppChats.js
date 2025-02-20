@@ -66,6 +66,8 @@ const WhatsAppChats = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+const chatContainerRef = useRef(null);
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
   const contactListRef = useRef(null);
@@ -319,6 +321,14 @@ const WhatsAppChats = () => {
     }
   };
 
+  const handleChatScroll = () => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setIsScrolledUp(!isAtBottom);
+    }
+  };
+
   const CustomTooltip = ({ children, content, isOpen, setIsOpen }) => {
     useEffect(() => {
       let timer;
@@ -461,6 +471,9 @@ const WhatsAppChats = () => {
   const scrollToBottom = () => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      setTimeout(() => {
+        setIsScrolledUp(false);
+      }, 500);
     }
   };
 
@@ -1177,9 +1190,9 @@ const WhatsAppChats = () => {
             msg.to === selectedUser.phoneNumber
         )
       : [];
-
+  
     const groupedMessages = groupMessagesByDate(chatMessages);
-
+  
     return (
       <Col
         xs="12"
@@ -1221,7 +1234,7 @@ const WhatsAppChats = () => {
                 <FaArrowLeft size={20} />
               </Button>
             )}
-
+  
             <div
               style={{
                 width: "40px",
@@ -1237,7 +1250,7 @@ const WhatsAppChats = () => {
             >
               {selectedUser.flag || "👤"}
             </div>
-
+  
             <div>
               <h6
                 style={{
@@ -1252,11 +1265,13 @@ const WhatsAppChats = () => {
             </div>
           </div>
         )}
-
+  
         {initialLoading && <LoaderOverlay />}
         {selectedUser ? (
           <>
             <div
+              ref={chatContainerRef}
+              onScroll={handleChatScroll}
               style={{
                 flex: 1,
                 padding: "20px",
@@ -1264,6 +1279,7 @@ const WhatsAppChats = () => {
                 marginBottom: isMobileView ? "60px" : 0,
                 msOverflowStyle: "none",
                 scrollbarWidth: "none",
+                position: "relative",
                 "&::-webkit-scrollbar": {
                   display: "none",
                 },
@@ -1339,11 +1355,49 @@ const WhatsAppChats = () => {
               ))}
               <div ref={chatEndRef} style={{ height: "1px" }} />
             </div>
-
+  
+            {/* Scroll To Bottom Button */}
+            {isScrolledUp && (
+              <div
+                onClick={scrollToBottom}
+                style={{
+                  position: "absolute",
+                  bottom: isMobileView ? "70px" : "70px",
+                  right: "20px",
+                  zIndex: 10,
+                  backgroundColor: "#FFFFFF",
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                  cursor: "pointer",
+                  transition: "transform 0.2s ease",
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = "scale(1.05)";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+              >
+                <svg 
+                  width="24" 
+                  height="24" 
+                  fill="#00a884" 
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 16.5l-6-6 1.4-1.4 4.6 4.6 4.6-4.6L18 10.5l-6 6z" transform="rotate(180, 12, 12)"/>
+                </svg>
+              </div>
+            )}
+  
             {/* Message Input Section */}
             <div
               style={{
-                padding: "12px 16px",
+                padding: "3px 7px",
                 position: isMobileView ? "fixed" : "relative",
                 bottom: 0,
                 left: isMobileView ? 0 : "auto",
@@ -1357,9 +1411,9 @@ const WhatsAppChats = () => {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "10px",
+                  // gap: "px",
                   backgroundColor: "#fff",
-                  padding: "6px 12px",
+                  padding: "2px 12px",
                   borderRadius: "24px",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                 }}
@@ -1375,28 +1429,28 @@ const WhatsAppChats = () => {
                   <FaPaperclip size={20} />
                 </Button>
                 <textarea
-  value={newMessage}
-  onChange={(e) => setNewMessage(e.target.value)}
-  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-  placeholder="Type a message..."
-  style={{
-    border: "none", 
-    padding: "4px",       // Reduced from 8px to 4px
-    flex: 1,
-    backgroundColor: "transparent",
-    boxShadow: "none",
-    outline: "none",
-    resize: "none",
-    wordWrap: "break-word",
-    whiteSpace: "pre-wrap",
-    height: "auto",
-    minHeight: "24px",    // Reduced from 40px to 24px
-    maxHeight: "100px",
-    overflowY: "auto",
-    fontFamily: "inherit",
-    fontSize: "inherit"
-  }}
-/>
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder="Type a message..."
+                  style={{
+                    border: "none", 
+                    padding: "4px",
+                    flex: 1,
+                    backgroundColor: "transparent",
+                    boxShadow: "none",
+                    outline: "none",
+                    resize: "none",
+                    wordWrap: "break-word",
+                    whiteSpace: "pre-wrap",
+                    height: "auto",
+                    minHeight: "24px",
+                    maxHeight: "100px",
+                    overflowY: "auto",
+                    fontFamily: "inherit",
+                    fontSize: "inherit"
+                  }}
+                />
                 <Button
                   onClick={sendMessage}
                   disabled={!newMessage.trim()}

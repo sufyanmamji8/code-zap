@@ -85,7 +85,7 @@ var routes = [
   {
     path: "/Create-menus",
     name: "WhatsAppCreateMenus",
-    icon: "ni ni-bullet-list-67 ",
+    icon: "ni ni-key-25 ",
     component: <WhatsAppCreateMenus />,
     layout: "/admin",
     showInSidebar: false,

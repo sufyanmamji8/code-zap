@@ -117,7 +117,7 @@ const WhatsAppMenuAccess = () => {
     },
     input: {
       borderRadius: '8px',
-      padding: '0.75rem',
+      padding: '-0.25rem',
       border: '2px solid #ddd',
       transition: 'all 0.3s ease'
     },

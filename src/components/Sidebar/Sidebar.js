@@ -110,7 +110,7 @@ const Sidebar = (props) => {
     { name: "Chats", icon: "ni ni-chat-round", path: "/chats", layout: "/admin" },
     { name: "Agents", icon: "ni ni-circle-08", path: "/agents", layout: "/admin", dropdown: true, subRoutes: [
       { name: "List", path: "/agentslist" },
-      { name: "Create Agent", path: "/createagents" }
+      { name: "Create Agent", path: "/createagents" , icon: "ni ni-circle-08 text-gray" }
     ]},
     { name: "Contacts", icon: "ni ni-single-02", path: "/contacts", layout: "/admin", dropdown: true, subRoutes: [
       { name: "List", path: "/contactslist" },
