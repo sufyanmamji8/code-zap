@@ -33,14 +33,17 @@ const WhatsAppChats = () => {
 
   useEffect(() => {
     if (location.state?.config) {
-        localStorage.setItem('whatsappConfig', JSON.stringify(location.state.config));
-        localStorage.setItem('whatsappCompanyId', location.state.companyId);
+      localStorage.setItem(
+        "whatsappConfig",
+        JSON.stringify(location.state.config)
+      );
+      localStorage.setItem("whatsappCompanyId", location.state.companyId);
     }
   }, [location.state]);
-  
+
   const { config, companyId } = location.state || {
-    config: JSON.parse(localStorage.getItem('whatsappConfig')),
-    companyId: localStorage.getItem('whatsappCompanyId')
+    config: JSON.parse(localStorage.getItem("whatsappConfig")),
+    companyId: localStorage.getItem("whatsappCompanyId"),
   };
   const businessId = config?.whatsappBusinessAccountId;
 
@@ -67,7 +70,7 @@ const WhatsAppChats = () => {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
-const chatContainerRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
   const contactListRef = useRef(null);
@@ -237,8 +240,6 @@ const chatContainerRef = useRef(null);
     }
   };
 
-  
-
   useEffect(() => {
     if (selectedUser && chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -323,7 +324,8 @@ const chatContainerRef = useRef(null);
 
   const handleChatScroll = () => {
     if (chatContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } =
+        chatContainerRef.current;
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
       setIsScrolledUp(!isAtBottom);
     }
@@ -489,7 +491,10 @@ const chatContainerRef = useRef(null);
         users.set(contact.phoneNumber, {
           ...contact,
           lastMessage: contact.lastMessage || contact.recentMessage || "",
-          timestamp: contact.timestamp || contact.latestChat || (Date.now() / 1000).toString(),
+          timestamp:
+            contact.timestamp ||
+            contact.latestChat ||
+            (Date.now() / 1000).toString(),
           flag: country?.flag || "🌐",
         });
       }
@@ -505,7 +510,12 @@ const chatContainerRef = useRef(null);
   }, [contacts]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedUser || !config?.phoneNumber || !companyId) {
+    if (
+      !newMessage.trim() ||
+      !selectedUser ||
+      !config?.phoneNumber ||
+      !companyId
+    ) {
       console.warn("Missing required data for sending message");
       return;
     }
@@ -539,7 +549,9 @@ const chatContainerRef = useRef(null);
               lastMessage: newMessage,
               recentMessage: newMessage,
               timestamp: currentTimestamp,
-              latestChat: new Date(parseInt(currentTimestamp) * 1000).toISOString(),
+              latestChat: new Date(
+                parseInt(currentTimestamp) * 1000
+              ).toISOString(),
             };
           }
           return contact;
@@ -591,7 +603,8 @@ const chatContainerRef = useRef(null);
                 status: "failed",
                 currentStatusTimestamp: Date.now() / 1000,
                 sentTimestamp: msg.originalTimestamp,
-                failureReason: error.response?.data?.message || "Failed to send message",
+                failureReason:
+                  error.response?.data?.message || "Failed to send message",
               }
             : msg
         )
@@ -1190,9 +1203,9 @@ const chatContainerRef = useRef(null);
             msg.to === selectedUser.phoneNumber
         )
       : [];
-  
+
     const groupedMessages = groupMessagesByDate(chatMessages);
-  
+
     return (
       <Col
         xs="12"
@@ -1234,7 +1247,7 @@ const chatContainerRef = useRef(null);
                 <FaArrowLeft size={20} />
               </Button>
             )}
-  
+
             <div
               style={{
                 width: "40px",
@@ -1250,7 +1263,7 @@ const chatContainerRef = useRef(null);
             >
               {selectedUser.flag || "👤"}
             </div>
-  
+
             <div>
               <h6
                 style={{
@@ -1265,7 +1278,7 @@ const chatContainerRef = useRef(null);
             </div>
           </div>
         )}
-  
+
         {initialLoading && <LoaderOverlay />}
         {selectedUser ? (
           <>
@@ -1355,7 +1368,7 @@ const chatContainerRef = useRef(null);
               ))}
               <div ref={chatEndRef} style={{ height: "1px" }} />
             </div>
-  
+
             {/* Scroll To Bottom Button */}
             {isScrolledUp && (
               <div
@@ -1383,21 +1396,26 @@ const chatContainerRef = useRef(null);
                   e.currentTarget.style.transform = "scale(1)";
                 }}
               >
-                <svg 
-                  width="24" 
-                  height="24" 
-                  fill="#00a884" 
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 16.5l-6-6 1.4-1.4 4.6 4.6 4.6-4.6L18 10.5l-6 6z" transform="rotate(180, 12, 12)"/>
-                </svg>
+                <svg
+      width="24"
+      height="24"
+      fill="#00a884"
+      viewBox="0 0 24 24"
+      style={{
+        backgroundColor: "#e0f2f1",
+        borderRadius: "50%",
+        padding: "4px",
+      }}
+    >
+      <path d="M12 11l-4-4 1.4-1.4L12 8.2l2.6-2.6L16 7l-4 4zm0 6l-4-4 1.4-1.4L12 14.2l2.6-2.6L16 13l-4 4z" />
+    </svg>
               </div>
             )}
-  
+
             {/* Message Input Section */}
             <div
               style={{
-                padding: "3px 7px",
+                padding: "5px 4px",
                 position: isMobileView ? "fixed" : "relative",
                 bottom: 0,
                 left: isMobileView ? 0 : "auto",
@@ -1434,7 +1452,7 @@ const chatContainerRef = useRef(null);
                   onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                   placeholder="Type a message..."
                   style={{
-                    border: "none", 
+                    border: "none",
                     padding: "4px",
                     flex: 1,
                     backgroundColor: "transparent",
@@ -1448,7 +1466,7 @@ const chatContainerRef = useRef(null);
                     maxHeight: "100px",
                     overflowY: "auto",
                     fontFamily: "inherit",
-                    fontSize: "inherit"
+                    fontSize: "inherit",
                   }}
                 />
                 <Button
