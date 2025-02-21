@@ -1,1061 +1,1063 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { MENU_ENDPOINTS } from 'Api/Constant';
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import {
-  Container, Row, Col, Card, CardBody, Button, Modal, 
-  ModalHeader, ModalBody, Form, FormGroup, Label, Input, 
-  Badge, Tooltip
-} from 'reactstrap';
-import { 
-  Plus, Edit2, Trash2, Menu as MenuIcon, 
-  FileText, AlertTriangle, 
-  X, Calendar,
-  ArrowRight,
-  ChevronRight
-} from 'lucide-react';
-import "../../assets/css/WhatsAppMenus.css";
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+  Card,
+  CardHeader,
+  CardBody,
+  FormGroup,
+  Label,
+  Input,
+  Button,
+  Alert,
+  Spinner,
+  InputGroup,
+  Dropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem,
+  Fade,
+  Modal,
+} from "reactstrap";
+import axios from "axios";
+import { toast } from "sonner";
+import { countryList } from "./countryList";
+import "../../assets/css/SendTemplate.css"; 
+import { TEMPLATE_ENDPOINTS } from "Api/Constant";
+import { API_KEY_ENDPOINTS } from "Api/Constant";
+import { MESSAGE_API_ENDPOINT } from "Api/Constant";
 
-const WhatsAppCreateMenus = () => {
-  const [menus, setMenus] = useState([]);
-  const [isFirstMenu, setIsFirstMenu] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [currentMenu, setCurrentMenu] = useState(null);
-  const [error, setError] = useState(null);
-  const [tooltipOpen, setTooltipOpen] = useState({});
-  const [selectedMenuId, setSelectedMenuId] = useState(null);
-  const [menuPath, setMenuPath] = useState([]);
-  const [expandedMenus, setExpandedMenus] = useState({});
-  const [activeMenu, setActiveMenu] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+const SendTemplate = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [template, setTemplate] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [apiKey, setApiKey] = useState(null);
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleTime, setScheduleTime] = useState("");
+  const [copyDropdownOpen, setCopyDropdownOpen] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(
+    countryList.find((country) => country.code === "92") || countryList[0]
+  );
+  const [formData, setFormData] = useState({
+    to: "",
+    templateName: location.state?.templateName || "",
+    templateLanguage: "en_US",
+    components: [],
+    companyId: location.state?.companyId || "",
+  });
+  const [isSending, setIsSending] = useState(false);
+  const token = localStorage.getItem("token");
+  const [headerParams, setHeaderParams] = useState({
+    mediaUrl: "",
+    latitude: "",
+    longitude: "",
+    locationName: "",
+    locationAddress: "",
+  });
 
+  const filteredCountries = countryList.filter(
+    (country) =>
+      country.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      country.code.includes(searchQuery)
+  );
 
+  const extractTemplateParameters = (template) => {
+    if (!template) return [];
+
+    const bodyComponent = template.components.find((c) => c.type === "BODY");
+    if (!bodyComponent || !bodyComponent.text) return [];
+
+    const paramRegex = /\{\{([^}]+)\}\}/g;
+    const params = [];
+    let match;
+
+    const fullText = bodyComponent.text;
+
+    while ((match = paramRegex.exec(fullText)) !== null) {
+      const paramNumber = match[1];
+
+      let startPos = Math.max(0, match.index - 50);
+      let contextText = fullText.substring(startPos, match.index).trim();
+
+      let contextWords = contextText.split(/[.,!?]\s*/).pop() || "";
+      if (contextWords.includes(":")) {
+        contextWords = contextWords.split(":").pop().trim();
+      } else if (contextWords.includes("-")) {
+        contextWords = contextWords.split("-").pop().trim();
+      }
+
+      contextWords = contextWords.replace(/^\W+|\W+$/g, "").trim();
+
+      params.push({
+        index: paramNumber,
+        original: match[0],
+        context: contextWords || `Variable ${paramNumber}`,
+        value: "",
+      });
+    }
+
+    return params.sort((a, b) => a.index - b.index);
+  };
+
+  const handleHeaderParamChange = (key, value) => {
+    setHeaderParams((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const copyToClipboard = async (text) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand("copy");
+        textArea.remove();
+        return true;
+      } catch (err) {
+        textArea.remove();
+        return false;
+      }
+    } catch (err) {
+      return false;
+    }
+  };
+
+  const fetchTemplateDetails = async () => {
+    if (!formData.companyId || !token) return;
+
+    try {
+      const response = await axios.post(
+        TEMPLATE_ENDPOINTS.FETCH,
+        {
+          companyId: formData.companyId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const selectedTemplate = response.data.templates.find(
+          (t) => t.name === location.state?.templateName
+        );
+
+        if (selectedTemplate) {
+          setTemplate(selectedTemplate);
+
+          const initialComponents = [];
+
+          const headerComponent = selectedTemplate.components.find(
+            (c) => c.type === "HEADER"
+          );
+          if (headerComponent) {
+            initialComponents.push({
+              type: "header",
+              parameters: [],
+            });
+          }
+
+          const bodyComponent = selectedTemplate.components.find(
+            (c) => c.type === "BODY"
+          );
+          if (bodyComponent) {
+            const params = extractTemplateParameters(selectedTemplate);
+            initialComponents.push({
+              type: "body",
+              parameters: params.map(() => ({
+                type: "text",
+                text: "",
+              })),
+            });
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            components: initialComponents,
+          }));
+        }
+      } else {
+        toast.error("Failed to load template details");
+      }
+    } catch (error) {
+      console.error("Error fetching template details:", error);
+      if (error.response?.status === 401) {
+        navigate("/auth/login");
+      } else {
+        toast.error("Failed to load template details");
+      }
+    }
+  };
+
+  const fetchApiKey = async () => {
+    if (!formData.companyId || !token) return;
+
+    try {
+      const response = await axios.post(
+        API_KEY_ENDPOINTS.GET,
+        { companyId: formData.companyId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setApiKey(response.data.data);
+      } else {
+        setApiKey(null);
+      }
+    } catch (error) {
+      setApiKey(null);
+      if (error.response?.status === 401) {
+        navigate("/auth/login");
+      }
+    }
+  };
 
   useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-      if (window.innerWidth > 768) {
-        setSidebarCollapsed(false);
-      } else {
-        setSidebarCollapsed(true);
+    const fetchData = async () => {
+      if (!formData.companyId || !token) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await axios.post(
+          TEMPLATE_ENDPOINTS.FETCH,
+          {
+            companyId: formData.companyId,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.data.success) {
+          const selectedTemplate = response.data.templates.find(
+            (t) => t.name === location.state?.templateName
+          );
+
+          if (selectedTemplate) {
+            setTemplate(selectedTemplate);
+
+            const initialComponents = [];
+
+            const headerComponent = selectedTemplate.components.find(
+              (c) => c.type === "HEADER"
+            );
+            if (headerComponent) {
+              initialComponents.push({
+                type: "header",
+                parameters: [
+                  {
+                    type: headerComponent.format.toLowerCase(),
+                    [headerComponent.format.toLowerCase()]: {
+                      link: "",
+                    },
+                  },
+                ],
+              });
+            }
+
+            const bodyComponent = selectedTemplate.components.find(
+              (c) => c.type === "BODY"
+            );
+            if (bodyComponent) {
+              const params = extractTemplateParameters(selectedTemplate);
+              initialComponents.push({
+                type: "body",
+                parameters: params.map(() => ({
+                  type: "text",
+                  text: "",
+                })),
+              });
+            }
+
+            setFormData((prev) => ({
+              ...prev,
+              templateName: selectedTemplate.name,
+              templateLanguage: selectedTemplate.language,
+              components: initialComponents,
+            }));
+          }
+        }
+        await fetchApiKey();
+      } catch (error) {
+        console.error("Error:", error);
+        toast.error("Failed to load template details");
+        if (error.response?.status === 401) {
+          navigate("/auth/login");
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  
-  
-  
-  const validationFormats = {
-    date: [
-      { 
-        label: 'Month-Year', 
-        value: '^[A-Za-z]{3}-\\d{4}$', 
-        example: 'Jan-2024',
-        errorMessage: 'Please enter date in Month-YYYY format (e.g., Jan-2024)'
-      },
-      { 
-        label: 'Day-Month-Year', 
-        value: '^\\d{1,2}-[A-Za-z]{3}-\\d{4}$',
-        example: '22-Nov-2024',
-        errorMessage: 'Please enter date in DD-Month-YYYY format (e.g., 22-Nov-2024)'
-      },
-      { 
-        label: 'DD/MM/YYYY', 
-        value: '^\\d{1,2}/\\d{1,2}/\\d{4}$',
-        example: '22/11/2024',
-        errorMessage: 'Please enter date in DD/MM/YYYY format (e.g., 22/11/2024)'
-      }
-    ],
-    number: [
-      { min: 0, max: 1000, description: 'Amount (0-1000)' },
-      { min: 1000, max: 10000, description: 'Amount (1000-10000)' },
-      { min: 10000, max: 100000, description: 'Amount (10000-100000)' }
-    ],
-    phone: [
-      { label: 'International', value: '^\\+?\\d{10,14}$', example: '+1234567890' },
-      { label: 'Local', value: '^\\d{10}$', example: '1234567890' }
-    ],
-    email: [
-      { label: 'Standard', value: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$', example: 'user@domain.com' }
-    ],
-    text: [
-      { label: 'Alphanumeric', value: '^[a-zA-Z0-9\\s]+$', example: 'Letters and numbers only' },
-      { label: 'Letters only', value: '^[a-zA-Z\\s]+$', example: 'Letters only' }
-    ]
-  };
+    fetchData();
+  }, [location.state, token, formData.companyId]);
 
-  const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country);
+    setDropdownOpen(false);
 
-  const handleOverlayClick = (e) => {
-    e.stopPropagation();
-    if (window.innerWidth <= 768) {
-      setSidebarCollapsed(true);
-    }
-  };
-
-  const handleMenuClickMobile = (menu) => {
-    handleMenuClick(menu);
-    if (window.innerWidth <= 768) {
-      setSidebarCollapsed(true);
-    }
-  };
-
-  const createInitialMenuState = () => ({
-    menuId: isFirstMenu ? 'main-menu' : '',
-    menuTitle: '',
-    menuType: 'options',
-    prompt: '',
-    nextMenuId: '',
-    apiCall: '',
-    validationType: 'none',
-    validationRules: {
-      min: null,
-      max: null,
-      format: '',
-      required: true
-    },
-    menuOptions: [],
-    isMainMenu: false  // Add this line
-  });
-
-  const [formData, setFormData] = useState(createInitialMenuState());
-
-
-
-  const handleValidationFormatChange = (e) => {
-    const selectedFormat = validationFormats[formData.validationType]
-      .find(format => format.value === e.target.value);
-    
-    setFormData(prevData => ({
-      ...prevData,
-      validationRules: {
-        ...prevData.validationRules,
-        format: selectedFormat?.value || '',
-        example: selectedFormat?.example || ''
-      }
+    const phoneWithoutCode = formData.to.replace(/^\+?\d+/, "");
+    setFormData((prev) => ({
+      ...prev,
+      to: `+${country.code}${phoneWithoutCode}`,
     }));
   };
 
-  const handleValidationTypeChange = (e) => {
-    const type = e.target.value;
-    setFormData(prevData => ({
-      ...prevData,
-      validationType: type,
-      validationRules: {
-        min: type === 'number' ? 0 : null,
-        max: type === 'number' ? 1000 : null,
-        format: type === 'date' ? validationFormats.date[0].value :
-               type === 'phone' ? validationFormats.phone[0].value :
-               type === 'email' ? validationFormats.email[0].value :
-               type === 'text' ? validationFormats.text[0].value : '',
-        required: true
-      }
+  const handlePhoneChange = (value) => {
+    const cleanedValue = value.replace(/[^\d+]/g, "");
+
+    let formattedValue = cleanedValue;
+    if (!cleanedValue.startsWith("+")) {
+      formattedValue = `+${selectedCountry.code}${cleanedValue.replace(
+        /^\+?\d+/,
+        ""
+      )}`;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      to: formattedValue,
     }));
   };
 
-  const getValidationExample = () => {
-    const { validationType, validationRules } = formData;
-    
-    const selectedFormat = validationType !== 'none' && validationRules.format
-      ? validationFormats[validationType]?.find(f => f.value === validationRules.format)
-      : null;
-  
-    switch (validationType) {
-      case 'date':
-        return selectedFormat?.errorMessage || 'Please enter a valid date';
-      
-      case 'number':
-        return `Enter a number between ${validationRules.min} and ${validationRules.max}`;
-      
-      case 'phone':
-        return `Enter a phone number (Example: ${selectedFormat?.example || '1234567890'})`;
-      
-      case 'email':
-        return `Enter a valid email address (Example: ${selectedFormat?.example || 'user@domain.com'})`;
-      
-      case 'text':
-        return `Enter text: ${selectedFormat?.example || 'Text input'}`;
-      
-      default:
-        return 'No validation required';
-    }
-  };
-
-  const fetchMenus = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(MENU_ENDPOINTS.GET_ALL);
-      const allMenus = response.data.data || [];
-      setMenus(allMenus);
-      
-      const mainMenuExists = allMenus.some(menu => menu.isMainMenu === true);
-      setIsFirstMenu(!mainMenuExists);
-    } catch (error) {
-      setError('Failed to fetch menus');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMenus();
-  }, []);
-
-  const handleInputChange = (e, field, isOption = false, optionIndex = null, isBoolean = false) => {
-    const value = isBoolean ? e.target.value === 'true' : e.target.value;
-    
-    setFormData(prevData => {
-      const newData = { ...prevData };
-      
-      if (isOption) {
-        newData.menuOptions[optionIndex][field] = value;
-      } else if (field.includes('.')) {
-        const [parent, child] = field.split('.');
-        newData[parent] = { ...newData[parent], [child]: value };
-      } else {
-        newData[field] = value;
+  const handleParameterChange = (index, value) => {
+    setFormData((prev) => {
+      const updatedComponents = [...prev.components];
+      const bodyComponent = updatedComponents.find((c) => c.type === "body");
+      if (bodyComponent && bodyComponent.parameters[index]) {
+        bodyComponent.parameters[index].text = value;
       }
-      
-      return newData;
-    });
-  };
-
-  const addOption = () => {
-    setFormData(prevData => ({
-      ...prevData,
-      menuOptions: [
-        ...prevData.menuOptions, 
-        { 
-          id: (prevData.menuOptions.length + 1).toString(), 
-          title: '', 
-          nextMenuId: '', 
-          apiCall: '' ,
-          apiText: ''
-        }
-      ]
-    }));
-  };
-
-
-
-  
-  const removeOption = (index) => {
-    setFormData(prevData => {
-      const newOptions = prevData.menuOptions.filter((_, i) => i !== index);
       return {
-        ...prevData,
-        menuOptions: newOptions.map((option, idx) => ({
-          ...option,
-          id: (idx + 1).toString()
-        }))
+        ...prev,
+        components: updatedComponents,
       };
     });
   };
 
-   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-  
-    try {
-      const endpoint = currentMenu 
-        ? MENU_ENDPOINTS.UPDATE(currentMenu.menuId)
-        : MENU_ENDPOINTS.CREATE;
-      
-      const method = currentMenu ? 'put' : 'post';
-      
-      if (!currentMenu && !isFirstMenu) {
-        const formattedId = formData.menuTitle.toLowerCase().replace(/\s+/g, '-');
-        formData.menuId = formattedId;
-      }
-      
-      const payload = method === 'post' 
-        ? { menus: [formData] }
-        : formData;
-      
-      const response = await axios[method](endpoint, payload);
-      
-      if (method === 'post') {
-        setMenus(prevMenus => [...prevMenus, response.data.data[0]]);
-      } else {
-        setMenus(prevMenus => 
-          prevMenus.map(menu => 
-            menu.menuId === currentMenu.menuId 
-              ? response.data.data 
-              : menu
-          )
-        );
-      }
-  
-      setFormData(createInitialMenuState());
-      setModalOpen(false);
-      setCurrentMenu(null);
-      
-      fetchMenus();
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to save menu');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getPreviewText = () => {
+    if (!template) return "";
 
-  const handleDelete = async (menuId) => {
-    setLoading(true);
-    try {
-      await axios.delete(MENU_ENDPOINTS.DELETE(menuId));
-      setMenus(prevMenus => prevMenus.filter(menu => menu.menuId !== menuId));
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to delete menu');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const bodyComponent = template.components.find((c) => c.type === "BODY");
+    if (!bodyComponent) return "";
 
-  const toggleModal = () => {
-    setModalOpen(!modalOpen);
-    if (!modalOpen) {
-      setFormData(createInitialMenuState());
-      setCurrentMenu(null);
-    }
-  };
+    let previewText = bodyComponent.text;
+    const parameters =
+      formData.components.find((c) => c.type === "body")?.parameters || [];
 
-  const editMenu = (menu) => {
-    setCurrentMenu(menu);
-    setFormData(menu);
-    setModalOpen(true);
-  };
-
-  const toggleTooltip = (menuId) => {
-    setTooltipOpen(prev => ({
-      ...prev,
-      [menuId]: !prev[menuId]
-    }));
-  };
-
-  const handleMenuClick = (menu) => {
-    setActiveMenu(menu);
-    setSelectedMenuId(menu.menuId);
-    setMenuPath([menu.menuId]);
-  };
-
-  const handleMenuSelect = (menuId) => {
-    const menu = menus.find(m => m.menuId === menuId);
-    if (menu) {
-      setSelectedMenuId(menuId);
-      if (!menuPath.includes(menuId)) {
-        setMenuPath([...menuPath, menuId]);
-      } else {
-        const index = menuPath.indexOf(menuId);
-        setMenuPath(menuPath.slice(0, index + 1));
-      }
-    }
-  };
-
-  const toggleExpandMenu = (menuId) => {
-    setExpandedMenus(prev => ({
-      ...prev,
-      [menuId]: !prev[menuId]
-    }));
-  };
-
-  const getChildMenus = (menuId) => {
-    const menu = menus.find(m => m.menuId === menuId);
-    if (!menu) return [];
-    
-    return menus.filter(m => 
-      (menu.menuType === 'options' && 
-       menu.menuOptions?.some(opt => opt.nextMenuId === m.menuId)) ||
-      (menu.menuType === 'prompt' && menu.nextMenuId === m.menuId)
-    );
-  };
-
-   const createSubMenu = (parentMenu) => {
-    const baseId = parentMenu.menuTitle.toLowerCase().replace(/\s+/g, '-');
-    const subMenuId = `${baseId}-sub`;
-    
-    setFormData({
-      ...createInitialMenuState(),
-      menuId: subMenuId,
-      menuTitle: `Sub-menu of ${parentMenu.menuTitle}`,
+    parameters.forEach((param, index) => {
+      const value = param.text || `{{${index + 1}}}`;
+      previewText = previewText.replace(
+        new RegExp(`\\{\\{${index + 1}\\}\\}`, "g"),
+        value
+      );
     });
-    setModalOpen(true);
+
+    return previewText;
   };
 
-  const renderSidebarMenus = () => {
-    const mainMenus = menus.filter(menu => menu.isMainMenu === true);
+  const getCurlCommand = (isScheduled = false) => {
+    if (!template) return "";
   
-    return mainMenus.map((menu) => (
-      <div
-        key={menu.menuId}
-        className={`menu-item p-3 mb-2 rounded cursor-pointer ${activeMenu?.menuId === menu.menuId ? 'bg-light' : ''}`}
-        style={{
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          border: '1px solid #e0e0e0',
-        }}
-        onClick={() => handleMenuClickMobile(menu)}
-      >
-        <div className="d-flex align-items-center gap-2">
-          <MenuIcon size={16} />
-          <span className="fw-medium">{menu.menuTitle}</span>
-        </div>
-        <small className="text-muted d-block mt-1">{menu.menuId}</small>
-      </div>
-    ));
+    const payload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: formData.to || "Enter phone number",
+      type: "template",
+      template: {
+        name: formData.templateName,
+        language: {
+          code: formData.templateLanguage,
+        },
+        components: [],
+      },
+    };
+  
+    if (isScheduled) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      payload.scheduleTime = tomorrow.toISOString();
+    }
+  
+    // Get header component from template
+    const headerComponent = template.components.find(
+      (c) => c.type === "HEADER"
+    );
+  
+    // Get body component from template
+    const bodyComponent = template.components.find(
+      (c) => c.type === "BODY"
+    );
+  
+    // Add header component if it exists
+    if (headerComponent) {
+      const headerParam = {
+        type: "header",
+        parameters: [],
+      };
+  
+      if (headerComponent.format === "IMAGE" && headerParams.mediaUrl) {
+        headerParam.parameters.push({
+          type: "image",
+          image: { link: headerParams.mediaUrl },
+        });
+      } else if (headerComponent.format === "VIDEO" && headerParams.mediaUrl) {
+        headerParam.parameters.push({
+          type: "video",
+          video: { link: headerParams.mediaUrl },
+        });
+      } else if (headerComponent.format === "DOCUMENT" && headerParams.mediaUrl) {
+        headerParam.parameters.push({
+          type: "document",
+          document: { link: headerParams.mediaUrl },
+        });
+      } else if (headerComponent.format === "LOCATION") {
+        headerParam.parameters.push({
+          type: "location",
+          location: {
+            latitude: parseFloat(headerParams.latitude) || 0,
+            longitude: parseFloat(headerParams.longitude) || 0,
+            name: headerParams.locationName || "",
+            address: headerParams.locationAddress || "",
+          },
+        });
+      }
+  
+      if (headerParam.parameters.length > 0) {
+        payload.template.components.push(headerParam);
+      }
+    }
+  
+    // Add body component if it exists
+    if (bodyComponent) {
+      const bodyParameters = formData.components
+        .find(c => c.type === "body")
+        ?.parameters || [];
+  
+      if (bodyParameters.length > 0) {
+        const bodyParam = {
+          type: "body",
+          parameters: bodyParameters.map(param => ({
+            type: "text",
+            text: param.text || "",
+          })),
+        };
+        payload.template.components.push(bodyParam);
+      }
+    }
+  
+    const formattedJson = JSON.stringify(payload, null, 2);
+    const authHeader = apiKey
+      ? `--header 'Authorization: Bearer ${apiKey}'`
+      : "--header 'Authorization: Bearer generate an api key first'";
+  
+    return `curl --location '${MESSAGE_API_ENDPOINT}/sendTemplate' \\
+  ${authHeader} \\
+  --header 'Content-Type: application/json' \\
+  --data '${formattedJson}'`;
   };
 
-  return (
-    <>
-    {/* Loading Overlay */}
-    {loading && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(255, 255, 255, 0.8)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 9999,
-          }}
-        >
-          <DotLottieReact
-            src="https://lottie.host/5060de43-85ac-474a-a85b-892f9730e17a/b3jJ1vGkWh.lottie"
-            loop
-            autoplay
-            style={{ width: "150px", height: "150px" }}
-          />
-        </div>
-      )}
-
+  const handleCopyCurl = (type) => {
+    const curlCommand = type === 'later' 
+      ? getCurlCommand(true)  // Pass true for scheduled version
+      : getCurlCommand();     // Pass nothing for immediate version
+      
+    try {
+      navigator.clipboard.writeText(curlCommand);
+      toast.success(`Curl command copied for ${type === 'later' ? 'scheduled' : 'immediate'} sending!`);
+    } catch (err) {
+      toast.error("Failed to copy. Please try selecting and copying manually.");
+    }
+  };
+  
+  const handleScheduleSubmit = async () => {
+    if (!scheduleTime) {
+      toast.error("Please select date and time for scheduling");
+      return;
+    }
     
-      {/* Overlay for mobile sidebar */}
-      {!sidebarCollapsed && windowWidth <= 768 && (
-        <div 
-          className="sidebar-overlay active" 
-          onClick={handleOverlayClick}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 999,
-            display: "block"
-          }}
-        />
-      )}
+    setIsSending(true);
+    try {
+      const payload = {
+        to: formData.to,
+        templateName: formData.templateName,
+        templateLanguage: formData.templateLanguage,
+        companyId: formData.companyId,
+        scheduleTime: new Date(scheduleTime).toISOString(),
+        components: formData.components.map((component) => {
+          if (component.type === "header") {
+            const headerFormat = template.components
+              .find((c) => c.type === "HEADER")
+              ?.format.toLowerCase();
+            return {
+              type: "header",
+              parameters: [
+                {
+                  type: headerFormat,
+                  [headerFormat]: headerParams.mediaUrl ? {
+                    link: headerParams.mediaUrl,
+                  } : null,
+                },
+              ],
+            };
+          }
+          return component;
+        }),
+      };
+  
+      const response = await axios.post(
+        `${MESSAGE_API_ENDPOINT}/sendTemplate`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      if (response.data.success) {
+        toast.success("Template message scheduled successfully!");
+        setShowSchedule(false);
+        navigate("/admin/chats", {
+          state: {
+            companyId: formData.companyId,
+            config: localStorage.getItem("whatsappConfig") 
+              ? JSON.parse(localStorage.getItem("whatsappConfig")) 
+              : null,
+            refresh: true,
+            timestamp: new Date().getTime(),
+          },
+          replace: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error scheduling template:", error);
+      toast.error(error.response?.data?.message || "Failed to schedule template");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.companyId || !token) {
+      toast.error("Missing required information");
+      return;
+    }
 
-<Container fluid className="d-flex p-0">
-      {/* Left Sidebar - Now has conditional classes for mobile collapse */}
-      <div 
-          className={`menu-sidebar ${sidebarCollapsed ? 'menu-sidebar-collapsed' : ''}`} 
-          style={{
-            width: windowWidth <= 768 ? '250px' : '250px',
-            minHeight: '100vh',
-            background: '#fff',
-            borderRight: '1px solid #e0e0e0',
-            padding: '1rem',
-            transition: 'all 0.3s ease-in-out',
-            transform: sidebarCollapsed && windowWidth <= 768 ? 'translateX(-100%)' : 'translateX(0)',
-            zIndex: 1000,
-            position: windowWidth <= 768 ? 'fixed' : 'sticky',
-            boxShadow: windowWidth <= 768 ? '2px 0 10px rgba(0,0,0,0.1)' : 'none'
-          }}
-        >
-          <div className="sidebar-header mb-4">
-            <h5 className="mb-3">Main Menus</h5>
+    setIsSending(true);
+
+    try {
+      const payload = {
+        to: formData.to,
+        templateName: formData.templateName,
+        templateLanguage: formData.templateLanguage,
+        companyId: formData.companyId,
+        components: formData.components.map((component) => {
+          if (component.type === "header") {
+            const headerFormat = template.components
+              .find((c) => c.type === "HEADER")
+              ?.format.toLowerCase();
+            return {
+              type: "header",
+              parameters: [
+                {
+                  type: headerFormat,
+                  [headerFormat]: {
+                    link: headerParams.mediaUrl,
+                  },
+                },
+              ],
+            };
+          }
+          return component;
+        }),
+      };
+
+      const response = await axios.post(
+        `${MESSAGE_API_ENDPOINT}/sendTemplate`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },}
+        );
+  
+        if (response.data.success) {
+          toast.success("Template message sent successfully!");
+  
+          const existingConfig = localStorage.getItem("whatsappConfig");
+          const existingCompanyId = localStorage.getItem("whatsappCompanyId");
+  
+          const navigationState = {
+            companyId: formData.companyId,
+            config: existingConfig ? JSON.parse(existingConfig) : null,
+            refresh: true,
+            timestamp: new Date().getTime(),
+          };
+  
+          if (!existingConfig) {
+            try {
+              const configResponse = await axios.get(
+                `http://192.168.0.106:25483/api/v1/whatsapp/config/${formData.companyId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
+  
+              if (configResponse.data.success) {
+                navigationState.config = configResponse.data.config;
+              }
+            } catch (error) {
+              console.error("Error fetching WhatsApp config:", error);
+            }
+          }
+  
+          navigate("/admin/chats", {
+            state: navigationState,
+            replace: true,
+          });
+        } else {
+          toast.error(response.data.message || "Failed to send template");
+        }
+      } catch (error) {
+        console.error("Error sending template:", error);
+        if (error.response?.status === 401) {
+          navigate("/auth/login");
+        } else {
+          const errorMessage =
+            error.response?.data?.message || "Error sending template message";
+          toast.error(errorMessage, {
+            duration: 5000,
+          });
+        }
+      } finally {
+        setIsSending(false);
+      }
+    };
+
+  
+    const renderHeaderParams = () => {
+      if (!template) return null;
+      const headerComponent = template.components.find(
+        (c) => c.type === "HEADER"
+      );
+      if (!headerComponent) return null;
+  
+      switch (headerComponent.format) {
+        case "IMAGE":
+        case "VIDEO":
+        case "DOCUMENT":
+          return (
+            <FormGroup>
+              <Label>Media URL for {headerComponent.format.toLowerCase()}</Label>
+              <Input
+                type="url"
+                placeholder={`Enter ${headerComponent.format.toLowerCase()} URL`}
+                value={headerParams.mediaUrl}
+                onChange={(e) =>
+                  handleHeaderParamChange("mediaUrl", e.target.value)
+                }
+                required
+              />
+            </FormGroup>
+          );
+        case "LOCATION":
+          return (
+            <>
+              <FormGroup>
+                <Label>Latitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="Enter latitude"
+                  value={headerParams.latitude}
+                  onChange={(e) =>
+                    handleHeaderParamChange("latitude", e.target.value)
+                  }
+                  required
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Longitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="Enter longitude"
+                  value={headerParams.longitude}
+                  onChange={(e) =>
+                    handleHeaderParamChange("longitude", e.target.value)
+                  }
+                  required
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Location Name</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter location name"
+                  value={headerParams.locationName}
+                  onChange={(e) =>
+                    handleHeaderParamChange("locationName", e.target.value)
+                  }
+                  required
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Address</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter address"
+                  value={headerParams.locationAddress}
+                  onChange={(e) =>
+                    handleHeaderParamChange("locationAddress", e.target.value)
+                  }
+                  required
+                />
+              </FormGroup>
+            </>
+          );
+        default:
+          return null;
+      }
+    };
+  
+    const renderDynamicFields = () => {
+      const params = extractTemplateParameters(template);
+      return params.map((param, index) => (
+        <FormGroup key={index}>
+          <Label>{param.context}</Label>
+          <Input
+            placeholder={`Enter ${param.context.toLowerCase()}`}
+            value={
+              formData.components.find((c) => c.type === "body")?.parameters[
+                index
+              ]?.text || ""
+            }
+            onChange={(e) => handleParameterChange(index, e.target.value)}
+            required
+          />
+        </FormGroup>
+      ));
+    };
+  
+    if (isLoading) {
+      return (
+        <div className="loading-overlay">
+          <div className="loader-container">
+            <DotLottieReact
+              src="https://lottie.host/5060de43-85ac-474a-a85b-892f9730e17a/b3jJ1vGkWh.lottie"
+              loop
+              autoplay
+              style={{ width: "200px", height: "200px" }}
+            />
           </div>
-          <div className="menu-list">
-            {renderSidebarMenus()}
-          </div>
-        
-        <div className="menu-list">
-          {/* Only show the main-menu */}
-          {menus
-              .filter(menu => menu.menuId === 'main-menu')
-              .map((menu) => (
-                <div
-                  key={menu.menuId}
-                  className={`menu-item p-3 mb-2 rounded cursor-pointer ${activeMenu?.menuId === menu.menuId ? 'bg-light' : ''}`}
-                  style={{
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    border: '1px solid #e0e0e0',
-                  }}
-                  onClick={() => handleMenuClickMobile(menu)}
-                >
-                  <div className="d-flex align-items-center gap-2">
-                    <MenuIcon size={16} />
-                    <span className="fw-medium">{menu.menuTitle}</span>
-                  </div>
-                  <small className="text-muted d-block mt-1">{menu.menuId}</small>
-                </div>
-              ))}
-          </div>
+          <style jsx>{`
+            .loading-overlay {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background-color: rgba(255, 255, 255, 0.9);
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              z-index: 9999;
+            }
+            .loader-container {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+          `}</style>
         </div>
-
-      {/* Main Content Area */}
-      <div className="flex-grow-1" style={{ 
-          marginLeft: windowWidth <= 768 ? '0' : (sidebarCollapsed ? '0' : '0'),
-          width: '100%'
-        }}>
-         <div className="whatsapp-menu-container">
-            {/* Modified menu-header-new to include collapse toggle button for mobile */}
-            <div className="menu-header-new">
-              <div className="menu-title-section d-flex align-items-center">
-                {/* The toggle button for mobile */}
-                <Button 
-                  color="light"
-                  className="sidebar-toggle-btn me-3"
-                  onClick={toggleSidebar}
-                  style={{
-                    padding: '0.5rem',
-                    borderRadius: '50%',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                    zIndex: 1001,
-                    position: 'relative',
-                    display: windowWidth <= 768 ? 'flex' : 'none'
-                  }}
-                >
-                  <MenuIcon size={18} />
-                </Button>
-                <div>
-                  <h2>WhatsApp Menu Builder</h2>
-                  <p className="text-muted">Build and manage your interactive WhatsApp menus</p>
-                </div>
-              </div>
-            
-            <Button 
-              color="primary" 
-              className="add-menu-btn-new"
-              onClick={toggleModal}
-            >
-              <Plus size={20} /> Create New Menu
-            </Button>
-          </div>
-
-          {/* Error Alert */}
-          {error && (
-            <div className="alert alert-danger d-flex align-items-center mb-4">
-              <AlertTriangle size={20} className="me-2" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Menu Cards */}
-          <div className="menu-flow-container">
-            {selectedMenuId ? (
-              menus.filter(m => m.menuId === selectedMenuId)
-                .map(menu => {
-                  const childMenus = getChildMenus(menu.menuId);
-                  const isExpanded = expandedMenus[menu.menuId];
-
-                  return (
-                    <div key={menu.menuId} className="menu-flow-item">
-                      <Card className="menu-card-new">
-                        <CardBody>
-                          <div className="menu-card-header">
-                            <div className="d-flex align-items-center gap-2">
-                              {childMenus.length > 0 && (
-                                <Button
-                                  color="link"
-                                  className="p-0 me-2"
-                                  onClick={() => toggleExpandMenu(menu.menuId)}
-                                >
-                                  <ChevronRight
-                                    size={20}
-                                    className={`transform transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                                  />
-                                </Button>
-                              )}
-                              <h4 className="mb-0">{menu.menuTitle}</h4>
+      );
+    }
+  
+    if (!template) {
+      return <div>Template not found</div>;
+    }
+  
+    return (
+      <div className="template-container">
+        {/* Back Navigation */}
+        <div className="back-nav mb-4">
+          <Button
+            color="link"
+            className="d-flex align-items-center p-0"
+            onClick={() => window.history.back()}
+          >
+            <i className="fas fa-arrow-left me-2"></i>
+            <span>Back to Templates</span>
+          </Button>
+        </div>
+  
+        {/* API Section */}
+        <Fade>
+        <Card className="api-card mb-4">
+  <CardHeader className="d-flex justify-content-between align-items-center bg-light">
+    <h4 className="mb-0">
+      <i className="fas fa-code me-2"></i>
+      API Request
+    </h4>
+    <Dropdown isOpen={copyDropdownOpen} toggle={() => setCopyDropdownOpen(!copyDropdownOpen)}>
+      <DropdownToggle caret color="primary" size="sm">
+        <i className="fas fa-copy me-2"></i>
+        Copy CURL
+      </DropdownToggle>
+      <DropdownMenu end>
+        <DropdownItem onClick={() => handleCopyCurl('now')}>
+          <i className="fas fa-bolt me-2"></i>
+          Copy Now
+        </DropdownItem>
+        <DropdownItem onClick={() => handleCopyCurl('later')}>
+          <i className="fas fa-clock me-2"></i>
+          Copy Later
+        </DropdownItem>
+      </DropdownMenu>
+    </Dropdown>
+  </CardHeader>
+  <CardBody className="p-0">
+    <div className="code-container">
+      <pre className="m-0 p-3">
+        <code>{getCurlCommand()}</code>
+      </pre>
+    </div>
+  </CardBody>
+</Card>
+        </Fade>
+  
+        <div className="row">
+          {/* Form Section */}
+          <div className="col-md-6">
+            <Fade>
+              <Card className="template-form-card">
+                <CardHeader className="bg-white border-bottom-0">
+                  <div className="d-flex align-items-center">
+                    <h4 className="mb-0">
+                      {template.name}
+                    </h4>
+                    <span className="badge bg-info ms-2">
+                      {template.language}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardBody>
+                  <form onSubmit={handleSubmit} className="template-form">
+                    {/* Phone Input Group */}
+                    <FormGroup className="phone-input-group">
+                      <Label className="form-label">
+                        Recipient's Phone Number
+                      </Label>
+                      <InputGroup>
+                        <Dropdown
+                          isOpen={countryDropdownOpen}
+                          toggle={() =>
+                            setCountryDropdownOpen(!countryDropdownOpen)
+                          }
+                          className="country-dropdown"
+                        >
+                          <DropdownToggle caret className="country-toggle">
+                            <span className="me-1">{selectedCountry.flag}</span>+
+                            {selectedCountry.code}
+                          </DropdownToggle>
+                          <DropdownMenu className="country-menu">
+                            <div className="px-2 pb-2">
+                              <Input
+                                type="text"
+                                placeholder="Search countries..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="search-input"
+                              />
                             </div>
-                            <Badge 
-                              color={menu.menuType === 'options' ? 'success' : 'warning'}
-                              className="menu-type-badge"
-                            >
-                              {menu.menuType === 'options' ? 'Multiple Choice' : 'User Input'}
-                            </Badge>
-                          </div>
-
-                          <div className="menu-id-section">
-                            <MenuIcon size={16} className="me-2" />
-                            <span className="menu-id-text">{menu.menuId}</span>
-                            {menu.isMainMenu && (
-                              <Badge color="primary" className="ms-2">
-                                Main Menu
-                              </Badge>
-                            )}
-                          </div>
-
-                          {menu.menuType === 'options' && (
-                            <div className="menu-options-new">
-                              {menu.menuOptions.map((option, idx) => (
-                                <div 
-                                  key={idx} 
-                                  className="option-item-new cursor-pointer"
-                                  onClick={() => option.nextMenuId && handleMenuSelect(option.nextMenuId)}
+                            <div className="country-list">
+                              {filteredCountries.map((country) => (
+                                <DropdownItem
+                                  key={country.code}
+                                  onClick={() => handleCountrySelect(country)}
+                                  className="country-item"
                                 >
-                                  <div className="option-number">{option.id}</div>
-                                  <div className="option-content">
-                                    <div className="option-title">{option.title}</div>
-                                    {option.nextMenuId && (
-                                      <div className="option-flow">
-                                        <ArrowRight size={14} />
-                                        <span className="next-menu-id">{option.nextMenuId}</span>
-                                        <Plus 
-                                          size={14} 
-                                          className="ms-2 text-primary cursor-pointer" 
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const parentMenu = menus.find(m => m.menuId === option.nextMenuId);
-                                            if (parentMenu) {
-                                              createSubMenu(parentMenu);
-                                            } else {
-                                              createSubMenu({
-                                                menuId: option.nextMenuId,
-                                                menuTitle: option.title
-                                              });
-                                            }
-                                          }}
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                                  <span className="me-2">{country.flag}</span>
+                                  <span className="country-name">
+                                    {country.country}
+                                  </span>
+                                  <span className="country-code">
+                                    +{country.code}
+                                  </span>
+                                </DropdownItem>
                               ))}
                             </div>
-                          )}
+                          </DropdownMenu>
+                        </Dropdown>
+                        <Input
+                          type="tel"
+                          placeholder="Enter phone number"
+                          value={formData.to}
+                          onChange={(e) => handlePhoneChange(e.target.value)}
+                          className="phone-input"
+                          required
+                        />
+                      </InputGroup>
+                    </FormGroup>
+  
+                    {/* Dynamic Fields */}
+                    <div className="dynamic-fields">{renderDynamicFields()}</div>
+  
+                    {/* Header Parameters */}
+                    <div className="header-params">{renderHeaderParams()}</div>
+  
+                    {/* Submit Button */}
+                    <div className="w-full">
+  <div className="sending-schedule mb-4">
+    <h5 className="mb-2">Sending Schedule <span className="required">REQUIRED</span></h5>
+    <div className="d-flex gap-2">
+      <Button 
+        color={showSchedule ? "secondary" : "primary"} 
+        className="flex-grow-1 d-flex align-items-center justify-content-center"
+        onClick={() => {
+          setShowSchedule(false);
+          handleSubmit();
+        }}
+        disabled={isSending || template.status !== "APPROVED"}
+      >
+        <i className="fas fa-bolt me-2"></i>
+        Send Immediately
+      </Button>
+      <Button
+        color={showSchedule ? "primary" : "secondary"}
+        className="flex-grow-1 d-flex align-items-center justify-content-center"
+        onClick={() => setShowSchedule(!showSchedule)}
+        disabled={isSending || template.status !== "APPROVED"}
+      >
+        <i className="far fa-clock me-2"></i>
+        Schedule for Later
+      </Button>
+    </div>
+  </div>
 
-                          {menu.menuType === 'prompt' && (
-                            <div className="prompt-content">
-                              <div className="prompt-text">
-                                <FileText size={16} className="me-2" />
-                                {menu.prompt}
-                              </div>
-                              <div className="validation-type">
-                                <AlertTriangle size={16} className="me-2" />
-                                Validates: {menu.validationType}
-                              </div>
-                              {menu.nextMenuId && (
-                                <div 
-                                  className="next-menu-flow cursor-pointer"
-                                  onClick={() => handleMenuSelect(menu.nextMenuId)}
-                                >
-                                  <ChevronRight size={16} className="me-2" />
-                                  Next: {menu.nextMenuId}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="menu-actions-new">
-                            <Button 
-                              color="light"
-                              className="edit-btn"
-                              onClick={() => editMenu(menu)}
-                            >
-                              <Edit2 size={16} /> Edit
-                            </Button>
-                            <Button 
-                              color="danger"
-                              className="delete-btn"
-                              onClick={() => handleDelete(menu.menuId)}
-                            >
-                              <Trash2 size={16} /> Delete
-                            </Button>
-                          </div>
-
-                          {/* Expanded Child Menus */}
-                          {isExpanded && childMenus.length > 0 && (
-                            <div className="child-menus mt-4">
-                              <div className="ps-4 border-start">
-                                {childMenus.map(childMenu => (
-                                  <div 
-                                    key={childMenu.menuId}
-                                    className="child-menu-item mb-3 cursor-pointer"
-                                    onClick={() => handleMenuSelect(childMenu.menuId)}
-                                  >
-                                    <Badge color="light" className="mb-2">
-                                      {childMenu.menuType === 'options' ? 'Multiple Choice' : 'User Input'}
-                                    </Badge>
-                                    <h5>{childMenu.menuTitle}</h5>
-                                    <small className="text-muted">{childMenu.menuId}</small>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </CardBody>
-                      </Card>
-                    </div>
-                  );
-                })
-            ) : (
-              <div className="text-center p-5">
-                <MenuIcon size={48} className="text-muted mb-3" />
-                <h4 className="text-muted">Select a menu from the sidebar to view its details</h4>
-              </div>
-            )}
+  {showSchedule && (
+    <div className="schedule-container p-3 bg-light rounded border mb-4">
+      <div className="d-flex align-items-center gap-3">
+        <div className="position-relative flex-grow-1">
+          <div className="position-absolute start-0 top-50 translate-middle-y ps-3">
+            <i className="far fa-calendar text-muted"></i>
           </div>
-
-          <Modal isOpen={modalOpen} toggle={toggleModal} size="lg" className="menu-modal">
-            <ModalHeader toggle={toggleModal} className="bg-primary text-white border-0">
-              <h4 className="mb-0 text-white">
-                {currentMenu ? 'Edit Menu' : 'Create Menu'}
-              </h4>
-            </ModalHeader>
-            <ModalBody className="p-4">
-              <Form onSubmit={handleSubmit}>
-                <div className="bg-light p-4 rounded mb-4">
-                  <Row>
-                    <Col md={6}>
-                      <FormGroup>
-                        <Label className="fw-bold">Menu ID</Label>
-                        <Input
-                          className="rounded-3 border-2"
-                          value={formData.menuId}
-                          onChange={(e) => handleInputChange(e, 'menuId')}
-                          disabled={isFirstMenu}
-                          required
-                        />
-                      </FormGroup>
-                    </Col>
-                    <Col md={6}>
-                      <FormGroup>
-                        <Label className="fw-bold">Menu Title</Label>
-                        <Input
-                          className="rounded-3 border-2"
-                          value={formData.menuTitle}
-                          onChange={(e) => handleInputChange(e, 'menuTitle')}
-                          required
-                        />
-                      </FormGroup>
-                    </Col>
-                    <Col md={6}>
-                      <FormGroup>
-                        <Label className="fw-bold">Is Main Menu</Label>
-                        <Input
-                          type="select"
-                          className="rounded-3 border-2"
-                          value={formData.isMainMenu}
-                          onChange={(e) => handleInputChange(e, 'isMainMenu', false, null, true)}
-                        >
-                          <option value={false}>No</option>
-                          <option value={true}>Yes</option>
-                        </Input>
-                      </FormGroup>
-                    </Col>
-                  </Row>
-
-        {formData.menuType === 'prompt' && formData.validationType === 'date' && (
-            <div className="validation-rules mb-3">
-              <FormGroup>
-                <Label className="fw-bold">Date Format</Label>
-                <Input
-                  type="select"
-                  className="rounded-3 border-2"
-                  value={formData.validationRules.format}
-                  onChange={handleValidationFormatChange}
-                >
-                  {validationFormats.date.map((format, index) => (
-                    <option key={index} value={format.value}>
-                      {format.label} (Example: {format.example})
-                    </option>
-                  ))}
-                </Input>
-                <small className="text-muted d-block mt-2">
-                  <Calendar size={14} className="me-1" />
-                  This format will be used to validate user input
-                </small>
-              </FormGroup>
-
-              <div className="validation-example mt-3 p-3 bg-light rounded-3 border">
-                <div className="d-flex align-items-start">
-                  <AlertTriangle size={16} className="me-2 mt-1 text-warning" />
-                  <div>
-                    <div className="fw-bold mb-1">Format Requirements:</div>
-                    <div className="text-muted">{getValidationExample()}</div>
-                    <div className="mt-2">
-                      <span className="fw-bold">Example: </span>
-                      {validationFormats.date.find(f => f.value === formData.validationRules.format)?.example}
+          <Input
+            type="datetime-local"
+            value={scheduleTime}
+            onChange={(e) => setScheduleTime(e.target.value)}
+            className="ps-5"
+            min={new Date().toISOString().slice(0, 16)}
+            required
+          />
+        </div>
+        <Button
+          color="primary"
+          onClick={handleScheduleSubmit}
+          disabled={!scheduleTime}
+        >
+          Schedule
+        </Button>
+      </div>
+    </div>
+  )}
+</div>
+  
+                    {template.status !== "APPROVED" && (
+                      <Alert color="warning" className="status-alert mt-3">
+                        <i className="fas fa-exclamation-triangle me-2"></i>
+                        This template is not approved and cannot be sent.
+                      </Alert>
+                    )}
+                  </form>
+                </CardBody>
+              </Card>
+            </Fade>
+          </div>
+  
+          {/* Preview Section */}
+          <div className="col-md-6">
+            <Fade>
+              <Card className="preview-card">
+                <CardHeader className="bg-white border-bottom-0">
+                  <h4 className="mb-0">
+                    Message Preview
+                  </h4>
+                </CardHeader>
+                <CardBody>
+                  <div className="preview-container">
+                    <div className="message-bubble">
+                      {template.components.find((c) => c.type === "HEADER")
+                        ?.format === "IMAGE" && (
+                        <div className="preview-image">
+                          {headerParams.mediaUrl ? (
+                            <img
+                              src={headerParams.mediaUrl}
+                              alt="Preview"
+                              className="preview-img"
+                              onError={(e) => (e.target.style.display = "none")}
+                            />
+                          ) : (
+                            <div className="placeholder-image">
+                              <i className="fas fa-image"></i>
+                              <span>Add an image</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="message-text">{getPreviewText()}</div>
+                      {template.components.find((c) => c.type === "FOOTER") && (
+                        <div className="message-footer">
+                          {
+                            template.components.find((c) => c.type === "FOOTER")
+                              .text
+                          }
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-        <Row>
-          <Col md={formData.menuType === 'prompt' ? 6 : 12}>
-            <FormGroup>
-              <Label className="fw-bold">Menu Type</Label>
-              <Input
-                type="select"
-                className="rounded-3 border-2"
-                value={formData.menuType}
-                onChange={(e) => handleInputChange(e, 'menuType')}
-              >
-                <option value="options">Options Menu</option>
-                <option value="prompt">Prompt Menu</option>
-              </Input>
-            </FormGroup>
-          </Col>
-          
-          {formData.menuType === 'prompt' && (
-            <Col md={6}>
-              <FormGroup>
-                <Label className="fw-bold">Validation Type</Label>
-                <Input
-                  type="select"
-                  className="rounded-3 border-2"
-                  value={formData.validationType}
-                  onChange={handleValidationTypeChange}
-                >
-                  <option value="none">No Validation</option>
-                  <option value="number">Number Only</option>
-                  <option value="date">Date Format</option>
-                  <option value="phone">Phone Number</option>
-                  <option value="email">Email Address</option>
-                  <option value="text">Text Input</option>
-                </Input>
-              </FormGroup>
-            </Col>
-          )}
-        </Row>
-      </div>
-
-      {formData.menuType === 'prompt' && (
-        <div className="bg-light p-4 rounded mb-4">
-          <FormGroup className="mb-3">
-            <Label className="fw-bold">Prompt Text</Label>
-            <Input
-              type="textarea"
-              className="rounded-3 border-2"
-              value={formData.prompt || ''}
-              onChange={(e) => handleInputChange(e, 'prompt')}
-              placeholder="Enter prompt text for user..."
-              rows="3"
-            />
-          </FormGroup>
-
-          {formData.validationType !== 'none' && (
-            <div className="validation-rules mb-3">
-              {formData.validationType === 'date' && (
-                <FormGroup>
-                  <Label className="fw-bold">Date Format</Label>
-                  <Input
-                    type="select"
-                    className="rounded-3 border-2"
-                    value={formData.validationRules.format}
-                    onChange={handleValidationFormatChange}
-                  >
-                    {validationFormats.date.map((format, index) => (
-                      <option key={index} value={format.value}>
-                        {format.label} (Example: {format.example})
-                      </option>
-                    ))}
-                  </Input>
-                </FormGroup>
-              )}
-
-              {formData.validationType === 'number' && (
-                <Row>
-                  <Col md={6}>
-                    <FormGroup>
-                      <Label className="fw-bold">Minimum Value</Label>
-                      <Input
-                        type="number"
-                        className="rounded-3 border-2"
-                        value={formData.validationRules.min}
-                        onChange={(e) => handleInputChange(e, 'validationRules.min')}
-                      />
-                    </FormGroup>
-                  </Col>
-                  <Col md={6}>
-                    <FormGroup>
-                      <Label className="fw-bold">Maximum Value</Label>
-                      <Input
-                        type="number"
-                        className="rounded-3 border-2"
-                        value={formData.validationRules.max}
-                        onChange={(e) => handleInputChange(e, 'validationRules.max')}
-                      />
-                    </FormGroup>
-                  </Col>
-                </Row>
-              )}
-
-              {(formData.validationType === 'phone' || 
-                formData.validationType === 'email' || 
-                formData.validationType === 'text') && (
-                <FormGroup>
-                  <Label className="fw-bold">Format Type</Label>
-                  <Input
-                    type="select"
-                    className="rounded-3 border-2"
-                    value={formData.validationRules.format}
-                    onChange={handleValidationFormatChange}
-                  >
-                    {validationFormats[formData.validationType].map((format, index) => (
-                      <option key={index} value={format.value}>
-                        {format.label} (Example: {format.example})
-                      </option>
-                    ))}
-                  </Input>
-                </FormGroup>
-              )}
-
-              <div className="validation-example mt-3 p-3 bg-white rounded-3 border">
-                <div className="d-flex align-items-center text-muted">
-                  <AlertTriangle size={16} className="me-2" />
-                  <span>Expected Format: {getValidationExample()}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <FormGroup>
-            <Label className="fw-bold">API Call</Label>
-            <Input
-              className="rounded-3 border-2"
-              value={formData.apiCall || ''}
-              onChange={(e) => handleInputChange(e, 'apiCall')}
-              placeholder="Enter API endpoint or function"
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label className="fw-bold">API Response Text</Label>
-            <Input
-              className="rounded-3 border-2"
-              value={formData.apiText || ''}
-              onChange={(e) => handleInputChange(e, 'apiText')}
-              placeholder="Enter API response text"
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label className="fw-bold">Next Menu ID</Label>
-            <Input
-              className="rounded-3 border-2"
-              value={formData.nextMenuId || ''}
-              onChange={(e) => handleInputChange(e, 'nextMenuId')}
-              placeholder="Enter next menu ID"
-            />
-          </FormGroup>
-        </div>
-      )}
-
-      {formData.menuType === 'options' && (
-        <div className="bg-light p-4 rounded">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h5 className="mb-0 fw-bold">Menu Options</h5>
-            <Button 
-              color="primary" 
-              outline 
-              onClick={addOption}
-              className="d-flex align-items-center gap-2"
-            >
-              <Plus size={16} /> Add Option
-            </Button>
-          </div>
-
-          <div className="options-container">
-            {formData.menuOptions.map((option, index) => (
-              <div key={index} className="bg-white p-3 rounded shadow-sm mb-3">
-                <Row className="align-items-center">
-                  <Col md={1}>
-                    <div className="bg-light rounded-circle d-flex align-items-center justify-content-center" style={{width: "32px", height: "32px"}}>
-                      {option.id}
-                    </div>
-                  </Col>
-                  <Col md={3}>
-                    <Input
-                      className="rounded-3 border-2"
-                      placeholder="Option Title"
-                      value={option.title}
-                      onChange={(e) => handleInputChange(e, 'title', true, index)}
-                    />
-                  </Col>
-                  <Col md={2}>
-                    <Input
-                      className="rounded-3 border-2"
-                      placeholder="Next Menu ID"
-                      value={option.nextMenuId}
-                      onChange={(e) => handleInputChange(e, 'nextMenuId', true, index)}
-                    />
-                  </Col>
-                  <Col md={2}>
-                    <Input
-                      className="rounded-3 border-2"
-                      placeholder="API Call"
-                      value={option.apiCall}
-                      onChange={(e) => handleInputChange(e, 'apiCall', true, index)}
-                    />
-                  </Col>
-                  <Col md={3}>
-                    <Input
-                      className="rounded-3 border-2"
-                      placeholder="API Text"
-                      value={option.apiText}
-                      onChange={(e) => handleInputChange(e, 'apiText', true, index)}
-                    />
-                  </Col>
-                  <Col md={1}>
-                    <Button 
-                      color="danger" 
-                      outline
-                      className="rounded-circle p-2"
-                      onClick={() => removeOption(index)}
-                    >
-                      <X size={16} />
-                    </Button>
-                  </Col>
-                </Row>
-              </div>
-            ))}
+                </CardBody>
+              </Card>
+            </Fade>
           </div>
         </div>
-      )}
-
-<div className="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
-                  <Button 
-                    color="secondary" 
-                    outline
-                    onClick={toggleModal}
-                    className="px-4"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    color="primary" 
-                    type="submit"
-                    className="px-4"
-                  >
-                    {currentMenu ? 'Update Menu' : 'Create Menu'}
-                  </Button>
-                </div>
-              </Form>
-            </ModalBody>
-          </Modal>
-        </div>
       </div>
-    </Container>
-    </>
-  );
-};
-
-export default WhatsAppCreateMenus;
+      
+    );
+  };
+  
+  export default SendTemplate;
