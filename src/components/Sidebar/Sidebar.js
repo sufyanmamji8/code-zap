@@ -104,7 +104,7 @@ const Sidebar = (props) => {
   const whatsAppRoutes = [
     { name: "Back to Owner", icon: "ni ni-bold-left", path: "/dashboard", layout: "/admin" },
     { name: "Menus", icon: "ni ni-app", path: "/menus", layout: "/admin", dropdown: true, subRoutes: [
-      { name: "Menus Access", path: "/Menus-access", icon: "ni ni-key-25" },
+      { name: "Menu Assign", path: "/Menus-assign", icon: "ni ni-key-25" },
       { name: "Create Menus", path: "/Create-menus", icon: "ni ni-fat-add" }
     ]},
     { name: "Chats", icon: "ni ni-chat-round", path: "/chats", layout: "/admin" },
@@ -113,10 +113,10 @@ const Sidebar = (props) => {
       { name: "Create Agent", path: "/createagents" , icon: "ni ni-circle-08 text-gray" }
     ]},
     { name: "Contacts", icon: "ni ni-single-02", path: "/contacts", layout: "/admin", dropdown: true, subRoutes: [
-      { name: "List", path: "/contactslist" },
+      // { name: "List", path: "/contactslist" },
       { name: "Group", path: "/contactsGroup" },
-      { name: "Fields", path: "/contactsFields" },
-      { name: "Import Fields", path: "/contactsImport" }
+      // { name: "Fields", path: "/contactsFields" },
+      // { name: "Import Fields", path: "/contactsImport" }
     ]},
     { name: "Templates", icon: "ni ni-single-copy-04", path: "/templates", layout: "/admin" },
     { name: "Campaign", icon: "ni ni-notification-70", path: "/campaign", layout: "/admin" },

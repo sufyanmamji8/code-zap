@@ -6,22 +6,27 @@ import {
   InputGroup, InputGroupText, Badge,
   Dropdown, DropdownToggle, DropdownMenu, DropdownItem
 } from 'reactstrap';
+import axios from 'axios';
 import { countryList } from '../Pages/countryList';
 import { Plus, Edit2, Trash2, Upload, Users, Search, Phone, FileText, ChevronDown } from 'lucide-react';
 import { GROUP_ENDPOINTS } from 'Api/Constant';
 
 const WhatsappGroup = () => {
+  // Find Pakistan in the countryList
+  const pakistanCountry = countryList.find(country => country.country === 'Pakistan') || countryList[0];
+  
   const [groups, setGroups] = useState([]);
   const [modal, setModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [currentGroupId, setCurrentGroupId] = useState(null);
   const [editIndex, setEditIndex] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [countryDropdown, setCountryDropdown] = useState(false);
   const [searchCountry, setSearchCountry] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
+  const [selectedCountry, setSelectedCountry] = useState(pakistanCountry);
   const [formData, setFormData] = useState({
     groupName: '',
-    countryCode: '1',
+    countryCode: pakistanCountry.code,
     phoneNumber: '',
     numbers: []
   });
@@ -41,9 +46,14 @@ const WhatsappGroup = () => {
     }
   };
 
-  const filteredCountries = countryList.filter(country => 
-    country.country.toLowerCase().includes(searchCountry.toLowerCase()) ||
-    country.code.includes(searchCountry)
+  // Fix: Make sure filteredCountries is properly populated
+  const filteredCountries = countryList?.filter(country => 
+    country?.country?.toLowerCase().includes(searchCountry.toLowerCase()) ||
+    country?.code?.includes(searchCountry)
+  ) || [];
+
+  const filteredGroups = groups.filter(group => 
+    group?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleCountrySelect = (country) => {
@@ -60,11 +70,13 @@ const WhatsappGroup = () => {
     if (!modal) {
       setFormData({
         groupName: '',
-        countryCode: '1',
+        countryCode: pakistanCountry.code,
         phoneNumber: '',
         numbers: []
       });
       setEditMode(false);
+      // Reset selected country to Pakistan when opening the modal
+      setSelectedCountry(pakistanCountry);
     }
   };
 
@@ -77,7 +89,8 @@ const WhatsappGroup = () => {
 
   const handleAddNumber = () => {
     if (formData.phoneNumber && formData.countryCode) {
-      const fullNumber = `+${formData.countryCode}${formData.phoneNumber}`;
+      // Store the number without the "+" symbol
+      const fullNumber = `${formData.countryCode}${formData.phoneNumber}`;
       if (!formData.numbers.includes(fullNumber)) {
         setFormData({
           ...formData,
@@ -104,9 +117,16 @@ const WhatsappGroup = () => {
         const csvData = event.target.result.split('\n')
           .map(line => line.trim())
           .filter(line => line);
+        
+        // Process each number to ensure no "+" symbol is stored
+        const processedNumbers = csvData.map(number => {
+          // Remove any "+" if present in the imported data
+          return number.startsWith('+') ? number.substring(1) : number;
+        });
+        
         setFormData({
           ...formData,
-          numbers: [...formData.numbers, ...csvData]
+          numbers: [...formData.numbers, ...processedNumbers]
         });
       };
       reader.readAsText(file);
@@ -133,12 +153,17 @@ const WhatsappGroup = () => {
         const formDataObj = new FormData();
         formDataObj.append('name', formData.groupName);
         
-        // If numbers exist, create a CSV file
-        if (formData.numbers.length > 0) {
-          const csvContent = formData.numbers.map(number => ({phoneNumber: number}));
-          const csvFile = new Blob([JSON.stringify(csvContent)], { type: 'text/csv' });
-          formDataObj.append('csvFile', csvFile, 'numbers.csv');
-        }
+       // With this:
+if (formData.numbers.length > 0) {
+    // Create proper CSV content with header and rows
+    const csvHeader = "phoneNumber\n";
+    const csvRows = formData.numbers.map(number => number).join("\n");
+    const csvContent = csvHeader + csvRows;
+    
+    // Create a properly formatted CSV file
+    const csvFile = new Blob([csvContent], { type: 'text/csv' });
+    formDataObj.append('csvFile', csvFile, 'numbers.csv');
+  }
 
         const response = await axios.post(
           GROUP_ENDPOINTS.CREATE,
@@ -167,12 +192,14 @@ const WhatsappGroup = () => {
         setCurrentGroupId(groupId);
         setFormData({
           groupName: group.name,
-          countryCode: '1',
+          countryCode: pakistanCountry.code,
           phoneNumber: '',
           numbers: group.allowedPhoneNumbers || []
         });
         setEditMode(true);
         setModal(true);
+        // Reset selected country to Pakistan when editing
+        setSelectedCountry(pakistanCountry);
       }
     } catch (error) {
       console.error('Error setting up edit mode:', error);
@@ -189,10 +216,6 @@ const WhatsappGroup = () => {
       console.error('Error deleting group:', error);
     }
   };
-
-  const filteredGroups = groups.filter(group => 
-    group.groupName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <Container fluid className="p-4 bg-light min-vh-100">
@@ -239,54 +262,54 @@ const WhatsappGroup = () => {
           </Row>
           
           <Table hover borderless className="align-middle mb-0">
-        <thead className="bg-light">
-          <tr>
-            <th className="ps-4">#</th>
-            <th>Group Name</th>
-            <th>Members</th>
-            <th className="text-end pe-4">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredGroups.map((group, index) => (
-            <tr key={group._id}>
-              <td className="ps-4">{index + 1}</td>
-              <td>
-                <div className="d-flex align-items-center">
-                  <div className="group-icon me-3 bg-primary text-white rounded-circle p-2">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <h6 className="mb-0">{group.name}</h6>
-                    <small className="text-muted">Created today</small>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <Badge color="info" pill className="px-3 py-2">
-                  {group.allowedPhoneNumbers?.length || 0} members
-                </Badge>
-              </td>
-              <td className="text-end pe-4">
-                <Button 
-                  color="light"
-                  className="me-2 btn-icon"
-                  onClick={() => handleEdit(group._id)}
-                >
-                  <Edit2 size={16} />
-                </Button>
-                <Button 
-                  color="light" 
-                  className="btn-icon text-danger"
-                  onClick={() => handleDelete(group._id)}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+            <thead className="bg-light">
+              <tr>
+                <th className="ps-4">#</th>
+                <th>Group Name</th>
+                <th>Members</th>
+                <th className="text-end pe-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredGroups.map((group, index) => (
+                <tr key={group._id}>
+                  <td className="ps-4">{index + 1}</td>
+                  <td>
+                    <div className="d-flex align-items-center">
+                      <div className="group-icon me-3 bg-primary text-white rounded-circle p-2">
+                        <Users size={20} />
+                      </div>
+                      <div>
+                        <h6 className="mb-0">{group.name}</h6>
+                        <small className="text-muted">Created today</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <Badge color="info" pill className="px-3 py-2">
+                      {group.allowedPhoneNumbers?.length || 0} members
+                    </Badge>
+                  </td>
+                  <td className="text-end pe-4">
+                    <Button 
+                      color="light"
+                      className="me-2 btn-icon"
+                      onClick={() => handleEdit(group._id)}
+                    >
+                      <Edit2 size={16} />
+                    </Button>
+                    <Button 
+                      color="light" 
+                      className="btn-icon text-danger"
+                      onClick={() => handleDelete(group._id)}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         </CardBody>
       </Card>
 
@@ -330,72 +353,70 @@ const WhatsappGroup = () => {
             <FormGroup className="mb-4">
               <Label className="fw-bold mb-2 d-flex align-items-center">
                 <Phone size={18} className="me-2" />
-                Add Phone Numbers
+                Phone Number
               </Label>
-              <Row className="gx-2">
-                <Col md={4}>
-                  <Dropdown 
-                    isOpen={countryDropdown} 
-                    toggle={() => setCountryDropdown(!countryDropdown)}
-                    className="country-dropdown mb-2 mb-md-0"
+              <div className="phone-input-container">
+                <div className="country-code-display" onClick={() => setCountryDropdown(!countryDropdown)}>
+                  <span className="country-code-flag me-1">{selectedCountry.flag}</span>
+                  <span className="country-code-text">
+                    {selectedCountry.code.length <= 2 ? `${selectedCountry.code.substring(0, 2)}` : `${selectedCountry.code.substring(0, 2)}..`}
+                  </span>
+                  <ChevronDown size={16} className="ms-1" />
+                </div>
+                <div className="phone-input-wrapper">
+                  <Input
+                    type="text"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    placeholder="Enter phone number"
+                    className="phone-input"
+                  />
+                  <Button 
+                    color="primary" 
+                    onClick={handleAddNumber}
+                    className="phone-add-btn"
                   >
-                    <DropdownToggle caret className="w-100 d-flex align-items-center justify-content-between bg-white text-dark border">
-                      <span className="d-flex align-items-center">
-                        <span className="me-2">{selectedCountry.flag}</span>
-                        <span>+{selectedCountry.code}</span>
-                      </span>
-                      <ChevronDown size={16} />
-                    </DropdownToggle>
-                    <DropdownMenu className="w-100 p-0 country-dropdown-menu">
-                      <div className="p-2 border-bottom">
-                        <InputGroup size="sm">
-                          <InputGroupText className="bg-light border-0">
-                            <Search size={14} />
-                          </InputGroupText>
-                          <Input
-                            placeholder="Search country..."
-                            value={searchCountry}
-                            onChange={(e) => setSearchCountry(e.target.value)}
-                            className="border-0 bg-light"
-                          />
-                        </InputGroup>
-                      </div>
-                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        {filteredCountries.map((country) => (
-                          <DropdownItem 
+                    Add
+                  </Button>
+                </div>
+                
+                {/* Improved Country Dropdown with better CSS and z-index */}
+                {countryDropdown && (
+                  <div className="country-dropdown-absolute shadow-lg">
+                    <div className="country-search-container border-bottom sticky-top">
+                      <InputGroup size="sm">
+                        <InputGroupText className="bg-light border-0">
+                          <Search size={14} />
+                        </InputGroupText>
+                        <Input
+                          placeholder="Search country..."
+                          value={searchCountry}
+                          onChange={(e) => setSearchCountry(e.target.value)}
+                          className="border-0 bg-light"
+                        />
+                      </InputGroup>
+                    </div>
+                    <div className="country-list-container">
+                      {filteredCountries.length > 0 ? (
+                        filteredCountries.map((country) => (
+                          <div 
                             key={country.code}
                             onClick={() => handleCountrySelect(country)}
-                            className="d-flex align-items-center py-2"
+                            className={`country-list-item ${selectedCountry.code === country.code ? 'active' : ''}`}
                           >
                             <span className="me-2">{country.flag}</span>
-                            <span className="me-2">{country.country}</span>
-                            <span className="text-muted">+{country.code}</span>
-                          </DropdownItem>
-                        ))}
-                      </div>
-                    </DropdownMenu>
-                  </Dropdown>
-                </Col>
-                <Col md={8}>
-                  <InputGroup>
-                    <Input
-                      type="text"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
-                      onChange={handleInputChange}
-                      placeholder="Enter phone number"
-                      className="form-control-lg border-2"
-                    />
-                    <Button 
-                      color="primary" 
-                      onClick={handleAddNumber}
-                      className="px-4"
-                    >
-                      Add
-                    </Button>
-                  </InputGroup>
-                </Col>
-              </Row>
+                            <span className="country-name">{country.country}</span>
+                            <span className="country-code">+{country.code}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-3 text-center text-muted">No countries found</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </FormGroup>
 
             <FormGroup className="mb-4">
@@ -467,17 +488,97 @@ const WhatsappGroup = () => {
           border-color: #80bdff;
           box-shadow: 0 0 0 0.2rem rgba(0,123,255,.1);
         }
-        .country-dropdown .dropdown-toggle {
-          height: 48px;
+        .phone-input-container {
+          display: flex;
+          align-items: stretch;
+          position: relative;
+          border: 2px solid #dee2e6;
+          border-radius: 0.375rem;
+          overflow: visible;  /* Changed from hidden to visible */
+        }
+        .country-code-display {
+          display: flex;
+          align-items: center;
           padding: 0.5rem 1rem;
-          font-size: 1rem;
+          background: #f8f9fa;
+          border-right: 2px solid #dee2e6;
+          cursor: pointer;
+          min-width: 100px;
+          justify-content: center;
+          user-select: none;
         }
-        .country-dropdown .dropdown-toggle::after {
-          display: none;
+        .country-code-flag {
+          font-size: 1.2rem;
         }
-        .country-dropdown-menu {
+        .country-code-text {
+          font-weight: 500;
+          margin-left: 0.5rem;
+          margin-right: 0.5rem;
+        }
+        .phone-input-wrapper {
+          display: flex;
+          flex: 1;
+        }
+        .phone-input {
+          border: none;
+          border-radius: 0;
+          padding-left: 1rem;
+          height: 100%;
+        }
+        .phone-input:focus {
+          box-shadow: none;
+        }
+        .phone-add-btn {
+          border-radius: 0;
+          padding-left: 1.5rem;
+          padding-right: 1.5rem;
+        }
+        .country-dropdown-absolute {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          width: 300px;
           max-height: 300px;
+          background: white;
+          border-radius: 0.5rem;
+          border: 1px solid #dee2e6;
+          z-index: 9999;  /* Increased z-index */
+          margin-top: 0.25rem;
+          overflow: visible;  /* Added */
+          display: block;  /* Added */
+        }
+        .country-search-container {
+          padding: 0.5rem;
+          background: white;
+        }
+        .country-list-container {
+          max-height: 250px;
           overflow-y: auto;
+          background: white;  /* Added */
+        }
+        .country-list-item {
+          display: flex;
+          align-items: center;
+          padding: 0.5rem 1rem;
+          cursor: pointer;
+          transition: background-color 0.15s ease;
+        }
+        .country-list-item:hover {
+          background-color: #f8f9fa;
+        }
+        .country-list-item.active {
+          background-color: #e9f0ff;
+          color: #0d6efd;
+        }
+        .country-name {
+          flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .country-code {
+          margin-left: auto;
+          color: #6c757d;
         }
         .btn-icon {
           width: 32px;
@@ -502,10 +603,14 @@ const WhatsappGroup = () => {
         .border-2 {
           border-width: 2px !important;
         }
+        .sticky-top {
+          position: sticky;
+          top: 0;
+          z-index: 1020;
+        }
       `}</style>
     </Container>
   );
 };
-
 
 export default WhatsappGroup;

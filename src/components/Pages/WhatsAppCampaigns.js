@@ -14,8 +14,10 @@ import {
   Badge,
   Alert,
   Progress,
-  Tooltip,
-  UncontrolledTooltip
+  Dropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem
 } from 'reactstrap';
 
 const WhatsAppCampaigns = () => {
@@ -28,10 +30,12 @@ const WhatsAppCampaigns = () => {
     priority: 'normal'
   });
 
-  const [tooltipOpen, setTooltipOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState({
+    template: false,
+    groups: false
+  });
 
   const templates = [
     { id: 1, name: '👋 Welcome Message', category: 'Onboarding', previewText: 'Hey {name}, welcome to our community!' },
@@ -55,30 +59,42 @@ const WhatsAppCampaigns = () => {
     }));
   };
 
-  const handleGroupSelection = (e) => {
-    const value = Array.from(e.target.selectedOptions, option => option.value);
+  const toggleDropdown = (type) => {
+    setDropdownOpen(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
+  };
+
+  const handleTemplateSelect = (templateId) => {
     setCampaignData(prev => ({
       ...prev,
-      selectedGroups: value
+      template: templateId
+    }));
+    toggleDropdown('template');
+  };
+
+  const handleGroupSelect = (groupId) => {
+    setCampaignData(prev => ({
+      ...prev,
+      selectedGroups: prev.selectedGroups.includes(groupId)
+        ? prev.selectedGroups.filter(id => id !== groupId)
+        : [...prev.selectedGroups, groupId]
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate API call with loading animation
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
     setShowSuccess(true);
     setIsSubmitting(false);
-    
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
   const getCompletionPercentage = () => {
     let filled = 0;
-    const total = 5; // Total required fields
+    const total = 5;
     if (campaignData.campaignName) filled++;
     if (campaignData.template) filled++;
     if (campaignData.selectedGroups.length > 0) filled++;
@@ -88,413 +104,178 @@ const WhatsAppCampaigns = () => {
   };
 
   return (
-    <div className="bg-light min-vh-100" style={{ backgroundImage: 'linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%)' }}>
-      <Container fluid className="p-4">
-        {/* Header Section */}
-        <Row className="mb-4">
-          <Col lg={8} className="mx-auto">
-            <div className="d-flex justify-content-between align-items-center">
-              <h2 className="mb-0 text-primary">
-                <i className="fas fa-paper-plane me-2"></i>
-                New Campaign
-              </h2>
-              <div>
-                <Button
-                  color="light"
-                  className="me-2 shadow-sm"
-                  onClick={() => setPreviewMode(!previewMode)}
-                >
-                  <i className="fas fa-eye me-1"></i>
-                  Preview
-                </Button>
-              </div>
-            </div>
-          </Col>
-        </Row>
-
-        <Row className="justify-content-center">
-          <Col lg={8}>
+    <div className="py-4">
+      <Container>
+        <Card className="shadow-sm">
+          <CardBody>
             {showSuccess && (
-              <Alert 
-                color="success" 
-                className="mb-4 shadow-sm border-0"
-                style={{ 
-                  borderLeft: '4px solid #28a745',
-                  animation: 'slideDown 0.5s ease-out'
-                }}
-              >
-                <div className="d-flex align-items-center">
-                  <i className="fas fa-check-circle fa-lg me-2"></i>
-                  <div>
-                    <h5 className="mb-1">Campaign Created Successfully!</h5>
-                    <p className="mb-0">Your messages will be delivered as scheduled.</p>
-                  </div>
-                </div>
+              <Alert color="success" className="mb-4">
+                Campaign created successfully!
               </Alert>
             )}
 
-            <Card className="shadow border-0 rounded-lg">
-              <div className="p-4 border-bottom bg-white rounded-top">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h4 className="mb-1">Campaign Progress</h4>
-                    <p className="text-muted mb-0">Complete all required fields</p>
-                  </div>
-                  <h3 className="mb-0">{Math.round(getCompletionPercentage())}%</h3>
-                </div>
-                <Progress 
-                  value={getCompletionPercentage()} 
-                  className="mt-3"
-                  style={{ 
-                    height: '8px',
-                    borderRadius: '4px',
-                    backgroundColor: '#e9ecef'
-                  }}
-                />
-              </div>
+            <div className="mb-4">
+              <h4>Campaign Progress</h4>
+              <Progress value={getCompletionPercentage()} className="mt-2" />
+            </div>
 
-              <CardBody className="p-4">
-                <Form onSubmit={handleSubmit}>
+            <Form onSubmit={handleSubmit}>
+              <Row>
+                {/* Column 1 */}
+                <Col md={6}>
                   {/* Campaign Name */}
                   <FormGroup className="mb-4">
-                    <Label for="campaignName" className="fw-bold h6">
+                    <Label className="fw-bold">
                       Campaign Name
                       <Badge color="primary" pill className="ms-2">Required</Badge>
                     </Label>
-                    <div className="input-group">
-                      <span className="input-group-text bg-light">
-                        <i className="fas fa-tag"></i>
-                      </span>
-                      <Input
-                        type="text"
-                        name="campaignName"
-                        id="campaignName"
-                        placeholder="Enter a memorable name for your campaign"
-                        value={campaignData.campaignName}
-                        onChange={handleInputChange}
-                        className="form-control-lg"
-                        required
-                      />
-                    </div>
+                    <Input
+                      type="text"
+                      name="campaignName"
+                      value={campaignData.campaignName}
+                      onChange={handleInputChange}
+                      placeholder="Enter campaign name"
+                      required
+                    />
                   </FormGroup>
 
                   {/* Template Selection */}
-                  <FormGroup className="mb-4">
-                    <Label for="template" className="fw-bold h6">
+                  <FormGroup className="mb-4 position-relative">
+                    <Label className="fw-bold">
                       Message Template
                       <Badge color="primary" pill className="ms-2">Required</Badge>
                     </Label>
-                    <div className="input-group">
-                      <span className="input-group-text bg-light">
-                        <i className="fas fa-envelope"></i>
-                      </span>
-                      <Input
-                        type="select"
-                        name="template"
-                        id="template"
-                        value={campaignData.template}
-                        onChange={handleInputChange}
-                        className="form-control-lg"
-                        required
-                      >
-                        <option value="">Select a template...</option>
+                    <Dropdown isOpen={dropdownOpen.template} toggle={() => toggleDropdown('template')} className="w-100">
+                      <DropdownToggle caret color="light" className="w-100 text-start">
+                        {campaignData.template 
+                          ? templates.find(t => t.id === parseInt(campaignData.template))?.name 
+                          : 'Select a template...'}
+                      </DropdownToggle>
+                      <DropdownMenu className="w-100">
                         {templates.map(template => (
-                          <option key={template.id} value={template.id}>
-                            {template.name} • {template.category}
-                          </option>
+                          <DropdownItem 
+                            key={template.id}
+                            onClick={() => handleTemplateSelect(template.id)}
+                          >
+                            {template.name}
+                          </DropdownItem>
                         ))}
-                      </Input>
-                    </div>
-                    {campaignData.template && (
-                      <div className="mt-3 p-3 bg-light rounded border">
-                        <small className="text-muted d-block mb-1">Template Preview</small>
-                        <div className="preview-text">
-                          {templates.find(t => t.id === parseInt(campaignData.template))?.previewText}
-                        </div>
-                      </div>
-                    )}
+                      </DropdownMenu>
+                    </Dropdown>
                   </FormGroup>
-
-                  {/* Send Type Selection */}
-                  <FormGroup className="mb-4">
-                    <Label className="fw-bold h6 d-block mb-3">
-                      Sending Schedule
-                      <Badge color="primary" pill className="ms-2">Required</Badge>
-                    </Label>
-                    <ButtonGroup className="w-100 shadow-sm">
-                      <Button
-                        color={campaignData.sendType === 'now' ? 'primary' : 'light'}
-                        onClick={() => setCampaignData(prev => ({ ...prev, sendType: 'now' }))}
-                        className="py-3 px-4"
-                        outline={campaignData.sendType !== 'now'}
-                      >
-                        <i className="fas fa-bolt me-2"></i>
-                        Send Immediately
-                      </Button>
-                      <Button
-                        color={campaignData.sendType === 'later' ? 'primary' : 'light'}
-                        onClick={() => setCampaignData(prev => ({ ...prev, sendType: 'later' }))}
-                        className="py-3 px-4"
-                        outline={campaignData.sendType !== 'later'}
-                      >
-                        <i className="fas fa-clock me-2"></i>
-                        Schedule for Later
-                      </Button>
-                    </ButtonGroup>
-                  </FormGroup>
-
-                  {/* Schedule Time */}
-                  {campaignData.sendType === 'later' && (
-                    <FormGroup className="mb-4">
-                      <Label for="scheduledTime" className="fw-bold h6">
-                        Schedule Time
-                        <Badge color="primary" pill className="ms-2">Required</Badge>
-                      </Label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light">
-                          <i className="fas fa-calendar"></i>
-                        </span>
-                        <Input
-                          type="datetime-local"
-                          name="scheduledTime"
-                          id="scheduledTime"
-                          value={campaignData.scheduledTime}
-                          onChange={handleInputChange}
-                          className="form-control-lg"
-                          required
-                        />
-                      </div>
-                    </FormGroup>
-                  )}
 
                   {/* Priority Selection */}
-                  <FormGroup className="mb-4">
-                    <Label className="fw-bold h6">
-                      Campaign Priority
+                  {/* <FormGroup className="mb-4">
+                    <Label className="fw-bold">
+                      Priority
                       <Badge color="primary" pill className="ms-2">Required</Badge>
                     </Label>
-                    <div className="d-flex gap-2">
+                    <ButtonGroup className="w-100">
                       {['low', 'normal', 'high'].map((priority) => (
                         <Button
                           key={priority}
                           color={campaignData.priority === priority ? 'primary' : 'light'}
-                          outline={campaignData.priority !== priority}
                           onClick={() => setCampaignData(prev => ({ ...prev, priority }))}
-                          className="flex-grow-1 py-2 text-capitalize"
+                          className="text-capitalize"
                         >
-                          <i className={`fas fa-${priority === 'low' ? 'angle-down' : priority === 'normal' ? 'equals' : 'angle-up'} me-2`}></i>
                           {priority}
                         </Button>
                       ))}
-                    </div>
+                    </ButtonGroup>
+                  </FormGroup> */}
+                </Col>
+
+                {/* Column 2 */}
+                <Col md={6}>
+                  {/* Send Type */}
+                  <FormGroup className="mb-4">
+                    <Label className="fw-bold">
+                      Sending Schedule
+                      <Badge color="primary" pill className="ms-2">Required</Badge>
+                    </Label>
+                    <ButtonGroup className="w-100">
+                      <Button
+                        color={campaignData.sendType === 'now' ? 'primary' : 'light'}
+                        onClick={() => setCampaignData(prev => ({ ...prev, sendType: 'now' }))}
+                      >
+                        Send Now
+                      </Button>
+                      <Button
+                        color={campaignData.sendType === 'later' ? 'primary' : 'light'}
+                        onClick={() => setCampaignData(prev => ({ ...prev, sendType: 'later' }))}
+                      >
+                        Schedule
+                      </Button>
+                    </ButtonGroup>
+                    {campaignData.sendType === 'later' && (
+                      <Input
+                        type="datetime-local"
+                        name="scheduledTime"
+                        value={campaignData.scheduledTime}
+                        onChange={handleInputChange}
+                        className="mt-2"
+                        required
+                      />
+                    )}
                   </FormGroup>
 
                   {/* Group Selection */}
-                  <FormGroup className="mb-4">
-                    <Label for="groups" className="fw-bold h6">
+                  <FormGroup className="mb-4 position-relative">
+                    <Label className="fw-bold">
                       Target Groups
                       <Badge color="primary" pill className="ms-2">Required</Badge>
                     </Label>
-                    <div className="input-group">
-                      <span className="input-group-text bg-light">
-                        <i className="fas fa-users"></i>
-                      </span>
-                      <Input
-                        type="select"
-                        name="groups"
-                        id="groups"
-                        multiple
-                        value={campaignData.selectedGroups}
-                        onChange={handleGroupSelection}
-                        className="form-control-lg"
-                        style={{ height: '200px' }}
-                      >
+                    <Dropdown isOpen={dropdownOpen.groups} toggle={() => toggleDropdown('groups')} className="w-100">
+                      <DropdownToggle caret color="light" className="w-100 text-start">
+                        {campaignData.selectedGroups.length 
+                          ? `${campaignData.selectedGroups.length} groups selected`
+                          : 'Select target groups...'}
+                      </DropdownToggle>
+                      <DropdownMenu className="w-100">
                         {groups.map(group => (
-                          <option key={group.id} value={group.id}>
-                            {group.name} • {group.members.toLocaleString()} members • {group.activity} Activity
-                          </option>
+                          <DropdownItem 
+                            key={group.id}
+                            onClick={() => handleGroupSelect(group.id)}
+                            className="d-flex align-items-center"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={campaignData.selectedGroups.includes(group.id)}
+                              onChange={() => {}}
+                              className="me-2"
+                            />
+                            {group.name}
+                          </DropdownItem>
                         ))}
-                      </Input>
-                    </div>
-                    <div className="mt-2 d-flex justify-content-between">
-                      <small className="text-muted">
-                        <i className="fas fa-info-circle me-1"></i>
-                        Hold Ctrl/Cmd to select multiple groups
-                      </small>
-                      <small className="text-primary">
-                        Selected: {campaignData.selectedGroups.length} groups
-                      </small>
-                    </div>
+                      </DropdownMenu>
+                    </Dropdown>
                   </FormGroup>
+                </Col>
+              </Row>
 
-                  {/* Submit Button */}
-                  <div className="d-grid gap-2">
-                    <Button
-                      color="primary"
-                      size="lg"
-                      type="submit"
-                      className="py-3"
-                      disabled={isSubmitting}
-                      style={{
-                        background: 'linear-gradient(45deg, #2196F3, #1976D2)',
-                        border: 'none',
-                        boxShadow: '0 4px 6px rgba(33, 150, 243, 0.3)',
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                          Creating Your Campaign...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-paper-plane me-2"></i>
-                          Launch Campaign
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </Form>
-              </CardBody>
-            </Card>
-
-            {/* Campaign Summary */}
-            {campaignData.campaignName && campaignData.template && (
-              <Card className="mt-4 shadow-sm border-0">
-                <CardBody>
-                  <h5 className="mb-3">Campaign Summary</h5>
-                  <Row>
-                    <Col sm={6}>
-                      <p className="mb-1 text-muted">Campaign Name</p>
-                      <p className="fw-bold">{campaignData.campaignName}</p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1 text-muted">Template</p>
-                      <p className="fw-bold">{templates.find(t => t.id === parseInt(campaignData.template))?.name}</p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1 text-muted">Schedule</p>
-                      <p className="fw-bold">
-                        {campaignData.sendType === 'now' ? 'Immediate Send' : 
-                         campaignData.scheduledTime ? new Date(campaignData.scheduledTime).toLocaleString() : 
-                         'Not Scheduled'}
-                      </p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1 text-muted">Priority</p>
-                      <p className="fw-bold text-capitalize">
-                        {campaignData.priority} Priority
-                      </p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1 text-muted">Selected Groups</p>
-                      <p className="fw-bold">
-                        {campaignData.selectedGroups.length} Groups Selected
-                      </p>
-                    </Col>
-                  </Row>
-                </CardBody>
-              </Card>
-            )}
-
-            {/* Help Card */}
-            <Card className="mt-4 shadow-sm border-0 bg-light">
-              <CardBody>
-                <div className="d-flex align-items-center mb-3">
-                  <i className="fas fa-lightbulb text-warning me-2 fa-lg"></i>
-                  <h5 className="mb-0">Tips for Better Campaign Performance</h5>
-                </div>
-                <ul className="mb-0 ps-3">
-                  <li className="mb-2">Choose peak activity hours for better engagement</li>
-                  <li className="mb-2">Personalize your message using template variables</li>
-                  <li className="mb-2">Test your campaign with a small group first</li>
-                  <li>Monitor delivery rates and user responses</li>
-                </ul>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Custom CSS */}
-        <style>
-          {`
-            .form-control-lg, .input-group-text {
-              font-size: 1rem;
-              padding: 0.75rem 1rem;
-            }
-
-            .form-control:focus {
-              box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-            }
-
-            .btn:hover {
-              transform: translateY(-1px);
-              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            }
-
-            .card {
-              transition: all 0.3s ease;
-            }
-
-            .preview-text {
-              font-size: 0.9rem;
-              color: #666;
-            }
-
-            @keyframes slideDown {
-              from {
-                transform: translateY(-10px);
-                opacity: 0;
-              }
-              to {
-                transform: translateY(0);
-                opacity: 1;
-              }
-            }
-
-            /* Custom scrollbar for select multiple */
-            select[multiple] {
-              scrollbar-width: thin;
-              scrollbar-color: #90A4AE #CFD8DC;
-            }
-
-            select[multiple]::-webkit-scrollbar {
-              width: 8px;
-            }
-
-            select[multiple]::-webkit-scrollbar-track {
-              background: #CFD8DC;
-              border-radius: 4px;
-            }
-
-            select[multiple]::-webkit-scrollbar-thumb {
-              background-color: #90A4AE;
-              border-radius: 4px;
-            }
-
-            /* Responsive adjustments */
-            @media (max-width: 768px) {
-              .card {
-                margin: 0;
-                border-radius: 0;
-              }
-
-              .container-fluid {
-                padding: 0;
-              }
-
-              .btn-group {
-                flex-direction: column;
-              }
-
-              .btn-group .btn {
-                border-radius: 4px !important;
-                margin-bottom: 0.5rem;
-              }
-            }
-          `}
-        </style>
+              {/* Submit Button - Full Width */}
+              <Row>
+                <Col>
+                  <Button
+                    color="primary"
+                    type="submit"
+                    className="w-100 mt-3"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" />
+                        Creating Campaign...
+                      </>
+                    ) : (
+                      'Launch Campaign'
+                    )}
+                  </Button>
+                </Col>
+              </Row>
+            </Form>
+          </CardBody>
+        </Card>
       </Container>
     </div>
   );

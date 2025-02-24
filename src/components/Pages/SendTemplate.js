@@ -568,41 +568,80 @@ const SendTemplate = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    // Prevent default form submission if event exists
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+  
     if (!formData.companyId || !token) {
       toast.error("Missing required information");
       return;
     }
-
+  
+    // Validate phone number
+    if (!formData.to || formData.to.length < 10) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+  
     setIsSending(true);
-
+  
     try {
+      // Construct the base payload
       const payload = {
         to: formData.to,
         templateName: formData.templateName,
         templateLanguage: formData.templateLanguage,
         companyId: formData.companyId,
-        components: formData.components.map((component) => {
-          if (component.type === "header") {
-            const headerFormat = template.components
-              .find((c) => c.type === "HEADER")
-              ?.format.toLowerCase();
-            return {
-              type: "header",
-              parameters: [
-                {
-                  type: headerFormat,
-                  [headerFormat]: {
-                    link: headerParams.mediaUrl,
-                  },
-                },
-              ],
-            };
-          }
-          return component;
-        }),
+        components: []
       };
-
+  
+      // Add header component if it exists
+      const headerComponent = template.components.find(c => c.type === "HEADER");
+      if (headerComponent) {
+        const headerFormat = headerComponent.format.toLowerCase();
+        const headerPayload = {
+          type: "header",
+          parameters: []
+        };
+  
+        // Handle different header types
+        if (["image", "video", "document"].includes(headerFormat) && headerParams.mediaUrl) {
+          headerPayload.parameters.push({
+            type: headerFormat,
+            [headerFormat]: {
+              link: headerParams.mediaUrl
+            }
+          });
+        } else if (headerFormat === "location" && headerParams.latitude && headerParams.longitude) {
+          headerPayload.parameters.push({
+            type: "location",
+            location: {
+              latitude: parseFloat(headerParams.latitude),
+              longitude: parseFloat(headerParams.longitude),
+              name: headerParams.locationName || "",
+              address: headerParams.locationAddress || ""
+            }
+          });
+        }
+  
+        if (headerPayload.parameters.length > 0) {
+          payload.components.push(headerPayload);
+        }
+      }
+  
+      // Add body component if it exists
+      const bodyParameters = formData.components.find(c => c.type === "body")?.parameters || [];
+      if (bodyParameters.length > 0) {
+        payload.components.push({
+          type: "body",
+          parameters: bodyParameters.map(param => ({
+            type: "text",
+            text: param.text || ""
+          }))
+        });
+      }
+  
       const response = await axios.post(
         `${MESSAGE_API_ENDPOINT}/sendTemplate`,
         payload,
@@ -610,63 +649,73 @@ const SendTemplate = () => {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
-          },}
-        );
-  
-        if (response.data.success) {
-          toast.success("Template message sent successfully!");
-  
-          const existingConfig = localStorage.getItem("whatsappConfig");
-          const existingCompanyId = localStorage.getItem("whatsappCompanyId");
-  
-          const navigationState = {
-            companyId: formData.companyId,
-            config: existingConfig ? JSON.parse(existingConfig) : null,
-            refresh: true,
-            timestamp: new Date().getTime(),
-          };
-  
-          if (!existingConfig) {
-            try {
-              const configResponse = await axios.get(
-                `http://192.168.0.106:25483/api/v1/whatsapp/config/${formData.companyId}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
-              );
-  
-              if (configResponse.data.success) {
-                navigationState.config = configResponse.data.config;
-              }
-            } catch (error) {
-              console.error("Error fetching WhatsApp config:", error);
-            }
           }
+        }
+      );
   
-          navigate("/admin/chats", {
-            state: navigationState,
-            replace: true,
-          });
+      if (response.data.success) {
+        toast.success("Template message sent successfully!");
+  
+        // Prepare navigation state
+        const navigationState = {
+          companyId: formData.companyId,
+          config: null,
+          refresh: true,
+          timestamp: new Date().getTime()
+        };
+  
+        // Try to get existing WhatsApp config
+        const existingConfig = localStorage.getItem("whatsappConfig");
+        if (existingConfig) {
+          navigationState.config = JSON.parse(existingConfig);
         } else {
-          toast.error(response.data.message || "Failed to send template");
+          try {
+            const configResponse = await axios.get(
+              `${process.env.REACT_APP_API_URL}/api/v1/whatsapp/config/${formData.companyId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              }
+            );
+  
+            if (configResponse.data.success) {
+              navigationState.config = configResponse.data.config;
+              localStorage.setItem("whatsappConfig", JSON.stringify(configResponse.data.config));
+            }
+          } catch (error) {
+            console.error("Error fetching WhatsApp config:", error);
+          }
         }
-      } catch (error) {
-        console.error("Error sending template:", error);
-        if (error.response?.status === 401) {
-          navigate("/auth/login");
-        } else {
-          const errorMessage =
-            error.response?.data?.message || "Error sending template message";
-          toast.error(errorMessage, {
-            duration: 5000,
-          });
-        }
-      } finally {
-        setIsSending(false);
+  
+        // Navigate to chats
+        navigate("/admin/chats", {
+          state: navigationState,
+          replace: true
+        });
+      } else {
+        throw new Error(response.data.message || "Failed to send template");
       }
-    };
+    } catch (error) {
+      console.error("Error sending template:", error);
+      
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        navigate("/auth/login");
+      } else if (error.response?.status === 429) {
+        toast.error("Too many requests. Please try again later.");
+      } else {
+        const errorMessage = error.response?.data?.message || 
+                            error.message || 
+                            "Error sending template message";
+        toast.error(errorMessage, {
+          duration: 5000
+        });
+      }
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   
     const renderHeaderParams = () => {
@@ -945,18 +994,18 @@ const SendTemplate = () => {
   <div className="sending-schedule mb-4">
     <h5 className="mb-2">Sending Schedule <span className="required">REQUIRED</span></h5>
     <div className="d-flex gap-2">
-      <Button 
-        color={showSchedule ? "secondary" : "primary"} 
-        className="flex-grow-1 d-flex align-items-center justify-content-center"
-        onClick={() => {
-          setShowSchedule(false);
-          handleSubmit();
-        }}
-        disabled={isSending || template.status !== "APPROVED"}
-      >
-        <i className="fas fa-bolt me-2"></i>
-        Send Immediately
-      </Button>
+    <Button 
+  color={showSchedule ? "secondary" : "primary"} 
+  className="flex-grow-1 d-flex align-items-center justify-content-center"
+  onClick={() => {
+    setShowSchedule(false);
+    handleSubmit(); // Remove the direct event passing
+  }}
+  disabled={isSending || template.status !== "APPROVED"}
+>
+  <i className="fas fa-bolt me-2"></i>
+  Send Immediately
+</Button>
       <Button
         color={showSchedule ? "primary" : "secondary"}
         className="flex-grow-1 d-flex align-items-center justify-content-center"

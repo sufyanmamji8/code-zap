@@ -21,6 +21,7 @@ import ApiKey from "components/Pages/ApiKey";
 import WhatsAppCampaigns from "components/Pages/WhatsAppCampaigns";
 import WhatsAppCreateMenus from "components/Pages/WhatsAppCreateMenus";
 import WhatsAppMenusAccess from "components/Pages/WhatsAppMenusAccess";
+import WhatsappGroup from "components/Pages/WhatsappGroup";
 
 var routes = [
   {
@@ -91,7 +92,7 @@ var routes = [
     showInSidebar: false,
   },
   {
-    path: "/Menus-access",
+    path: "/Menus-assign",
     name: "WhatsAppMenusAccess",
     icon: "ni ni-bullet-list-67 ",
     component: <WhatsAppMenusAccess />,
@@ -190,6 +191,14 @@ var routes = [
     name: "WhatsAppCompaign",
     icon: "ni ni-single-02",
     component: <WhatsAppCampaigns />,
+    layout: "/admin",
+    showInSidebar: false,
+  },
+  {
+    path: "/contactsGroup",
+    name: "WhatsAppGroup",
+    icon: "ni ni-single-02",
+    component: <WhatsappGroup />,
     layout: "/admin",
     showInSidebar: false,
   },
