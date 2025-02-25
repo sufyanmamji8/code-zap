@@ -225,25 +225,21 @@ const AddWhatsapp = () => {
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
     setDropdownOpen(false);
-    
-    // Remove any existing plus signs and country codes from the phone number
-    const cleanedNumber = formData.phoneNumber.replace(/^\+\d+/, '');
-    
+    const phoneWithoutCode = formData.phoneNumber.replace(/^\+?\d+/, "");
     setFormData((prev) => ({
       ...prev,
-      phoneNumber: `+${country.code}${cleanedNumber}`,
+      phoneNumber: `${country.code}${phoneWithoutCode}`,
     }));
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === "phoneNumber") {
-      // Remove any existing plus signs and country code from the input
-      const cleanedNumber = value.replace(/^\+/, '').replace(/^(\d+)/, '');
-      
-      // Format with the selected country code
-      const phoneNumber = `+${selectedCountry.code}${cleanedNumber}`;
-      
+      // Remove any plus sign from the input
+      const cleanValue = value.replace(/\+/g, "");
+      const phoneNumber = cleanValue.startsWith(selectedCountry.code)
+        ? cleanValue
+        : `${selectedCountry.code}${cleanValue.replace(/^\d+/, "")}`;
       setFormData((prev) => ({
         ...prev,
         phoneNumber,
@@ -267,7 +263,8 @@ const AddWhatsapp = () => {
       return;
     }
 
-    const phoneRegex = /^\+[0-9]{10,14}$/;
+    // Modified phone validation regex to not require a plus sign
+    const phoneRegex = /^[0-9]{10,14}$/;
     if (!phoneRegex.test(formData.phoneNumber)) {
       toast.error("Please enter a valid phone number.");
       setIsSubmitting(false);
@@ -350,7 +347,7 @@ const AddWhatsapp = () => {
                       caret
                       className="bg-white text-dark border-2 rounded-l-lg px-3"
                     >
-                      {selectedCountry.flag} +{selectedCountry.code}
+                      {selectedCountry.flag} {selectedCountry.code}
                     </DropdownToggle>
                     <DropdownMenu className="p-0 border-2">
                       <div className="p-2 border-b">
@@ -380,7 +377,7 @@ const AddWhatsapp = () => {
                               <span className="mr-2">{country.flag}</span>
                               <span className="mr-2">{country.country}</span>
                               <span className="text-gray-600">
-                                +{country.code}
+                                {country.code}
                               </span>
                             </DropdownItem>
                           ))}
