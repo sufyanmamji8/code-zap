@@ -989,8 +989,8 @@ const WhatsAppMenusAccess = () => {
 
   return (
     <div className="whatsapp-menu-access p-4">
-      <h2 className="text-primary mb-4">
-        <i className="fa fa-whatsapp mr-2"></i>
+      <h2 className=" mb-4">
+        <i className=" mr-2"></i>
         WhatsApp Menu Management
       </h2>
 

@@ -479,7 +479,7 @@ const SendTemplate = () => {
       ? `--header 'Authorization: Bearer ${apiKey}'`
       : "--header 'Authorization: Bearer generate an api key first'";
   
-    return `curl --location '${MESSAGE_API_ENDPOINT}/sendTemplate' \\
+    return `curl --location 'https://codozap-e04e12b02929.herokuapp.com/sendTemplate' \\
   ${authHeader} \\
   --header 'Content-Type: application/json' \\
   --data '${formattedJson}'`;
