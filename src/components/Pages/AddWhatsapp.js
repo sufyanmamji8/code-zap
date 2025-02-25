@@ -225,19 +225,25 @@ const AddWhatsapp = () => {
   const handleCountrySelect = (country) => {
     setSelectedCountry(country);
     setDropdownOpen(false);
-    const phoneWithoutCode = formData.phoneNumber.replace(/^\+\d+/, "");
+    
+    // Remove any existing plus signs and country codes from the phone number
+    const cleanedNumber = formData.phoneNumber.replace(/^\+\d+/, '');
+    
     setFormData((prev) => ({
       ...prev,
-      phoneNumber: `+${country.code}${phoneWithoutCode}`,
+      phoneNumber: `+${country.code}${cleanedNumber}`,
     }));
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === "phoneNumber") {
-      const phoneNumber = value.startsWith("+")
-        ? value
-        : `+${selectedCountry.code}${value.replace(/^\+?\d+/, "")}`;
+      // Remove any existing plus signs and country code from the input
+      const cleanedNumber = value.replace(/^\+/, '').replace(/^(\d+)/, '');
+      
+      // Format with the selected country code
+      const phoneNumber = `+${selectedCountry.code}${cleanedNumber}`;
+      
       setFormData((prev) => ({
         ...prev,
         phoneNumber,
@@ -418,7 +424,6 @@ const AddWhatsapp = () => {
                 <Input
                   name="description"
                   type="textarea"
-                  placeholder="Tell us about your company..."
                   value={formData.description}
                   onChange={handleInputChange}
                   className="border-2 rounded-lg"
