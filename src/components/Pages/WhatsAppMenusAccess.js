@@ -779,6 +779,8 @@ import {
 import axios from 'axios';
 import { GROUP_ENDPOINTS, MENU_API_ENDPOINT, ASSIGN_MENU_ENDPOINTS } from 'Api/Constant';
 import { FaCheck, FaTrash, FaLink, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
+import { toast } from 'sonner';
+import { Navigate } from 'react-router-dom';
 
 const WhatsAppMenusAccess = () => {
   // State initialization with proper types
@@ -816,12 +818,28 @@ const WhatsAppMenusAccess = () => {
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL);
+      
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("No token found, please login again.");
+        Navigate("/login");
+        return;
+      }
+      
+      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      });
+      
       const groupsData = response.data?.groups || [];
       setGroups(groupsData);
     } catch (err) {
       console.error('Error fetching groups:', err);
       setError('Failed to fetch groups');
+      toast.error(err.response?.data?.message || "An error occurred");
       setGroups([]);
     } finally {
       setLoading(false);

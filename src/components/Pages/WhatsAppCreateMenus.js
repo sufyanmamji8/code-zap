@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import "../../assets/css/WhatsAppMenus.css";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const WhatsAppCreateMenus = () => {
   const [menus, setMenus] = useState([]);
@@ -31,7 +33,7 @@ const WhatsAppCreateMenus = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   
-  
+  const navigate = useNavigate();
   
   const validationFormats = {
     date: [
@@ -160,14 +162,35 @@ const WhatsAppCreateMenus = () => {
   const fetchMenus = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(MENU_ENDPOINTS.GET_ALL);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No token found, please login again.');
+        navigate('/login');
+        return;
+      }
+  
+      const response = await axios.get(MENU_ENDPOINTS.GET_ALL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      
       const allMenus = response.data.data || [];
       setMenus(allMenus);
       
       const mainMenuExists = allMenus.some(menu => menu.isMainMenu === true);
       setIsFirstMenu(!mainMenuExists);
     } catch (error) {
-      setError('Failed to fetch menus');
+      console.error('Error fetching menus:', error);
+      setError(error.response?.data?.message || 'Failed to fetch menus');
+      
+      // If token is invalid or expired
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
@@ -228,12 +251,19 @@ const WhatsAppCreateMenus = () => {
     });
   };
 
-   const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
   
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No token found, please login again.');
+        navigate('/login');
+        return;
+      }
+  
       const endpoint = currentMenu 
         ? MENU_ENDPOINTS.UPDATE(currentMenu.menuId)
         : MENU_ENDPOINTS.CREATE;
@@ -249,7 +279,13 @@ const WhatsAppCreateMenus = () => {
         ? { menus: [formData] }
         : formData;
       
-      const response = await axios[method](endpoint, payload);
+      const response = await axios[method](endpoint, payload, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
       
       if (method === 'post') {
         setMenus(prevMenus => [...prevMenus, response.data.data[0]]);
@@ -269,19 +305,47 @@ const WhatsAppCreateMenus = () => {
       
       fetchMenus();
     } catch (error) {
+      console.error('Error saving menu:', error);
       setError(error.response?.data?.message || 'Failed to save menu');
+      
+      // If token is invalid or expired
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
   };
-
+  
   const handleDelete = async (menuId) => {
     setLoading(true);
     try {
-      await axios.delete(MENU_ENDPOINTS.DELETE(menuId));
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No token found, please login again.');
+        navigate('/login');
+        return;
+      }
+  
+      await axios.delete(MENU_ENDPOINTS.DELETE(menuId), {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      
       setMenus(prevMenus => prevMenus.filter(menu => menu.menuId !== menuId));
     } catch (error) {
+      console.error('Error deleting menu:', error);
       setError(error.response?.data?.message || 'Failed to delete menu');
+      
+      // If token is invalid or expired
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }

@@ -7,11 +7,14 @@ import {
   Dropdown, DropdownToggle, DropdownMenu, DropdownItem
 } from 'reactstrap';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { countryList } from '../Pages/countryList';
 import { Plus, Edit2, Trash2, Upload, Users, Search, Phone, FileText, ChevronDown } from 'lucide-react';
 import { GROUP_ENDPOINTS } from 'Api/Constant';
 
 const WhatsappGroup = () => {
+  const navigate = useNavigate();
   // Find Pakistan in the countryList
   const pakistanCountry = countryList.find(country => country.country === 'Pakistan') || countryList[0];
   
@@ -32,17 +35,48 @@ const WhatsappGroup = () => {
   });
 
   useEffect(() => {
+    // Check token on component mount
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('No token found, please login again.');
+      navigate('/login');
+      return;
+    }
+    
     fetchGroups();
-  }, []);
+  }, [navigate]);
 
   const fetchGroups = async () => {
     try {
-      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No token found, please login again.');
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      
       if (response.data.success) {
         setGroups(response.data.groups);
+      } else {
+        toast.error(response.data.message || 'Failed to fetch groups');
       }
     } catch (error) {
       console.error('Error fetching groups:', error);
+      toast.error(error.response?.data?.message || 'An error occurred while fetching groups');
+      
+      // If token is invalid or expired
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
     }
   };
 
@@ -136,57 +170,93 @@ const WhatsappGroup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No token found, please login again.');
+        navigate('/login');
+        return;
+      }
+
       if (editMode) {
         const response = await axios.put(
           GROUP_ENDPOINTS.UPDATE(currentGroupId),
           {
             name: formData.groupName,
             allowedPhoneNumbers: formData.numbers
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            withCredentials: true
           }
         );
+        
         if (response.data.success) {
+          toast.success('Group updated successfully!');
           await fetchGroups();
           toggle();
+        } else {
+          toast.error(response.data.message || 'Failed to update group');
         }
       } else {
         // Create new group
         const formDataObj = new FormData();
         formDataObj.append('name', formData.groupName);
         
-       // With this:
-if (formData.numbers.length > 0) {
-    // Create proper CSV content with header and rows
-    const csvHeader = "phoneNumber\n";
-    const csvRows = formData.numbers.map(number => number).join("\n");
-    const csvContent = csvHeader + csvRows;
-    
-    // Create a properly formatted CSV file
-    const csvFile = new Blob([csvContent], { type: 'text/csv' });
-    formDataObj.append('csvFile', csvFile, 'numbers.csv');
-  }
+        if (formData.numbers.length > 0) {
+          // Create proper CSV content with header and rows
+          const csvHeader = "phoneNumber\n";
+          const csvRows = formData.numbers.map(number => number).join("\n");
+          const csvContent = csvHeader + csvRows;
+          
+          // Create a properly formatted CSV file
+          const csvFile = new Blob([csvContent], { type: 'text/csv' });
+          formDataObj.append('csvFile', csvFile, 'numbers.csv');
+        }
 
         const response = await axios.post(
           GROUP_ENDPOINTS.CREATE,
           formDataObj,
           {
             headers: {
+              'Authorization': `Bearer ${token}`,
               'Content-Type': 'multipart/form-data'
-            }
+            },
+            withCredentials: true
           }
         );
 
         if (response.data.success) {
+          toast.success('Group created successfully!');
           await fetchGroups();
           toggle();
+        } else {
+          toast.error(response.data.message || 'Failed to create group');
         }
       }
     } catch (error) {
       console.error('Error submitting group:', error);
+      toast.error(error.response?.data?.message || 'An error occurred while saving the group');
+      
+      // If token is invalid or expired
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
     }
   };
 
   const handleEdit = async (groupId) => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No token found, please login again.');
+        navigate('/login');
+        return;
+      }
+
       const group = groups.find(g => g._id === groupId);
       if (group) {
         setCurrentGroupId(groupId);
@@ -203,17 +273,45 @@ if (formData.numbers.length > 0) {
       }
     } catch (error) {
       console.error('Error setting up edit mode:', error);
+      toast.error('An error occurred while editing the group');
     }
   };
 
   const handleDelete = async (groupId) => {
     try {
-      const response = await axios.delete(GROUP_ENDPOINTS.DELETE(groupId));
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No token found, please login again.');
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.delete(
+        GROUP_ENDPOINTS.DELETE(groupId),
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      );
+      
       if (response.data.success) {
+        toast.success('Group deleted successfully!');
         await fetchGroups();
+      } else {
+        toast.error(response.data.message || 'Failed to delete group');
       }
     } catch (error) {
       console.error('Error deleting group:', error);
+      toast.error(error.response?.data?.message || 'An error occurred while deleting the group');
+      
+      // If token is invalid or expired
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+      }
     }
   };
 
