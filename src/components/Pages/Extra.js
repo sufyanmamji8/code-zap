@@ -1,38 +1,222 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Container, Row, Col, Card, CardBody,
-  Button, Form, FormGroup, Label, Input, Table,
-  Modal, ModalHeader, ModalBody, ModalFooter,
-  InputGroup, InputGroupText, Badge,
-  Dropdown, DropdownToggle, DropdownMenu, DropdownItem
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  CardBody,
+  Form,
+  FormGroup,
+  Label,
+  Input,
+  Button,
+  ButtonGroup,
+  Badge,
+  Alert,
+  Progress,
+  Dropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem
 } from 'reactstrap';
-import { countryList } from '../Pages/countryList';
-import { Plus, Edit2, Trash2, Upload, Users, Search, Phone, FileText, ChevronDown } from 'lucide-react';
-import { GROUP_ENDPOINTS } from 'Api/Constant';
+import axios from 'axios';
+import { GROUP_ENDPOINTS, TEMPLATE_ENDPOINTS } from 'Api/Constant';
 
-const WhatsappGroup = () => {
-  const [groups, setGroups] = useState([]);
-  const [modal, setModal] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [countryDropdown, setCountryDropdown] = useState(false);
-  const [searchCountry, setSearchCountry] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
-  const [formData, setFormData] = useState({
-    groupName: '',
-    countryCode: '1',
-    phoneNumber: '',
-    numbers: []
+const WhatsAppCampaigns = () => {
+  const [campaignData, setCampaignData] = useState({
+    campaignName: '',
+    template: '',
+    sendType: 'now',
+    scheduledTime: '',
+    selectedGroups: [],
+    priority: 'normal',
+    templateParams: {} // Store parameter values here
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState({
+    template: false,
+    groups: false
+  });
+  
+  // Add templates state to store fetched templates
+  const [templates, setTemplates] = useState([]);
+  // Add templatesLoading state
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  
+  // Add groups state to store fetched groups
+  const [groups, setGroups] = useState([]);
+  // Add search term state for filtering groups
+  const [searchTerm, setSearchTerm] = useState('');
+  // Add template search term state
+  const [templateSearchTerm, setTemplateSearchTerm] = useState('');
+  // Add state to store the selected template's details
+  const [selectedTemplateDetails, setSelectedTemplateDetails] = useState(null);
+  // Add state to store extracted parameters
+  const [extractedParams, setExtractedParams] = useState([]);
 
   useEffect(() => {
     fetchGroups();
+    fetchTemplates();
   }, []);
 
+  // When template selection changes, fetch template details
+  useEffect(() => {
+    if (campaignData.template) {
+      fetchTemplateDetails(campaignData.template);
+    } else {
+      setSelectedTemplateDetails(null);
+      setExtractedParams([]);
+    }
+  }, [campaignData.template]);
+
+  // Extract parameters from template text
+  const extractParameters = (templateText) => {
+    // Regular expression to match {{number}} patterns
+    const paramRegex = /\{\{(\d+)\}\}/g;
+    let match;
+    const params = [];
+    const usedIndexes = new Set();
+    
+    // Find all matches in the template text
+    while ((match = paramRegex.exec(templateText)) !== null) {
+      const paramIndex = match[1];
+      
+      // Only add unique parameters
+      if (!usedIndexes.has(paramIndex)) {
+        usedIndexes.add(paramIndex);
+        
+        // Create parameter object with default label based on index
+        let paramLabel = "Parameter";
+        
+        // Try to infer parameter type from context
+        // This is a simple example - you can enhance this logic
+        const contextBefore = templateText.substring(
+          Math.max(0, match.index - 30), 
+          match.index
+        ).toLowerCase();
+        
+        if (contextBefore.includes("movie") || paramIndex === "1") {
+          paramLabel = "Movie Name";
+        } else if (contextBefore.includes("time") || paramIndex === "2") {
+          paramLabel = "Time";
+        } else if (contextBefore.includes("venue") || paramIndex === "3") {
+          paramLabel = "Venue";
+        } else if (contextBefore.includes("seat") || paramIndex === "4") {
+          paramLabel = "Seats";
+        }
+        
+        params.push({
+          index: paramIndex,
+          key: `param${paramIndex}`,
+          name: paramLabel,
+          type: 'text'
+        });
+      }
+    }
+    
+    // Sort parameters by index
+    params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
+    return params;
+  };
+
+  // Add fetchTemplates function to get templates from API
+  const fetchTemplates = async () => {
+    const token = localStorage.getItem("token");
+    const companyId = localStorage.getItem("selectedCompanyId");
+    
+    if (!companyId || !token) {
+      setTemplatesLoading(false);
+      return;
+    }
+
+    try {
+      setTemplatesLoading(true);
+      const response = await axios.post(
+        TEMPLATE_ENDPOINTS.FETCH,
+        { companyId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success && response.data.templates) {
+        // Only use approved templates
+        const approvedTemplates = response.data.templates.filter(
+          template => template.status === "APPROVED"
+        );
+        setTemplates(approvedTemplates);
+      }
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  // Add new function to fetch template details including fields
+  const fetchTemplateDetails = async (templateId) => {
+    try {
+      const token = localStorage.getItem("token");
+      // Find selected template from existing templates
+      const selectedTemplate = templates.find(t => t.id === templateId);
+      
+      if (selectedTemplate) {
+        // Extract template components text for parameter extraction
+        let templateText = "";
+        if (selectedTemplate.components) {
+          templateText = selectedTemplate.components.map(component => 
+            component.text || ""
+          ).join(" ");
+        } else if (selectedTemplate.text) {
+          templateText = selectedTemplate.text;
+        } else {
+          // Fallback to sample template text for this example
+          templateText = "Your ticket for *{{1}}* *Time* - {{2}} *Venue* - {{3}} *Seats* - {{4}}";
+        }
+        
+        // Extract parameters from template text
+        const params = extractParameters(templateText);
+        setExtractedParams(params);
+        
+        // Initialize template parameters with empty values
+        const initialParams = {};
+        params.forEach(param => {
+          initialParams[param.key] = '';
+        });
+
+        setCampaignData(prev => ({
+          ...prev,
+          templateParams: initialParams
+        }));
+
+        setSelectedTemplateDetails({
+          ...selectedTemplate,
+          text: templateText
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching template details:", error);
+    }
+  };
+
+  // Add fetchGroups function to get groups from API
   const fetchGroups = async () => {
     try {
-      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      
       if (response.data.success) {
         setGroups(response.data.groups);
       }
@@ -41,471 +225,444 @@ const WhatsappGroup = () => {
     }
   };
 
-  const filteredCountries = countryList.filter(country => 
-    country.country.toLowerCase().includes(searchCountry.toLowerCase()) ||
-    country.code.includes(searchCountry)
+  // Filter groups based on search term
+  const filteredGroups = groups.filter(group => 
+    group?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCountrySelect = (country) => {
-    setSelectedCountry(country);
-    setFormData({
-      ...formData,
-      countryCode: country.code
-    });
-    setCountryDropdown(false);
-  };
-  
-  const toggle = () => {
-    setModal(!modal);
-    if (!modal) {
-      setFormData({
-        groupName: '',
-        countryCode: '1',
-        phoneNumber: '',
-        numbers: []
-      });
-      setEditMode(false);
-    }
-  };
+  // Filter templates based on template search term
+  const filteredTemplates = templates.filter(template =>
+    template?.name?.toLowerCase().includes(templateSearchTerm.toLowerCase())
+  );
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setCampaignData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleAddNumber = () => {
-    if (formData.phoneNumber && formData.countryCode) {
-      const fullNumber = `+${formData.countryCode}${formData.phoneNumber}`;
-      if (!formData.numbers.includes(fullNumber)) {
-        setFormData({
-          ...formData,
-          numbers: [...formData.numbers, fullNumber],
-          phoneNumber: ''
-        });
+  // Add function to handle template parameter changes
+  const handleParamChange = (e) => {
+    const { name, value } = e.target;
+    setCampaignData(prev => ({
+      ...prev,
+      templateParams: {
+        ...prev.templateParams,
+        [name]: value
       }
-    }
+    }));
   };
 
-  const handleRemoveNumber = (index) => {
-    const updatedNumbers = formData.numbers.filter((_, i) => i !== index);
-    setFormData({
-      ...formData,
-      numbers: updatedNumbers
-    });
+  const toggleDropdown = (type) => {
+    setDropdownOpen(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
   };
 
-  const handleCSVImport = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const csvData = event.target.result.split('\n')
-          .map(line => line.trim())
-          .filter(line => line);
-        setFormData({
-          ...formData,
-          numbers: [...formData.numbers, ...csvData]
-        });
-      };
-      reader.readAsText(file);
-    }
+  const handleTemplateSelect = (templateId) => {
+    setCampaignData(prev => ({
+      ...prev,
+      template: templateId,
+      // Reset template params when template changes
+      templateParams: {}
+    }));
+    toggleDropdown('template');
+  };
+
+  const handleGroupSelect = (groupId) => {
+    setCampaignData(prev => ({
+      ...prev,
+      selectedGroups: prev.selectedGroups.includes(groupId)
+        ? prev.selectedGroups.filter(id => id !== groupId)
+        : [...prev.selectedGroups, groupId]
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      if (editMode) {
-        const response = await axios.put(
-          GROUP_ENDPOINTS.UPDATE(currentGroupId),
-          {
-            name: formData.groupName,
-            allowedPhoneNumbers: formData.numbers
-          }
-        );
-        if (response.data.success) {
-          await fetchGroups();
-          toggle();
-        }
-      } else {
-        // Create new group
-        const formDataObj = new FormData();
-        formDataObj.append('name', formData.groupName);
-        
-        // If numbers exist, create a CSV file
-        if (formData.numbers.length > 0) {
-          const csvContent = formData.numbers.map(number => ({phoneNumber: number}));
-          const csvFile = new Blob([JSON.stringify(csvContent)], { type: 'text/csv' });
-          formDataObj.append('csvFile', csvFile, 'numbers.csv');
-        }
-
-        const response = await axios.post(
-          GROUP_ENDPOINTS.CREATE,
-          formDataObj,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          }
-        );
-
-        if (response.data.success) {
-          await fetchGroups();
-          toggle();
-        }
-      }
-    } catch (error) {
-      console.error('Error submitting group:', error);
-    }
+    setIsSubmitting(true);
+    
+    // Prepare the data including template parameters
+    const payload = {
+      ...campaignData,
+      // Format template parameters as needed for your API
+      templateParams: Object.keys(campaignData.templateParams).reduce((acc, key) => {
+        const paramIndex = key.replace('param', '');
+        acc[paramIndex] = campaignData.templateParams[key];
+        return acc;
+      }, {})
+    };
+    
+    console.log("Submit payload:", payload);
+    
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setShowSuccess(true);
+    setIsSubmitting(false);
+    setTimeout(() => setShowSuccess(false), 3000);
   };
 
-  const handleEdit = async (groupId) => {
-    try {
-      const group = groups.find(g => g._id === groupId);
-      if (group) {
-        setCurrentGroupId(groupId);
-        setFormData({
-          groupName: group.name,
-          countryCode: '1',
-          phoneNumber: '',
-          numbers: group.allowedPhoneNumbers || []
-        });
-        setEditMode(true);
-        setModal(true);
-      }
-    } catch (error) {
-      console.error('Error setting up edit mode:', error);
+  const getCompletionPercentage = () => {
+    let filled = 0;
+    let total = 5;
+    
+    // Add template fields to total if they exist
+    if (extractedParams.length) {
+      total += extractedParams.length;
+      // Count filled template params
+      extractedParams.forEach(param => {
+        if (campaignData.templateParams[param.key]) filled++;
+      });
     }
+    
+    if (campaignData.campaignName) filled++;
+    if (campaignData.template) filled++;
+    if (campaignData.selectedGroups.length > 0) filled++;
+    if (campaignData.sendType === 'now' || campaignData.scheduledTime) filled++;
+    if (campaignData.priority) filled++;
+    
+    return (filled / total) * 100;
   };
 
-  const handleDelete = async (groupId) => {
-    try {
-      const response = await axios.delete(GROUP_ENDPOINTS.DELETE(groupId));
-      if (response.data.success) {
-        await fetchGroups();
-      }
-    } catch (error) {
-      console.error('Error deleting group:', error);
-    }
+  // Format the category to display it properly
+  const formatCategory = (category) => {
+    if (!category) return '';
+    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
   };
 
-  const filteredGroups = groups.filter(group => 
-    group.groupName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Generate preview with parameters replaced
+  const getPreviewText = (text) => {
+    if (!text) return "";
+    
+    return text.replace(/\{\{(\d+)\}\}/g, (match, paramIndex) => {
+      const paramKey = `param${paramIndex}`;
+      const paramValue = campaignData.templateParams[paramKey];
+      return paramValue ? paramValue : match;
+    });
+  };
 
   return (
-    <Container fluid className="p-4 bg-light min-vh-100">
-      <Row className="mb-4">
-        <Col md="6">
-          <h2 className="text-primary mb-0">
-            <Users className="me-2" size={28} />
-            WhatsApp Groups Management
-          </h2>
-        </Col>
-        <Col md="6" className="d-flex justify-content-end align-items-center">
-          <Button 
-            color="success" 
-            className="d-flex align-items-center shadow-sm" 
-            onClick={toggle}
-          >
-            <Plus size={20} className="me-2" />
-            Create New Group
-          </Button>
-        </Col>
-      </Row>
+    <div className="py-4">
+      <Container>
+        <Card className="shadow-sm">
+          <CardBody>
+            {showSuccess && (
+              <Alert color="success" className="mb-4">
+                Campaign created successfully!
+              </Alert>
+            )}
 
-      <Card className="shadow-sm border-0 mb-4">
-        <CardBody className="p-0">
-          <Row className="p-4 align-items-center border-bottom">
-            <Col md="6">
-              <InputGroup className="search-group">
-                <InputGroupText className="bg-white border-end-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroupText>
-                <Input
-                  placeholder="Search groups..."
-                  className="border-start-0 ps-0"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </InputGroup>
-            </Col>
-            <Col md="6" className="text-end">
-              <Badge color="primary" className="me-2 p-2">
-                Total Groups: {groups.length}
-              </Badge>
-            </Col>
-          </Row>
-          
-          <Table hover borderless className="align-middle mb-0">
-        <thead className="bg-light">
-          <tr>
-            <th className="ps-4">#</th>
-            <th>Group Name</th>
-            <th>Members</th>
-            <th className="text-end pe-4">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredGroups.map((group, index) => (
-            <tr key={group._id}>
-              <td className="ps-4">{index + 1}</td>
-              <td>
-                <div className="d-flex align-items-center">
-                  <div className="group-icon me-3 bg-primary text-white rounded-circle p-2">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <h6 className="mb-0">{group.name}</h6>
-                    <small className="text-muted">Created today</small>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <Badge color="info" pill className="px-3 py-2">
-                  {group.allowedPhoneNumbers?.length || 0} members
-                </Badge>
-              </td>
-              <td className="text-end pe-4">
-                <Button 
-                  color="light"
-                  className="me-2 btn-icon"
-                  onClick={() => handleEdit(group._id)}
-                >
-                  <Edit2 size={16} />
-                </Button>
-                <Button 
-                  color="light" 
-                  className="btn-icon text-danger"
-                  onClick={() => handleDelete(group._id)}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-        </CardBody>
-      </Card>
-
-      <Modal 
-        isOpen={modal} 
-        toggle={toggle} 
-        size="lg" 
-        className="modal-dialog-centered"
-        style={{ maxWidth: '700px' }}
-      >
-        <Form onSubmit={handleSubmit} className="modal-custom">
-          <ModalHeader toggle={toggle} className="bg-light border-bottom-0 p-4">
-            <div className="d-flex align-items-center">
-              {editMode ? (
-                <Edit2 size={24} className="me-2 text-primary" />
-              ) : (
-                <Plus size={24} className="me-2 text-primary" />
-              )}
-              <h4 className="mb-0">
-                {editMode ? 'Edit Group' : 'Create New Group'}
-              </h4>
+            <div className="mb-4">
+              <h4>Campaign Progress</h4>
+              <Progress value={getCompletionPercentage()} className="mt-2" />
             </div>
-          </ModalHeader>
-          <ModalBody className="p-4">
-            <FormGroup className="mb-4">
-              <Label for="groupName" className="fw-bold mb-2">
-                Group Name
-              </Label>
-              <Input
-                type="text"
-                name="groupName"
-                id="groupName"
-                value={formData.groupName}
-                onChange={handleInputChange}
-                required
-                className="form-control-lg border-2"
-                placeholder="Enter your group name"
-              />
-            </FormGroup>
-            
-            <FormGroup className="mb-4">
-              <Label className="fw-bold mb-2 d-flex align-items-center">
-                <Phone size={18} className="me-2" />
-                Add Phone Numbers
-              </Label>
-              <Row className="gx-2">
-                <Col md={4}>
-                  <Dropdown 
-                    isOpen={countryDropdown} 
-                    toggle={() => setCountryDropdown(!countryDropdown)}
-                    className="country-dropdown mb-2 mb-md-0"
-                  >
-                    <DropdownToggle caret className="w-100 d-flex align-items-center justify-content-between bg-white text-dark border">
-                      <span className="d-flex align-items-center">
-                        <span className="me-2">{selectedCountry.flag}</span>
-                        <span>+{selectedCountry.code}</span>
-                      </span>
-                      <ChevronDown size={16} />
-                    </DropdownToggle>
-                    <DropdownMenu className="w-100 p-0 country-dropdown-menu">
-                      <div className="p-2 border-bottom">
-                        <InputGroup size="sm">
-                          <InputGroupText className="bg-light border-0">
-                            <Search size={14} />
-                          </InputGroupText>
-                          <Input
-                            placeholder="Search country..."
-                            value={searchCountry}
-                            onChange={(e) => setSearchCountry(e.target.value)}
-                            className="border-0 bg-light"
-                          />
-                        </InputGroup>
-                      </div>
-                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        {filteredCountries.map((country) => (
-                          <DropdownItem 
-                            key={country.code}
-                            onClick={() => handleCountrySelect(country)}
-                            className="d-flex align-items-center py-2"
-                          >
-                            <span className="me-2">{country.flag}</span>
-                            <span className="me-2">{country.country}</span>
-                            <span className="text-muted">+{country.code}</span>
-                          </DropdownItem>
-                        ))}
-                      </div>
-                    </DropdownMenu>
-                  </Dropdown>
-                </Col>
-                <Col md={8}>
-                  <InputGroup>
+
+            <Form onSubmit={handleSubmit}>
+              <Row>
+                {/* Column 1 */}
+                <Col md={6}>
+                  {/* Campaign Name */}
+                  <FormGroup className="mb-4">
+                    <Label className="fw-bold">
+                      Campaign Name
+                      <Badge color="primary" pill className="ms-2">Required</Badge>
+                    </Label>
                     <Input
                       type="text"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
+                      name="campaignName"
+                      value={campaignData.campaignName}
                       onChange={handleInputChange}
-                      placeholder="Enter phone number"
-                      className="form-control-lg border-2"
+                      placeholder="Enter campaign name"
+                      required
                     />
-                    <Button 
-                      color="primary" 
-                      onClick={handleAddNumber}
-                      className="px-4"
-                    >
-                      Add
-                    </Button>
-                  </InputGroup>
+                  </FormGroup>
+
+                  {/* Template Selection - Updated with API data */}
+                  <FormGroup className="mb-4 position-relative">
+                    <Label className="fw-bold">
+                      Message Template
+                      <Badge color="primary" pill className="ms-2">Required</Badge>
+                    </Label>
+                    <Dropdown isOpen={dropdownOpen.template} toggle={() => toggleDropdown('template')} className="w-100">
+                      <DropdownToggle caret color="light" className="w-100 text-start">
+                        {campaignData.template 
+                          ? templates.find(t => t.id === campaignData.template)?.name 
+                          : 'Select a template...'}
+                      </DropdownToggle>
+                      <DropdownMenu className="w-100">
+                        {/* Added search input for templates */}
+                        <div className="px-3 py-2 border-bottom">
+                          <Input
+                            type="text"
+                            placeholder="Search templates..."
+                            value={templateSearchTerm}
+                            onChange={(e) => setTemplateSearchTerm(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {templatesLoading ? (
+                            <DropdownItem disabled>
+                              <span className="spinner-border spinner-border-sm me-2" />
+                              Loading templates...
+                            </DropdownItem>
+                          ) : filteredTemplates.length > 0 ? (
+                            filteredTemplates.map(template => (
+                              <DropdownItem 
+                                key={template.id}
+                                onClick={() => handleTemplateSelect(template.id)}
+                              >
+                                <div>
+                                  <span className="fw-bold">{template.name}</span>
+                                  <div className="d-flex mt-1">
+                                    <Badge 
+                                      color="primary" 
+                                      pill 
+                                      className="me-2"
+                                      style={{ textTransform: 'none' }}
+                                    >
+                                      {formatCategory(template.category)}
+                                    </Badge>
+                                    <Badge color="info" pill>
+                                      {template.language}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </DropdownItem>
+                            ))
+                          ) : (
+                            <DropdownItem disabled>No templates found</DropdownItem>
+                          )}
+                        </div>
+                      </DropdownMenu>
+                    </Dropdown>
+                  </FormGroup>
+                </Col>
+
+                {/* Column 2 */}
+                <Col md={6}>
+                  {/* Send Type */}
+                  <FormGroup className="mb-4">
+                    <Label className="fw-bold">
+                      Sending Schedule
+                      <Badge color="primary" pill className="ms-2">Required</Badge>
+                    </Label>
+                    <ButtonGroup className="w-100">
+                      <Button
+                        color={campaignData.sendType === 'now' ? 'primary' : 'light'}
+                        onClick={() => setCampaignData(prev => ({ ...prev, sendType: 'now' }))}
+                      >
+                        Send Now
+                      </Button>
+                      <Button
+                        color={campaignData.sendType === 'later' ? 'primary' : 'light'}
+                        onClick={() => setCampaignData(prev => ({ ...prev, sendType: 'later' }))}
+                      >
+                        Schedule
+                      </Button>
+                    </ButtonGroup>
+                    {campaignData.sendType === 'later' && (
+                      <Input
+                        type="datetime-local"
+                        name="scheduledTime"
+                        value={campaignData.scheduledTime}
+                        onChange={handleInputChange}
+                        className="mt-2"
+                        required
+                      />
+                    )}
+                  </FormGroup>
+
+                  {/* Group Selection */}
+                  <FormGroup className="mb-4 position-relative">
+                    <Label className="fw-bold">
+                      Target Groups
+                      <Badge color="primary" pill className="ms-2">Required</Badge>
+                    </Label>
+                    <Dropdown isOpen={dropdownOpen.groups} toggle={() => toggleDropdown('groups')} className="w-100">
+                      <DropdownToggle caret color="light" className="w-100 text-start">
+                        {campaignData.selectedGroups.length 
+                          ? `${campaignData.selectedGroups.length} groups selected`
+                          : 'Select target groups...'}
+                      </DropdownToggle>
+                      <DropdownMenu className="w-100">
+                        {/* Search input for groups */}
+                        <div className="px-3 py-2 border-bottom">
+                          <Input
+                            type="text"
+                            placeholder="Search groups..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {filteredGroups.length > 0 ? (
+                            filteredGroups.map(group => (
+                              <DropdownItem 
+                                key={group._id}
+                                onClick={() => handleGroupSelect(group._id)}
+                                className="d-flex align-items-center"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={campaignData.selectedGroups.includes(group._id)}
+                                  onChange={() => {}}
+                                  className="me-2"
+                                />
+                                <div className="d-flex justify-content-between w-100">
+                                  <span>{group.name}</span>
+                                  <Badge color="info" pill>
+                                    {group.allowedPhoneNumbers?.length || 0} members
+                                  </Badge>
+                                </div>
+                              </DropdownItem>
+                            ))
+                          ) : (
+                            <DropdownItem disabled>No groups found</DropdownItem>
+                          )}
+                        </div>
+                      </DropdownMenu>
+                    </Dropdown>
+                  </FormGroup>
                 </Col>
               </Row>
-            </FormGroup>
 
-            <FormGroup className="mb-4">
-              <Label className="fw-bold mb-2 d-flex align-items-center">
-                <FileText size={18} className="me-2" />
-                Import Numbers (CSV)
-              </Label>
-              <div className="custom-file-upload border-2 rounded-3">
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleCSVImport}
-                  className="form-control-lg"
-                />
-              </div>
-            </FormGroup>
+              {/* Selected Template Preview with Parameters - NEW SECTION */}
+              {campaignData.template && selectedTemplateDetails && (
+                <Row className="mb-3">
+                  <Col>
+                    <Card className="border">
+                      <CardBody>
+                        <h5 className="mb-3">Template: {selectedTemplateDetails.name || "Selected Template"}</h5>
+                        
+                        {/* Display template badges if available */}
+                        <div className="d-flex mb-3">
+                          {selectedTemplateDetails.category && (
+                            <Badge 
+                              color="primary" 
+                              pill 
+                              className="me-2"
+                              style={{ textTransform: 'none' }}
+                            >
+                              {formatCategory(selectedTemplateDetails.category)}
+                            </Badge>
+                          )}
+                          {selectedTemplateDetails.language && (
+                            <Badge color="info" pill>
+                              {selectedTemplateDetails.language}
+                            </Badge>
+                          )}
+                        </div>
 
-            <FormGroup>
-              <Label className="fw-bold mb-2">Added Numbers</Label>
-              <div className="border-2 rounded-3 p-3" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                {formData.numbers.length === 0 ? (
-                  <div className="text-center text-muted py-4">
-                    <Phone size={24} className="mb-2" />
-                    <p className="mb-0">No numbers added yet</p>
-                  </div>
-                ) : (
-                  formData.numbers.map((number, index) => (
-                    <div key={index} className="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded">
-                      <div className="d-flex align-items-center">
-                        <Phone size={16} className="me-2 text-primary" />
-                        <span>{number}</span>
+                        {/* Display template preview with live parameter replacement */}
+                        <div className="mb-4">
+                          <Label className="fw-bold">Template Preview</Label>
+                          <div className="border rounded p-3 bg-light mb-3">
+                            <div className="text-muted mb-2">(Header)</div>
+                            <div className="mb-2">
+                              {getPreviewText(selectedTemplateDetails.text)}
+                            </div>
+                            <div className="text-muted small">This message is from an unverified business.</div>
+                          </div>
+                        </div>
+
+                        {/* Template Parameters Section */}
+                        <div className="mb-3">
+                          <Label className="fw-bold">
+                            Template Parameters
+                            <Badge color="primary" pill className="ms-2">Required</Badge>
+                          </Label>
+                          {extractedParams.length > 0 ? (
+                            <Row className="mt-2">
+                              {extractedParams.map((param) => (
+                                <Col md={6} key={param.key} className="mb-3">
+                                  <FormGroup>
+                                    <Label className="fw-bold text-secondary">
+                                      {param.name} ({`{${param.index}}`})
+                                    </Label>
+                                    <Input
+                                      type={param.type}
+                                      name={param.key}
+                                      value={campaignData.templateParams[param.key] || ''}
+                                      onChange={handleParamChange}
+                                      placeholder={`Enter ${param.name}`}
+                                      required
+                                    />
+                                  </FormGroup>
+                                </Col>
+                              ))}
+                            </Row>
+                          ) : (
+                            <p className="text-muted">This template has no editable parameters.</p>
+                          )}
+                        </div>
+                      </CardBody>
+                    </Card>
+                  </Col>
+                </Row>
+              )}
+
+              {/* Selected Groups Preview */}
+              {campaignData.selectedGroups.length > 0 && (
+                <Row className="mb-3">
+                  <Col>
+                    <Label className="fw-bold">Selected Groups</Label>
+                    <div className="border rounded p-3">
+                      <div className="d-flex flex-wrap gap-2">
+                        {campaignData.selectedGroups.map(groupId => {
+                          const group = groups.find(g => g._id === groupId);
+                          return group ? (
+                            <Badge 
+                              key={groupId} 
+                              color="primary" 
+                              className="p-2 d-flex align-items-center"
+                            >
+                              {group.name}
+                              <span 
+                                className="ms-2 cursor-pointer" 
+                                onClick={() => handleGroupSelect(groupId)}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                ×
+                              </span>
+                            </Badge>
+                          ) : null;
+                        })}
                       </div>
-                      <Button
-                        color="danger"
-                        size="sm"
-                        className="btn-icon"
-                        onClick={() => handleRemoveNumber(index)}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
                     </div>
-                  ))
-                )}
-              </div>
-            </FormGroup>
-          </ModalBody>
-          <ModalFooter className="bg-light border-top-0 p-4">
-            <Button color="light" onClick={toggle} className="px-4">
-              Cancel
-            </Button>
-            <Button color="primary" type="submit" className="px-4">
-              {editMode ? 'Update Group' : 'Create Group'}
-            </Button>
-          </ModalFooter>
-        </Form>
-      </Modal>
+                  </Col>
+                </Row>
+              )}
 
-      <style jsx>{`
-        .modal-custom {
-          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .modal-custom .form-control,
-        .modal-custom .form-select {
-          border-color: #dee2e6;
-          transition: all 0.2s;
-        }
-        .modal-custom .form-control:focus,
-        .modal-custom .form-select:focus {
-          border-color: #80bdff;
-          box-shadow: 0 0 0 0.2rem rgba(0,123,255,.1);
-        }
-        .country-dropdown .dropdown-toggle {
-          height: 48px;
-          padding: 0.5rem 1rem;
-          font-size: 1rem;
-        }
-        .country-dropdown .dropdown-toggle::after {
-          display: none;
-        }
-        .country-dropdown-menu {
-          max-height: 300px;
-          overflow-y: auto;
-        }
-        .btn-icon {
-          width: 32px;
-          height: 32px;
-          padding: 0;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 6px;
-        }
-        .custom-file-upload {
-          position: relative;
-          overflow: hidden;
-          border: 2px dashed #dee2e6;
-          background: #f8f9fa;
-          transition: all 0.2s;
-        }
-        .custom-file-upload:hover {
-          border-color: #80bdff;
-          background: #fff;
-        }
-        .border-2 {
-          border-width: 2px !important;
-        }
-      `}</style>
-    </Container>
+              {/* Submit Button - Full Width */}
+              <Row>
+                <Col>
+                  <Button
+                    color="primary"
+                    type="submit"
+                    className="w-100 mt-3"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" />
+                        Creating Campaign...
+                      </>
+                    ) : (
+                      'Launch Campaign'
+                    )}
+                  </Button>
+                </Col>
+              </Row>
+            </Form>
+          </CardBody>
+        </Card>
+      </Container>
+    </div>
   );
 };
 
-
-export default WhatsappGroup;
+export default WhatsAppCampaigns;

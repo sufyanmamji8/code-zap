@@ -780,9 +780,12 @@ import axios from 'axios';
 import { GROUP_ENDPOINTS, MENU_API_ENDPOINT, ASSIGN_MENU_ENDPOINTS } from 'Api/Constant';
 import { FaCheck, FaTrash, FaLink, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
 import { toast } from 'sonner';
-import { Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'; // Import DotLottieReact
 
 const WhatsAppMenusAccess = () => {
+  const navigate = useNavigate();
+  
   // State initialization with proper types
   const [groups, setGroups] = useState([]);
   const [menus, setMenus] = useState([]);
@@ -798,10 +801,27 @@ const WhatsAppMenusAccess = () => {
   const [menuToDelete, setMenuToDelete] = useState(null);
   const [groupToDeleteFrom, setGroupToDeleteFrom] = useState(null);
 
+  // Helper function to get the auth headers
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("No token found, please login again.");
+      navigate("/login");
+      return null;
+    }
+    
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
+
   // Fetch initial data on component mount
   useEffect(() => {
     const initializeData = async () => {
+      setLoading(true);
       await Promise.all([fetchGroups(), fetchMenus(), fetchAllAssignedMenus()]);
+      setLoading(false);
     };
     initializeData();
   }, []);
@@ -817,20 +837,11 @@ const WhatsAppMenusAccess = () => {
 
   const fetchGroups = async () => {
     try {
-      setLoading(true);
-      
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("No token found, please login again.");
-        Navigate("/login");
-        return;
-      }
+      const headers = getAuthHeaders();
+      if (!headers) return;
       
       const response = await axios.get(GROUP_ENDPOINTS.GET_ALL, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
         withCredentials: true,
       });
       
@@ -841,15 +852,19 @@ const WhatsAppMenusAccess = () => {
       setError('Failed to fetch groups');
       toast.error(err.response?.data?.message || "An error occurred");
       setGroups([]);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchMenus = async () => {
     try {
-      setLoading(true);
-      const response = await axios.get(`${MENU_API_ENDPOINT}/getAllMenus`);
+      const headers = getAuthHeaders();
+      if (!headers) return;
+      
+      const response = await axios.get(`${MENU_API_ENDPOINT}/getAllMenus`, {
+        headers,
+        withCredentials: true
+      });
+      
       console.log("Fetched Menus Response:", response.data);
       
       if (response.data?.data) {
@@ -859,8 +874,10 @@ const WhatsAppMenusAccess = () => {
       } else {
         setMenus([]);
       }
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching menus:', err);
+      setError('Failed to fetch menus');
+      toast.error(err.response?.data?.message || "An error occurred");
     }
   };
 
@@ -869,12 +886,21 @@ const WhatsAppMenusAccess = () => {
     
     try {
       setLoading(true);
-      const response = await axios.get(ASSIGN_MENU_ENDPOINTS.GET_GROUP_MENUS(groupId));
+      
+      const headers = getAuthHeaders();
+      if (!headers) return;
+      
+      const response = await axios.get(ASSIGN_MENU_ENDPOINTS.GET_GROUP_MENUS(groupId), {
+        headers,
+        withCredentials: true
+      });
+      
       const assignedMenusData = response.data?.assignedMenus || [];
       setAssignedMenus(assignedMenusData);
     } catch (err) {
       console.error('Error fetching assigned menus:', err);
       setError('Failed to fetch assigned menus');
+      toast.error(err.response?.data?.message || "An error occurred");
       setAssignedMenus([]);
     } finally {
       setLoading(false);
@@ -883,17 +909,22 @@ const WhatsAppMenusAccess = () => {
 
   const fetchAllAssignedMenus = async () => {
     try {
-      setLoading(true);
-      const response = await axios.get(ASSIGN_MENU_ENDPOINTS.GET_ALL_ASSIGNED);
+      const headers = getAuthHeaders();
+      if (!headers) return;
+      
+      const response = await axios.get(ASSIGN_MENU_ENDPOINTS.GET_ALL_ASSIGNED, {
+        headers,
+        withCredentials: true
+      });
+      
       const allMenusData = response.data?.assignedMenus || [];
       setAllAssignedMenus(allMenusData);
       console.log("All assigned menus:", response.data);
     } catch (err) {
       console.error('Error fetching all assigned menus:', err);
       setError('Failed to fetch all assigned menus');
+      toast.error(err.response?.data?.message || "An error occurred");
       setAllAssignedMenus([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -911,12 +942,20 @@ const WhatsAppMenusAccess = () => {
 
     try {
       setLoading(true);
+      
+      const headers = getAuthHeaders();
+      if (!headers) return;
+      
       await axios.post(ASSIGN_MENU_ENDPOINTS.ASSIGN, {
         groupId: selectedGroup,
         menuId: selectedMenu
+      }, {
+        headers,
+        withCredentials: true
       });
       
       setSuccess('Menu assigned successfully');
+      toast.success("Menu assigned successfully!");
       setSelectedMenu('');
       await Promise.all([
         fetchAssignedMenus(selectedGroup),
@@ -925,6 +964,7 @@ const WhatsAppMenusAccess = () => {
     } catch (err) {
       console.error('Error assigning menu:', err);
       setError(err.response?.data?.message || 'Failed to assign menu');
+      toast.error(err.response?.data?.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -942,11 +982,18 @@ const WhatsAppMenusAccess = () => {
 
     try {
       setLoading(true);
+      
+      const headers = getAuthHeaders();
+      if (!headers) return;
+      
       await axios.delete(ASSIGN_MENU_ENDPOINTS.REMOVE, {
+        headers,
+        withCredentials: true,
         data: { groupId, menuId }
       });
       
       setSuccess('Menu removed successfully');
+      toast.success("Menu removed successfully!");
       await Promise.all([
         fetchAssignedMenus(selectedGroup),
         fetchAllAssignedMenus()
@@ -954,6 +1001,7 @@ const WhatsAppMenusAccess = () => {
     } catch (err) {
       console.error('Error removing menu:', err);
       setError('Failed to remove menu');
+      toast.error(err.response?.data?.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -1006,250 +1054,264 @@ const WhatsAppMenusAccess = () => {
   };
 
   return (
-    <div className="whatsapp-menu-access p-4">
-      <h2 className=" mb-4">
-        <i className=" mr-2"></i>
-        WhatsApp Menu Management
-      </h2>
-
-      {/* Tabs Navigation */}
-      <div className="mb-4 text-center">
-        <Button 
-          color={activeTab === 'assign' ? 'primary' : 'light'} 
-          className="mr-2 px-4"
-          onClick={() => setActiveTab('assign')}
+    <>
+      {/* Loading overlay with DotLottie animation - similar to Login component */}
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(255, 255, 255, 0.8)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
         >
-          <FaLink className="mr-2" /> Assign Menus
-        </Button>
-        <Button 
-          color={activeTab === 'overview' ? 'primary' : 'light'} 
-          className="px-4"
-          onClick={() => setActiveTab('overview')}
-        >
-          <FaInfoCircle className="mr-2" /> Overview
-        </Button>
-      </div>
-
-      {/* Status Messages */}
-      {error && (
-        <Alert color="danger" toggle={clearMessages} className="animated fadeIn">
-          <FaExclamationTriangle className="mr-2" />
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert color="success" toggle={clearMessages} className="animated fadeIn">
-          <FaCheck className="mr-2" />
-          {success}
-        </Alert>
+          <DotLottieReact
+            src="https://lottie.host/5060de43-85ac-474a-a85b-892f9730e17a/b3jJ1vGkWh.lottie"
+            loop
+            autoplay
+            style={{ width: "150px", height: "150px" }}
+          />
+        </div>
       )}
 
-      {activeTab === 'assign' ? (
-        <Row>
-          {/* Assign Menu Section - Full Width */}
-          <Col md="12">
-            <Card className="shadow-sm border-0 mb-4">
-              <CardHeader className="bg-gradient-primary text-white">
-                <h4 className="mb-0">Assign Menu to Group</h4>
-              </CardHeader>
-              <CardBody>
-                <Form onSubmit={handleAssignMenu}>
-                  <Row>
-                    <Col md="5">
-                      <FormGroup>
-                        <Label for="groupSelect" className="font-weight-bold">
-                          <i className="fa fa-users mr-2"></i>
-                          Select Group
-                        </Label>
-                        <Input
-                          type="select"
-                          id="groupSelect"
-                          value={selectedGroup}
-                          onChange={(e) => setSelectedGroup(e.target.value)}
-                          disabled={loading || !groups.length}
-                          className="form-control-lg"
-                        >
-                          <option value="">Choose Group...</option>
-                          {Array.isArray(groups) && groups.map(group => (
-                            <option key={group._id} value={group._id}>
-                              {group.name} ({getMenuCountForGroup(group._id)} menus)
-                            </option>
-                          ))}
-                        </Input>
-                      </FormGroup>
-                    </Col>
-                    <Col md="5">
-                      <FormGroup>
-                        <Label for="menuSelect" className="font-weight-bold">
-                          <i className="fa fa-list mr-2"></i>
-                          Select Menu
-                        </Label>
-                        <Input
-                          type="select"
-                          id="menuSelect"
-                          value={selectedMenu}
-                          onChange={(e) => setSelectedMenu(e.target.value)}
-                          disabled={loading || !menus.length || !selectedGroup}
-                          className="form-control-lg"
-                        >
-                          <option value="">Choose Menu...</option>
-                          {Array.isArray(menus) && menus.map(menu => (
-                            <option key={menu._id} value={menu._id}>
-                              {getMenuName(menu)}
-                            </option>
-                          ))}
-                        </Input>
-                      </FormGroup>
-                    </Col>
-                    <Col md="2" className="d-flex align-items-end">
-                      <Button 
-                        color="primary" 
-                        type="submit" 
-                        disabled={loading || !selectedGroup || !selectedMenu}
-                        className="btn-lg btn-block mb-3"
-                      >
-                        {loading ? (
-                          <>
-                            <Spinner size="sm" className="mr-2" /> Assigning...
-                          </>
-                        ) : (
-                          <>
-                            <FaLink className="mr-2" /> Assign Menu
-                          </>
-                        )}
-                      </Button>
-                    </Col>
-                  </Row>
-                </Form>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      ) : (
-        // Overview Tab
-        <Card className="shadow-sm border-0">
-          <CardHeader className=" bg-gradient-primary text-white">
-            <h4 className="mb-0">Global Menu Assignments Overview</h4>
-          </CardHeader>
-          <CardBody>
-            {loading && allAssignedMenus.length === 0 ? (
-              <div className="text-center p-5">
-                <Spinner size="lg" />
-                <p className="mt-3">Loading all assignments...</p>
-              </div>
-            ) : Array.isArray(allAssignedMenus) && allAssignedMenus.length > 0 ? (
-              <>
-                <div className="overview-stats mb-4">
-                  <Row>
-                    <Col md="4">
-                      <Card className="bg-primary text-white text-center p-3">
-                        <h2>{groups.length}</h2>
-                        <p className="mb-0">Total Groups</p>
-                      </Card>
-                    </Col>
-                    <Col md="4">
-                      <Card className="bg-success text-white text-center p-3">
-                        <h2>{menus.length}</h2>
-                        <p className="mb-0">Available Menus</p>
-                      </Card>
-                    </Col>
-                    <Col md="4">
-                      <Card className="bg-info text-white text-center p-3">
-                        <h2>{allAssignedMenus.length}</h2>
-                        <p className="mb-0">Total Assignments</p>
-                      </Card>
-                    </Col>
-                  </Row>
-                </div>
-                
-                <Table striped hover responsive className="assignment-table border">
-                  <thead className="bg-light">
-                    <tr>
-                      <th width="30%">Group</th>
-                      <th width="60%">Assigned Menus</th>
-                      <th width="10%">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.values(getGroupedAssignments()).map(({ group, assignments }) => (
-                      <tr key={group._id}>
-                        <td className="align-middle">
-                          <h5 className="mb-1">{group.name}</h5>
-                        </td>
-                        <td>
-                          {assignments.length > 0 ? (
-                            <div className="d-flex flex-wrap">
-                              {assignments.map(assignment => (
-                                <Badge 
-                                  key={assignment._id} 
-                                  color="primary" 
-                                  className="p-2 m-1"
-                                  pill
-                                >
-                                  {getAssignedMenuName(assignment)}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <Badge color="light" pill>No menus assigned</Badge>
-                          )}
-                        </td>
-                        <td>
-                          {assignments.length > 0 && (
-                            <div className="d-flex flex-column">
-                              {assignments.map(assignment => (
-                                <Button
-                                  key={assignment._id}
-                                  color="danger"
-                                  size="sm"
-                                  className="mb-2"
-                                  onClick={() => confirmDeleteMenu(
-                                    assignment.groupId?._id || assignment.groupId, 
-                                    assignment.menuId?._id || assignment.menuId
-                                  )}
-                                >
-                                  <FaTrash />
-                                </Button>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </>
-            ) : (
-              <div className="text-center p-5 bg-light rounded">
-                <FaInfoCircle size={50} className="text-muted mb-3" />
-                <h4>No Menu Assignments Found</h4>
-                <p>No menus have been assigned to any groups yet. Go to the Assign Menus tab to create new assignments.</p>
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      )}
+      <div className="whatsapp-menu-access p-4">
+        <h2 className="mb-4">
+          <i className="mr-2"></i>
+          WhatsApp Menu Management
+        </h2>
 
-      {/* Delete Confirmation Modal */}
-      <Modal isOpen={deleteModal} toggle={() => setDeleteModal(false)}>
-        <ModalHeader toggle={() => setDeleteModal(false)}>Confirm Delete</ModalHeader>
-        <ModalBody>
-          Are you sure you want to remove this menu assignment? This action cannot be undone.
-        </ModalBody>
-        <ModalFooter>
-          <Button color="secondary" onClick={() => setDeleteModal(false)}>
-            Cancel
+        {/* Tabs Navigation */}
+        <div className="mb-4 text-center">
+          <Button 
+            color={activeTab === 'assign' ? 'primary' : 'light'} 
+            className="mr-2 px-4"
+            onClick={() => setActiveTab('assign')}
+          >
+            <FaLink className="mr-2" /> Assign Menus
           </Button>
           <Button 
-            color="danger" 
-            onClick={() => handleRemoveMenu(menuToDelete, groupToDeleteFrom)}
-            disabled={loading}
+            color={activeTab === 'overview' ? 'primary' : 'light'} 
+            className="px-4"
+            onClick={() => setActiveTab('overview')}
           >
-            {loading ? <Spinner size="sm" /> : 'Delete'}
+            <FaInfoCircle className="mr-2" /> Overview
           </Button>
-        </ModalFooter>
-      </Modal>
-    </div>
+        </div>
+
+        {/* Status Messages */}
+        {error && (
+          <Alert color="danger" toggle={clearMessages} className="animated fadeIn">
+            <FaExclamationTriangle className="mr-2" />
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert color="success" toggle={clearMessages} className="animated fadeIn">
+            <FaCheck className="mr-2" />
+            {success}
+          </Alert>
+        )}
+
+        {activeTab === 'assign' ? (
+          <Row>
+            {/* Assign Menu Section - Full Width */}
+            <Col md="12">
+              <Card className="shadow-sm border-0 mb-4">
+                <CardHeader className="bg-gradient-primary text-white">
+                  <h4 className="mb-0">Assign Menu to Group</h4>
+                </CardHeader>
+                <CardBody>
+                  <Form onSubmit={handleAssignMenu}>
+                    <Row>
+                      <Col md="5">
+                        <FormGroup>
+                          <Label for="groupSelect" className="font-weight-bold">
+                            <i className="fa fa-users mr-2"></i>
+                            Select Group
+                          </Label>
+                          <Input
+                            type="select"
+                            id="groupSelect"
+                            value={selectedGroup}
+                            onChange={(e) => setSelectedGroup(e.target.value)}
+                            disabled={loading || !groups.length}
+                            className="form-control-lg"
+                          >
+                            <option value="">Choose Group...</option>
+                            {Array.isArray(groups) && groups.map(group => (
+                              <option key={group._id} value={group._id}>
+                                {group.name} ({getMenuCountForGroup(group._id)} menus)
+                              </option>
+                            ))}
+                          </Input>
+                        </FormGroup>
+                      </Col>
+                      <Col md="5">
+                        <FormGroup>
+                          <Label for="menuSelect" className="font-weight-bold">
+                            <i className="fa fa-list mr-2"></i>
+                            Select Menu
+                          </Label>
+                          <Input
+                            type="select"
+                            id="menuSelect"
+                            value={selectedMenu}
+                            onChange={(e) => setSelectedMenu(e.target.value)}
+                            disabled={loading || !menus.length || !selectedGroup}
+                            className="form-control-lg"
+                          >
+                            <option value="">Choose Menu...</option>
+                            {Array.isArray(menus) && menus.map(menu => (
+                              <option key={menu._id} value={menu._id}>
+                                {getMenuName(menu)}
+                              </option>
+                            ))}
+                          </Input>
+                        </FormGroup>
+                      </Col>
+                      <Col md="2" className="d-flex align-items-end">
+                        <Button 
+                          color="primary" 
+                          type="submit" 
+                          disabled={loading || !selectedGroup || !selectedMenu}
+                          className="btn-lg btn-block mb-3"
+                        >
+                          <FaLink className="mr-2" /> Assign Menu
+                        </Button>
+                      </Col>
+                    </Row>
+                  </Form>
+                </CardBody>
+              </Card>
+            </Col>
+          </Row>
+        ) : (
+          // Overview Tab
+          <Card className="shadow-sm border-0">
+            <CardHeader className="bg-gradient-primary text-white">
+              <h4 className="mb-0">Global Menu Assignments Overview</h4>
+            </CardHeader>
+            <CardBody>
+              {!loading && allAssignedMenus.length === 0 ? (
+                <div className="text-center p-5 bg-light rounded">
+                  <FaInfoCircle size={50} className="text-muted mb-3" />
+                  <h4>No Menu Assignments Found</h4>
+                  <p>No menus have been assigned to any groups yet. Go to the Assign Menus tab to create new assignments.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="overview-stats mb-4">
+                    <Row>
+                      <Col md="4">
+                        <Card className="bg-primary text-white text-center p-3">
+                          <h2>{groups.length}</h2>
+                          <p className="mb-0">Total Groups</p>
+                        </Card>
+                      </Col>
+                      <Col md="4">
+                        <Card className="bg-success text-white text-center p-3">
+                          <h2>{menus.length}</h2>
+                          <p className="mb-0">Available Menus</p>
+                        </Card>
+                      </Col>
+                      <Col md="4">
+                        <Card className="bg-info text-white text-center p-3">
+                          <h2>{allAssignedMenus.length}</h2>
+                          <p className="mb-0">Total Assignments</p>
+                        </Card>
+                      </Col>
+                    </Row>
+                  </div>
+                  
+                  <Table striped hover responsive className="assignment-table border">
+                    <thead className="bg-light">
+                      <tr>
+                        <th width="30%">Group</th>
+                        <th width="60%">Assigned Menus</th>
+                        <th width="10%">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.values(getGroupedAssignments()).map(({ group, assignments }) => (
+                        <tr key={group._id}>
+                          <td className="align-middle">
+                            <h5 className="mb-1">{group.name}</h5>
+                          </td>
+                          <td>
+                            {assignments.length > 0 ? (
+                              <div className="d-flex flex-wrap">
+                                {assignments.map(assignment => (
+                                  <Badge 
+                                    key={assignment._id} 
+                                    color="primary" 
+                                    className="p-2 m-1"
+                                    pill
+                                  >
+                                    {getAssignedMenuName(assignment)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <Badge color="light" pill>No menus assigned</Badge>
+                            )}
+                          </td>
+                          <td>
+                            {assignments.length > 0 && (
+                              <div className="d-flex flex-column">
+                                {assignments.map(assignment => (
+                                  <Button
+                                    key={assignment._id}
+                                    color="danger"
+                                    size="sm"
+                                    className="mb-2"
+                                    onClick={() => confirmDeleteMenu(
+                                      assignment.groupId?._id || assignment.groupId, 
+                                      assignment.menuId?._id || assignment.menuId
+                                    )}
+                                  >
+                                    <FaTrash />
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </>
+              )}
+            </CardBody>
+          </Card>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        <Modal isOpen={deleteModal} toggle={() => setDeleteModal(false)}>
+          <ModalHeader toggle={() => setDeleteModal(false)}>Confirm Delete</ModalHeader>
+          <ModalBody>
+            Are you sure you want to remove this menu assignment? This action cannot be undone.
+          </ModalBody>
+          <ModalFooter>
+            <Button color="secondary" onClick={() => setDeleteModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              color="danger" 
+              onClick={() => handleRemoveMenu(menuToDelete, groupToDeleteFrom)}
+              disabled={loading}
+            >
+              {loading ? <Spinner size="sm" /> : 'Delete'}
+            </Button>
+          </ModalFooter>
+        </Modal>
+      </div>
+    </>
   );
 };
 

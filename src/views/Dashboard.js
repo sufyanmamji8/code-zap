@@ -316,7 +316,6 @@ const Dashboard = () => {
           .dashboard-container {
             max-width: 1400px;
             margin: 0 auto;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
             min-height: 100vh;
             padding-top: 2rem;
           }

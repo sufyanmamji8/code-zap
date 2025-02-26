@@ -10,8 +10,9 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { countryList } from '../Pages/countryList';
-import { Plus, Edit2, Trash2, Upload, Users, Search, Phone, FileText, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Users, Search, Phone, FileText, ChevronDown, UserPlus } from 'lucide-react';
 import { GROUP_ENDPOINTS } from 'Api/Constant';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'; // Import DotLottieReact
 
 const WhatsappGroup = () => {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const WhatsappGroup = () => {
   const [countryDropdown, setCountryDropdown] = useState(false);
   const [searchCountry, setSearchCountry] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(pakistanCountry);
+  const [loading, setLoading] = useState(false); // Add loading state
   const [formData, setFormData] = useState({
     groupName: '',
     countryCode: pakistanCountry.code,
@@ -47,6 +49,7 @@ const WhatsappGroup = () => {
   }, [navigate]);
 
   const fetchGroups = async () => {
+    setLoading(true); // Show loader when fetching groups
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -77,6 +80,8 @@ const WhatsappGroup = () => {
         localStorage.removeItem('token');
         navigate('/login');
       }
+    } finally {
+      setLoading(false); // Hide loader after fetching completes
     }
   };
 
@@ -169,6 +174,7 @@ const WhatsappGroup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true); // Show loader when submitting form
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -245,10 +251,13 @@ const WhatsappGroup = () => {
         localStorage.removeItem('token');
         navigate('/login');
       }
+    } finally {
+      setLoading(false); // Hide loader after submission completes
     }
   };
 
   const handleEdit = async (groupId) => {
+    setLoading(true); // Show loader when editing
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -274,10 +283,13 @@ const WhatsappGroup = () => {
     } catch (error) {
       console.error('Error setting up edit mode:', error);
       toast.error('An error occurred while editing the group');
+    } finally {
+      setLoading(false); // Hide loader after editing setup completes
     }
   };
 
   const handleDelete = async (groupId) => {
+    setLoading(true); // Show loader when deleting
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -312,325 +324,568 @@ const WhatsappGroup = () => {
         localStorage.removeItem('token');
         navigate('/login');
       }
+    } finally {
+      setLoading(false); // Hide loader after deletion completes
     }
   };
 
   return (
-    <Container fluid className="p-4 bg-light min-vh-100">
-      <Row className="mb-4">
-        <Col md="6">
-          <h2 className="text-primary mb-0">
-            <Users className="me-2" size={28} />
-            WhatsApp Groups Management
-          </h2>
-        </Col>
-        <Col md="6" className="d-flex justify-content-end align-items-center">
-          <Button 
-            color="success" 
-            className="d-flex align-items-center shadow-sm" 
-            onClick={toggle}
-          >
-            <Plus size={20} className="me-2" />
-            Create New Group
-          </Button>
-        </Col>
-      </Row>
-
-      <Card className="shadow-sm border-0 mb-4">
-        <CardBody className="p-0">
-          <Row className="p-4 align-items-center border-bottom">
-            <Col md="6">
-              <InputGroup className="search-group">
-                <InputGroupText className="bg-white border-end-0">
-                  <Search size={18} className="text-muted" />
-                </InputGroupText>
-                <Input
-                  placeholder="Search groups..."
-                  className="border-start-0 ps-0"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </InputGroup>
+    <>
+      {/* Loading Overlay */}
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(255, 255, 255, 0.8)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <DotLottieReact
+            src="https://lottie.host/5060de43-85ac-474a-a85b-892f9730e17a/b3jJ1vGkWh.lottie"
+            loop
+            autoplay
+            style={{ width: "150px", height: "150px" }}
+          />
+        </div>
+      )}
+      
+      <Container fluid className="p-4 min-vh-100">
+        {/* Header Section with Gradient Background */}
+        <div className="header-section rounded-lg p-4 mb-4 bg-gradient-primary text-white shadow-lg">
+          <Row className="align-items-center">
+            <Col md="7">
+              <h2 className="mb-1 d-flex align-items-center">
+                <Users className="me-3" size={32} />
+                WhatsApp Groups Management
+              </h2>
+              <p className="mb-0 text-white-50">Create and manage your WhatsApp groups efficiently</p>
             </Col>
-            <Col md="6" className="text-end">
-              <Badge color="primary" className="me-2 p-2">
-                Total Groups: {groups.length}
-              </Badge>
+            <Col md="5" className="d-flex justify-content-end align-items-center">
+              <Button color="light" className="d-flex align-items-center shadow btn-hover-effect" onClick={toggle}>
+                <Plus size={20} className="me-2" />
+                <span className="fw-bold">Create New Group</span>
+              </Button>
             </Col>
           </Row>
-          
-          <Table hover borderless className="align-middle mb-0">
-            <thead className="bg-light">
-              <tr>
-                <th className="ps-4">#</th>
-                <th>Group Name</th>
-                <th>Members</th>
-                <th className="text-end pe-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredGroups.map((group, index) => (
-                <tr key={group._id}>
-                  <td className="ps-4">{index + 1}</td>
-                  <td>
-                    <div className="d-flex align-items-center">
-                      <div className="group-icon me-3 bg-primary text-white rounded-circle p-2">
-                        <Users size={20} />
-                      </div>
-                      <div>
-                        <h6 className="mb-0">{group.name}</h6>
-                        <small className="text-muted">Created today</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <Badge color="info" pill className="px-3 py-2">
-                      {group.allowedPhoneNumbers?.length || 0} members
-                    </Badge>
-                  </td>
-                  <td className="text-end pe-4">
-                    <Button 
-                      color="light"
-                      className="me-2 btn-icon"
-                      onClick={() => handleEdit(group._id)}
-                    >
-                      <Edit2 size={16} />
-                    </Button>
-                    <Button 
-                      color="light" 
-                      className="btn-icon text-danger"
-                      onClick={() => handleDelete(group._id)}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </CardBody>
-      </Card>
+        </div>
 
-      <Modal 
-        isOpen={modal} 
-        toggle={toggle} 
-        size="lg" 
-        className="modal-dialog-centered"
-        style={{ maxWidth: '700px' }}
-      >
-        <Form onSubmit={handleSubmit} className="modal-custom">
-          <ModalHeader toggle={toggle} className="bg-light border-bottom-0 p-4">
-            <div className="d-flex align-items-center">
-              {editMode ? (
-                <Edit2 size={24} className="me-2 text-primary" />
-              ) : (
-                <Plus size={24} className="me-2 text-primary" />
-              )}
-              <h4 className="mb-0">
-                {editMode ? 'Edit Group' : 'Create New Group'}
-              </h4>
-            </div>
-          </ModalHeader>
-          <ModalBody className="p-4">
-            <FormGroup className="mb-4">
-              <Label for="groupName" className="fw-bold mb-2">
-                Group Name
-              </Label>
-              <Input
-                type="text"
-                name="groupName"
-                id="groupName"
-                value={formData.groupName}
-                onChange={handleInputChange}
-                required
-                className="form-control-lg border-2"
-                placeholder="Enter your group name"
-              />
-            </FormGroup>
-            
-            <FormGroup className="mb-4">
-              <Label className="fw-bold mb-2 d-flex align-items-center">
-                <Phone size={18} className="me-2" />
-                Phone Number
-              </Label>
-              <div className="phone-input-container">
-                <div className="country-code-display" onClick={() => setCountryDropdown(!countryDropdown)}>
-                  <span className="country-code-flag me-1">{selectedCountry.flag}</span>
-                  <span className="country-code-text">
-                    {selectedCountry.code.length <= 2 ? `${selectedCountry.code.substring(0, 2)}` : `${selectedCountry.code.substring(0, 2)}..`}
-                  </span>
-                  <ChevronDown size={16} className="ms-1" />
-                </div>
-                <div className="phone-input-wrapper">
+        {/* Search and Stats Card */}
+        <Card className="shadow-sm border-0 mb-4 search-card overflow-hidden">
+          <CardBody className="p-0">
+            <Row className="p-4 align-items-center border-bottom">
+              <Col lg="8" md="6">
+                <InputGroup className="search-group shadow-sm rounded overflow-hidden">
+                  <InputGroupText className="bg-white border-0">
+                    <Search size={18} className="text-primary" />
+                  </InputGroupText>
                   <Input
-                    type="text"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleInputChange}
-                    placeholder="Enter phone number"
-                    className="phone-input"
+                    placeholder="Search groups by name..."
+                    className="border-0 py-2"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
-                  <Button 
-                    color="primary" 
-                    onClick={handleAddNumber}
-                    className="phone-add-btn"
-                  >
-                    Add
-                  </Button>
+                </InputGroup>
+              </Col>
+              <Col lg="4" md="6" className="mt-3 mt-md-0 d-flex justify-content-md-end">
+                <div className="stats-card d-flex align-items-center bg-primary-subtle p-2 px-3 rounded-pill">
+                  <div className="stats-icon me-2 bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center">
+                    <Users size={16} />
+                  </div>
+                  <div className="stats-text">
+                    <h6 className="mb-0 fw-bold">Total Groups</h6>
+                    <h5 className="mb-0 text-primary">{groups.length}</h5>
+                  </div>
                 </div>
-                
-                {/* Improved Country Dropdown with better CSS and z-index */}
-                {countryDropdown && (
-                  <div className="country-dropdown-absolute shadow-lg">
-                    <div className="country-search-container border-bottom sticky-top">
-                      <InputGroup size="sm">
-                        <InputGroupText className="bg-light border-0">
-                          <Search size={14} />
-                        </InputGroupText>
-                        <Input
-                          placeholder="Search country..."
-                          value={searchCountry}
-                          onChange={(e) => setSearchCountry(e.target.value)}
-                          className="border-0 bg-light"
-                        />
-                      </InputGroup>
-                    </div>
-                    <div className="country-list-container">
-                      {filteredCountries.length > 0 ? (
-                        filteredCountries.map((country) => (
-                          <div 
-                            key={country.code}
-                            onClick={() => handleCountrySelect(country)}
-                            className={`country-list-item ${selectedCountry.code === country.code ? 'active' : ''}`}
-                          >
-                            <span className="me-2">{country.flag}</span>
-                            <span className="country-name">{country.country}</span>
-                            <span className="country-code">+{country.code}</span>
+              </Col>
+            </Row>
+            
+            {/* Groups Table */}
+            <div className="table-responsive">
+              <Table hover borderless className="align-middle mb-0 groups-table">
+                <thead className="bg-light">
+                  <tr>
+                    <th className="ps-4 py-3">#</th>
+                    <th className="py-3">Group Information</th>
+                    <th className="py-3">Members</th>
+                    <th className="text-end pe-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredGroups.length > 0 ? (
+                    filteredGroups.map((group, index) => (
+                      <tr key={group._id} className="group-row">
+                        <td className="ps-4">{index + 1}</td>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <div className="group-icon me-3 bg-primary text-white rounded p-2 d-flex align-items-center justify-content-center">
+                              <Users size={20} />
+                            </div>
+                            <div>
+                              <h6 className="mb-0 fw-bold">{group.name}</h6>
+                              {/* <small className="text-muted d-flex align-items-center">
+                                <span className="status-dot bg-success me-1"></span>
+                                Active since today
+                              </small> */}
+                            </div>
                           </div>
-                        ))
-                      ) : (
-                        <div className="p-3 text-center text-muted">No countries found</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </FormGroup>
+                        </td>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <div className="members-badge me-2">
+                              <Badge color="primary" pill className="px-3 py-2 d-flex align-items-center">
+                                <UserPlus size={14} className="me-1" />
+                                <span>{group.allowedPhoneNumbers?.length || 0}</span>
+                              </Badge>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="text-end pe-4">
+                          <Button 
+                            color="light"
+                            className="me-2 btn-icon btn-action"
+                            onClick={() => handleEdit(group._id)}
+                          >
+                            <Edit2 size={16} className="text-primary" />
+                          </Button>
+                          <Button 
+                            color="light" 
+                            className="btn-icon btn-action"
+                            onClick={() => handleDelete(group._id)}
+                          >
+                            <Trash2 size={16} className="text-danger" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="text-center py-5">
+                        <div className="empty-state">
+                          <div className="empty-icon mb-3 bg-light p-4 rounded-circle mx-auto">
+                            <Users size={32} className="text-muted" />
+                          </div>
+                          <h5>No groups found</h5>
+                          <p className="text-muted mb-3">Try creating a new group or adjusting your search</p>
+                          <Button color="primary" onClick={toggle}>
+                            <Plus size={16} className="me-2" />
+                            Create Group
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+            </div>
+          </CardBody>
+        </Card>
 
-            <FormGroup className="mb-4">
-              <Label className="fw-bold mb-2 d-flex align-items-center">
-                <FileText size={18} className="me-2" />
-                Import Numbers (CSV)
-              </Label>
-              <div className="custom-file-upload border-2 rounded-3">
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleCSVImport}
-                  className="form-control-lg"
-                />
-              </div>
-            </FormGroup>
-
-            <FormGroup>
-              <Label className="fw-bold mb-2">Added Numbers</Label>
-              <div className="border-2 rounded-3 p-3" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                {formData.numbers.length === 0 ? (
-                  <div className="text-center text-muted py-4">
-                    <Phone size={24} className="mb-2" />
-                    <p className="mb-0">No numbers added yet</p>
-                  </div>
+        {/* Modal */}
+        <Modal 
+          isOpen={modal} 
+          toggle={toggle} 
+          size="lg" 
+          className="modal-dialog-centered"
+          style={{ maxWidth: '700px' }}
+        >
+          <Form onSubmit={handleSubmit} className="modal-custom">
+            <ModalHeader toggle={toggle} className="bg-gradient-primary text-white border-0 p-4">
+              <div className="d-flex align-items-center">
+                {editMode ? (
+                  <Edit2 size={24} className="me-2" />
                 ) : (
-                  formData.numbers.map((number, index) => (
-                    <div key={index} className="d-flex justify-content-between align-items-center p-2 mb-2 bg-light rounded">
-                      <div className="d-flex align-items-center">
-                        <Phone size={16} className="me-2 text-primary" />
-                        <span>{number}</span>
-                      </div>
-                      <Button
-                        color="danger"
-                        size="sm"
-                        className="btn-icon"
-                        onClick={() => handleRemoveNumber(index)}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  ))
+                  <Plus size={24} className="me-2" />
                 )}
+                <div>
+                  <h4 className="mb-0">
+                    {editMode ? 'Edit WhatsApp Group' : 'Create New WhatsApp Group'}
+                  </h4>
+                  <p className="mb-0 mt-1 text-white-50 small">
+                    {editMode ? 'Update your group details and members' : 'Add a new group with members to your collection'}
+                  </p>
+                </div>
               </div>
-            </FormGroup>
-          </ModalBody>
-          <ModalFooter className="bg-light border-top-0 p-4">
-            <Button color="light" onClick={toggle} className="px-4">
-              Cancel
-            </Button>
-            <Button color="primary" type="submit" className="px-4">
-              {editMode ? 'Update Group' : 'Create Group'}
-            </Button>
-          </ModalFooter>
-        </Form>
+            </ModalHeader>
+            <ModalBody className="p-4">
+              <FormGroup className="mb-4">
+                <Label for="groupName" className="fw-bold mb-2 d-flex align-items-center">
+                  <span className="label-icon bg-primary-subtle text-primary rounded p-1 me-3">
+                    <Users size={16} />
+                  </span>
+                  Group Name
+                </Label>
+                <Input
+                  type="text"
+                  name="groupName"
+                  id="groupName"
+                  value={formData.groupName}
+                  onChange={handleInputChange}
+                  required
+                  className="form-control-lg border"
+                  placeholder="Enter your group name"
+                />
+              </FormGroup>
+              
+              {/* Phone Number Input with Enhanced UI */}
+              <FormGroup className="mb-4">
+                <Label className="fw-bold mb-2 d-flex align-items-center">
+                  <span className="label-icon bg-primary-subtle text-primary rounded p-1 me-2">
+                    <Phone size={16} />
+                  </span>
+                  Phone Number
+                </Label>
+                <div className="phone-input-container shadow-sm">
+                  <div className="country-code-display" onClick={() => setCountryDropdown(!countryDropdown)}>
+                    <span className="country-code-flag me-2">{selectedCountry.flag}</span>
+                    <span className="country-code-text">
+                      {selectedCountry.code.substring(0, 3)}
+                    </span>
+                    <ChevronDown size={16} className="ms-2" />
+                  </div>
+                  <div className="phone-input-wrapper">
+                    <Input
+                      type="text"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      placeholder="Enter phone number"
+                      className="phone-input"
+                    />
+                    <Button 
+                      color="primary" 
+                      onClick={handleAddNumber}
+                      className="phone-add-btn"
+                    >
+                      <span className="d-none d-md-inline">Add</span>
+                      <Plus size={18} className="d-md-none" />
+                    </Button>
+                  </div>
+                  
+                  {/* Country Dropdown */}
+                  {countryDropdown && (
+                    <div className="country-dropdown-absolute shadow-lg">
+                      <div className="country-search-container border-bottom sticky-top">
+                        <InputGroup size="sm">
+                          <InputGroupText className="bg-light border-0">
+                            <Search size={14} />
+                          </InputGroupText>
+                          <Input
+                            placeholder="Search country..."
+                            value={searchCountry}
+                            onChange={(e) => setSearchCountry(e.target.value)}
+                            className="border-0 bg-light"
+                          />
+                        </InputGroup>
+                      </div>
+                      <div className="country-list-container">
+                        {filteredCountries.length > 0 ? (
+                          filteredCountries.map((country) => (
+                            <div 
+                              key={country.code}
+                              onClick={() => handleCountrySelect(country)}
+                              className={`country-list-item ${selectedCountry.code === country.code ? 'active' : ''}`}
+                            >
+                              <span className="me-2">{country.flag}</span>
+                              <span className="country-name">{country.country}</span>
+                              <span className="country-code">+{country.code}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-3 text-center text-muted">No countries found</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </FormGroup>
+
+              {/* CSV Import */}
+              <FormGroup className="mb-4">
+                <Label className="fw-bold mb-2 d-flex align-items-center">
+                  <span className="label-icon bg-primary-subtle text-primary rounded p-1 me-2">
+                    <FileText size={16} />
+                  </span>
+                  Import Numbers (CSV)
+                </Label>
+                <div className="custom-file-upload border rounded-3">
+                  <div className="csv-upload-content">
+                    <Upload size={24} className="text-primary mb-2" />
+                    <p className="mb-1">Drag & drop CSV file or</p>
+                    <Button color="primary" size="sm" className="position-relative">
+                      Browse Files
+                      <Input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleCSVImport}
+                        className="file-upload-input"
+                      />
+                    </Button>
+                    <p className="text-muted small mt-2 mb-0">Only CSV files are supported</p>
+                  </div>
+                </div>
+              </FormGroup>
+
+              {/* Added Numbers Section */}
+              <FormGroup>
+                <Label className="fw-bold mb-2 d-flex align-items-center">
+                  <span className="label-icon bg-primary-subtle text-primary rounded p-1 me-2">
+                    <UserPlus size={16} />
+                  </span>
+                  Added Numbers <Badge color="primary" pill className="ms-2">{formData.numbers.length}</Badge>
+                </Label>
+                <div className="numbers-container border rounded-3 p-3" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {formData.numbers.length === 0 ? (
+                    <div className="text-center text-muted py-4 empty-numbers">
+                      <Phone size={32} className="mb-2" />
+                      <p className="mb-0">No numbers added yet</p>
+                      <small>Add numbers using the form above or import from CSV</small>
+                    </div>
+                  ) : (
+                    <Row className="g-2">
+                      {formData.numbers.map((number, index) => (
+                        <Col md="6" key={index}>
+                          <div className="number-item d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                            <div className="d-flex align-items-center">
+                              <div className="number-avatar me-2">
+                                {number.substring(number.length - 2)}
+                              </div>
+                              <span className="number-text">{number}</span>
+                            </div>
+                            <Button
+                              color="link"
+                              className="p-1 text-danger"
+                              onClick={() => handleRemoveNumber(index)}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        </Col>
+                      ))}
+                    </Row>
+                  )}
+                </div>
+              </FormGroup>
+            </ModalBody>
+            <ModalFooter className="bg-light border-top-0 p-4">
+              <Button color="light" onClick={toggle} className="px-4 btn-hover-effect">
+                Cancel
+              </Button>
+              <Button color="primary" type="submit" className="px-4 btn-hover-effect">
+                {editMode ? 'Update Group' : 'Create Group'}
+              </Button>
+            </ModalFooter>
+          </Form>
       </Modal>
 
       <style jsx>{`
+        /* Base Styling */
+        .bg-gradient-light {
+          background: linear-gradient(to right, #f8f9fa, #ffffff);
+        }
+        
+        .bg-gradient-primary {
+          background: linear-gradient(to right, #4361ee, #3a0ca3);
+        }
+        
+        .shadow-lg {
+          box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
+        }
+        
+        .rounded-lg {
+          border-radius: 12px !important;
+        }
+        
+        .btn-hover-effect {
+          transition: all 0.3s ease;
+          transform: translateY(0);
+        }
+        
+        .btn-hover-effect:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        /* Search Card Styles */
+        .search-card {
+          border-radius: 12px;
+          transition: all 0.3s ease;
+        }
+        
+        .search-card:hover {
+          box-shadow: 0 15px 30px rgba(0,0,0,0.05) !important;
+        }
+        
+        .search-group {
+          transition: all 0.3s ease;
+        }
+        
+        .search-group:focus-within {
+          box-shadow: 0 5px 15px rgba(0,0,0,0.05) !important;
+        }
+        
+        .bg-primary-subtle {
+          background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        /* Table Styling */
+        .groups-table thead th {
+          font-weight: 600;
+          color: #495057;
+          border-bottom: 2px solid #e9ecef;
+        }
+        
+        .group-row {
+          transition: all 0.2s ease;
+        }
+        
+        .group-row:hover {
+          background-color: #f8f9fa;
+        }
+        
+        .status-dot {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+        }
+        
+        .btn-action {
+          transition: all 0.2s ease;
+          opacity: 0.8;
+          background: white;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        
+        .btn-action:hover {
+          opacity: 1;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        .member-avatars {
+          display: flex;
+          align-items: center;
+        }
+        
+        .member-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 12px;
+          font-weight: bold;
+          border: 2px solid white;
+        }
+        
+        .member-avatar-more {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #e9ecef;
+          color: #495057;
+          font-size: 10px;
+          font-weight: bold;
+          margin-left: -10px;
+          border: 2px solid white;
+        }
+        
+        /* Empty State */
+        .empty-state {
+          padding: 20px;
+          text-align: center;
+        }
+        
+        .empty-icon {
+          width: 70px;
+          height: 70px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        /* Modal Styling */
         .modal-custom {
-          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 15px 40px rgba(0,0,0,0.12);
         }
-        .modal-custom .form-control,
-        .modal-custom .form-select {
-          border-color: #dee2e6;
-          transition: all 0.2s;
+        
+        .label-icon {
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        .modal-custom .form-control:focus,
-        .modal-custom .form-select:focus {
-          border-color: #80bdff;
-          box-shadow: 0 0 0 0.2rem rgba(0,123,255,.1);
-        }
+        
+        /* Phone Input Styling */
         .phone-input-container {
           display: flex;
           align-items: stretch;
           position: relative;
-          border: 2px solid #dee2e6;
-          border-radius: 0.375rem;
-          overflow: visible;  /* Changed from hidden to visible */
+          border: 1px solid #dee2e6;
+          border-radius: 8px;
+          overflow: visible;
+          background: white;
         }
+        
         .country-code-display {
           display: flex;
           align-items: center;
           padding: 0.5rem 1rem;
           background: #f8f9fa;
-          border-right: 2px solid #dee2e6;
+          border-right: 1px solid #dee2e6;
           cursor: pointer;
           min-width: 100px;
           justify-content: center;
           user-select: none;
+          transition: all 0.2s ease;
         }
+        
+        .country-code-display:hover {
+          background: #e9ecef;
+        }
+        
         .country-code-flag {
           font-size: 1.2rem;
         }
-        .country-code-text {
-          font-weight: 500;
-          margin-left: 0.5rem;
-          margin-right: 0.5rem;
-        }
+        
         .phone-input-wrapper {
           display: flex;
           flex: 1;
         }
+        
         .phone-input {
           border: none;
           border-radius: 0;
           padding-left: 1rem;
           height: 100%;
         }
+        
         .phone-input:focus {
           box-shadow: none;
         }
+        
         .phone-add-btn {
-          border-radius: 0;
+          border-radius: 0 8px 8px 0;
           padding-left: 1.5rem;
           padding-right: 1.5rem;
         }
+        
+        /* Country Dropdown */
         .country-dropdown-absolute {
           position: absolute;
           top: 100%;
@@ -638,76 +893,130 @@ const WhatsappGroup = () => {
           width: 300px;
           max-height: 300px;
           background: white;
-          border-radius: 0.5rem;
+          border-radius: 12px;
           border: 1px solid #dee2e6;
-          z-index: 9999;  /* Increased z-index */
-          margin-top: 0.25rem;
-          overflow: visible;  /* Added */
-          display: block;  /* Added */
+          z-index: 9999;
+          margin-top: 0.5rem;
+          overflow: hidden;
+          display: block;
+          box-shadow: 0 15px 40px rgba(0,0,0,0.12);
         }
+        
         .country-search-container {
-          padding: 0.5rem;
+          padding: 0.75rem;
           background: white;
         }
+        
         .country-list-container {
           max-height: 250px;
           overflow-y: auto;
-          background: white;  /* Added */
+          background: white;
         }
+        
         .country-list-item {
           display: flex;
           align-items: center;
-          padding: 0.5rem 1rem;
+          padding: 0.75rem 1rem;
           cursor: pointer;
           transition: background-color 0.15s ease;
         }
+        
         .country-list-item:hover {
           background-color: #f8f9fa;
         }
+        
         .country-list-item.active {
-          background-color: #e9f0ff;
-          color: #0d6efd;
+          background-color: rgba(67, 97, 238, 0.1);
+          color: #4361ee;
         }
-        .country-name {
-          flex: 1;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .country-code {
-          margin-left: auto;
-          color: #6c757d;
-        }
-        .btn-icon {
-          width: 32px;
-          height: 32px;
-          padding: 0;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 6px;
-        }
+        
+        /* CSV Upload */
         .custom-file-upload {
           position: relative;
-          overflow: hidden;
           border: 2px dashed #dee2e6;
           background: #f8f9fa;
-          transition: all 0.2s;
+          transition: all 0.3s ease;
+          border-radius: 12px;
         }
+        
         .custom-file-upload:hover {
-          border-color: #80bdff;
+          border-color: #4361ee;
           background: #fff;
         }
-        .border-2 {
-          border-width: 2px !important;
+        
+        .csv-upload-content {
+          padding: 2rem;
+          text-align: center;
         }
-        .sticky-top {
-          position: sticky;
+        
+        .file-upload-input {
+          position: absolute;
           top: 0;
-          z-index: 1020;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          opacity: 0;
+          cursor: pointer;
+        }
+        
+        /* Numbers Container */
+        .numbers-container {
+          border: 1px solid #dee2e6 !important;
+          border-radius: 12px !important;
+          background: #fff;
+        }
+        
+        .number-item {
+          transition: all 0.2s ease;
+          border-radius: 8px;
+        }
+        
+        .number-item:hover {
+          background-color: #e9ecef !important;
+        }
+        
+        .number-avatar {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: #4361ee;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          font-weight: bold;
+        }
+        
+        .number-text {
+          font-size: 0.85rem;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        
+        .empty-numbers {
+          opacity: 0.7;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .country-dropdown-absolute {
+            width: 100%;
+          }
+          
+          .header-section {
+            padding: 1.5rem !important;
+          }
+          
+          .stats-card {
+            margin-top: 1rem;
+          }
         }
       `}</style>
     </Container>
+    </>
   );
 };
 
