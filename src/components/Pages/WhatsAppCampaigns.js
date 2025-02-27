@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Edit, Eye, Trash2, X } from 'lucide-react';
+
 import {
   Container,
   Row,
@@ -19,6 +21,7 @@ import {
   DropdownMenu,
   DropdownItem,
   Table
+  
 } from 'reactstrap';
 import axios from 'axios';
 import { GROUP_ENDPOINTS, TEMPLATE_ENDPOINTS, CAMPAIGN_ENDPOINTS } from 'Api/Constant';
@@ -31,7 +34,7 @@ const WhatsAppCampaigns = () => {
     scheduledTime: '',
     selectedGroups: [],
     priority: 'normal',
-    templateParams: {} // Store parameter values here
+    templateParams: {} 
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,26 +44,17 @@ const WhatsAppCampaigns = () => {
     groups: false
   });
   
-  // Add templates state to store fetched templates
   const [templates, setTemplates] = useState([]);
-  // Add templatesLoading state
   const [templatesLoading, setTemplatesLoading] = useState(true);
-  
-  // Add groups state to store fetched groups
   const [groups, setGroups] = useState([]);
-  // Add search term state for filtering groups
   const [searchTerm, setSearchTerm] = useState('');
-  // Add template search term state
   const [templateSearchTerm, setTemplateSearchTerm] = useState('');
-  // Add state to store the selected template's details
   const [selectedTemplateDetails, setSelectedTemplateDetails] = useState(null);
-  // Add state to store extracted parameters
   const [extractedParams, setExtractedParams] = useState([]);
-  
-  // Add state for campaigns list
+  const [editingCampaignId, setEditingCampaignId] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('new'); // 'new' or 'list'
+  const [activeTab, setActiveTab] = useState('new'); 
 
   useEffect(() => {
     fetchGroups();
@@ -68,7 +62,6 @@ const WhatsAppCampaigns = () => {
     fetchCampaigns();
   }, []);
 
-  // When template selection changes, fetch template details
   useEffect(() => {
     if (campaignData.template) {
       fetchTemplateDetails(campaignData.template);
@@ -78,89 +71,122 @@ const WhatsAppCampaigns = () => {
     }
   }, [campaignData.template]);
 
-  // Extract parameters from template text
-  const extractParameters = (templateText) => {
-    // Regular expression to match {{number}} patterns
-    const paramRegex = /\{\{(\d+)\}\}/g;
-    let match;
-    const params = [];
-    const usedIndexes = new Set();
-    
-    // Find all matches in the template text
-    while ((match = paramRegex.exec(templateText)) !== null) {
-      const paramIndex = match[1];
+  const extractParameters = (template) => {
+    // First try to extract from components if they exist
+    if (template.components && template.components.length > 0) {
+      const params = [];
+      let paramIndex = 1;
       
-      // Only add unique parameters
-      if (!usedIndexes.has(paramIndex)) {
-        usedIndexes.add(paramIndex);
-        
-        // Create parameter object with default label based on index
-        let paramLabel = "Parameter";
-        
-        // Try to infer parameter type from context
-        // This is a simple example - you can enhance this logic
-        const contextBefore = templateText.substring(
-          Math.max(0, match.index - 30), 
-          match.index
-        ).toLowerCase();
-        
-        if (contextBefore.includes("movie") || paramIndex === "1") {
-          paramLabel = "Movie Name";
-        } else if (contextBefore.includes("time") || paramIndex === "2") {
-          paramLabel = "Time";
-        } else if (contextBefore.includes("venue") || paramIndex === "3") {
-          paramLabel = "Venue";
-        } else if (contextBefore.includes("seat") || paramIndex === "4") {
-          paramLabel = "Seats";
+      template.components.forEach(component => {
+        if (component.example && Array.isArray(component.example)) {
+          component.example.forEach(example => {
+            // If we have example parameters, use them to extract info
+            params.push({
+              index: paramIndex.toString(),
+              key: `param${paramIndex}`,
+              name: example.text || `Parameter ${paramIndex}`,
+              type: 'text',
+              componentType: component.type
+            });
+            paramIndex++;
+          });
+        } else if (component.text) {
+          // Otherwise, extract from text using regex
+          const paramRegex = /\{\{(\d+)\}\}/g;
+          let match;
+          const usedIndexes = new Set();
+          
+          while ((match = paramRegex.exec(component.text)) !== null) {
+            const paramIndex = match[1];
+            
+            if (!usedIndexes.has(paramIndex)) {
+              usedIndexes.add(paramIndex);
+              params.push({
+                index: paramIndex,
+                key: `param${paramIndex}`,
+                name: `Parameter ${paramIndex}`,
+                type: 'text',
+                componentType: component.type
+              });
+            }
+          }
         }
+      });
+      
+      return params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
+    } else {
+      // Fallback to extracting from template text
+      const paramRegex = /\{\{(\d+)\}\}/g;
+      let match;
+      const params = [];
+      const usedIndexes = new Set();
+      
+      const templateText = template.text || "";
+      
+      while ((match = paramRegex.exec(templateText)) !== null) {
+        const paramIndex = match[1];
         
-        params.push({
-          index: paramIndex,
-          key: `param${paramIndex}`,
-          name: paramLabel,
-          type: 'text'
-        });
+        if (!usedIndexes.has(paramIndex)) {
+          usedIndexes.add(paramIndex);
+          
+          params.push({
+            index: paramIndex,
+            key: `param${paramIndex}`,
+            name: `Parameter ${paramIndex}`,
+            type: 'text'
+          });
+        }
       }
+      
+      return params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
     }
-    
-    // Sort parameters by index
-    params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
-    return params;
   };
 
-  // Add fetchCampaigns function to get all campaigns
- const fetchCampaigns = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const companyId = localStorage.getItem('selectedCompanyId');
-    
-    if (!token || !companyId) {
-      setCampaignsLoading(false);
-      return;
-    }
-    
-    setCampaignsLoading(true);
-    const response = await axios.post(CAMPAIGN_ENDPOINTS.GET_ALL, 
-      { companyId },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    
-    if (response.data.success) {
-      setCampaigns(response.data.data || []);
-    }
-  } catch (error) {
-    console.error('Error fetching campaigns:', error);
-  } finally {
-    setCampaignsLoading(false);
-  }
-};
+  
 
-  // Add fetchTemplates function to get templates from API
+  const fetchCampaigns = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const companyId = localStorage.getItem('selectedCompanyId');
+      
+      if (!token || !companyId) {
+        setCampaignsLoading(false);
+        return;
+      }
+      
+      setCampaignsLoading(true);
+      const response = await axios.post(
+        CAMPAIGN_ENDPOINTS.GET_ALL, 
+        { companyId },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        // Process campaigns to match your frontend display requirements
+        const processedCampaigns = (response.data.data || []).map(campaign => {
+          return {
+            ...campaign,
+            status: campaign.status || 'draft',
+            pendingCount: campaign.pendingCount || (campaign.totalRecipients - (campaign.successCount + campaign.failCount)),
+            successCount: campaign.successCount || 0,
+            failCount: campaign.failCount || 0
+          };
+        });
+        
+        setCampaigns(processedCampaigns);
+      }
+    } catch (error) {
+      console.error('Error fetching campaigns:', error.response?.data || error.message);
+    } finally {
+      setCampaignsLoading(false);
+    }
+  };
+
   const fetchTemplates = async () => {
     const token = localStorage.getItem("token");
     const companyId = localStorage.getItem("selectedCompanyId");
@@ -184,7 +210,6 @@ const WhatsAppCampaigns = () => {
       );
 
       if (response.data.success && response.data.templates) {
-        // Only use approved templates
         const approvedTemplates = response.data.templates.filter(
           template => template.status === "APPROVED"
         );
@@ -197,53 +222,87 @@ const WhatsAppCampaigns = () => {
     }
   };
 
-  // Add new function to fetch template details including fields
   const fetchTemplateDetails = async (templateId) => {
     try {
-      const token = localStorage.getItem("token");
-      // Find selected template from existing templates
       const selectedTemplate = templates.find(t => t.id === templateId);
       
       if (selectedTemplate) {
-        // Extract template components text for parameter extraction
-        let templateText = "";
-        if (selectedTemplate.components) {
-          templateText = selectedTemplate.components.map(component => 
-            component.text || ""
-          ).join(" ");
-        } else if (selectedTemplate.text) {
-          templateText = selectedTemplate.text;
-        } else {
-          // Fallback to sample template text for this example
-          templateText = "Your ticket for *{{1}}* *Time* - {{2}} *Venue* - {{3}} *Seats* - {{4}}";
-        }
+        console.log("Selected template details:", selectedTemplate);
         
-        // Extract parameters from template text
-        const params = extractParameters(templateText);
+        // Extract parameters using the improved function
+        const params = extractParameters(selectedTemplate);
         setExtractedParams(params);
         
-        // Initialize template parameters with empty values
+        // Initialize parameter values
         const initialParams = {};
         params.forEach(param => {
           initialParams[param.key] = '';
         });
-
+  
         setCampaignData(prev => ({
           ...prev,
           templateParams: initialParams
         }));
-
+  
+        // Set template details for preview
+        let templateText = "";
+        if (selectedTemplate.components && selectedTemplate.components.length > 0) {
+          // Find body component text
+          const bodyComponent = selectedTemplate.components.find(c => c.type === "BODY" || c.type === "body");
+          if (bodyComponent) {
+            templateText = bodyComponent.text || "";
+          } else {
+            templateText = selectedTemplate.components.map(component => 
+              component.text || ""
+            ).join("\n\n");
+          }
+        } else if (selectedTemplate.text) {
+          templateText = selectedTemplate.text;
+        }
+  
         setSelectedTemplateDetails({
           ...selectedTemplate,
           text: templateText
         });
       }
     } catch (error) {
-      console.error("Error fetching template details:", error);
+      console.error("Error processing template details:", error);
     }
   };
 
-  // Add fetchGroups function to get groups from API
+
+  const validateForm = () => {
+    // Required fields
+    if (!campaignData.campaignName || !campaignData.template || campaignData.selectedGroups.length === 0) {
+      return false;
+    }
+    
+    // If scheduled, must have a valid date that is in the future
+    if (campaignData.sendType === 'later') {
+      if (!campaignData.scheduledTime) {
+        return false;
+      }
+      
+      // Check if the selected date is in the future
+      const scheduledDate = new Date(campaignData.scheduledTime);
+      const currentDate = new Date();
+      
+      if (scheduledDate <= currentDate) {
+        return false;
+      }
+    }
+    
+    // Check that all template parameters are filled
+    for (const param of extractedParams) {
+      if (!campaignData.templateParams[param.key]) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+
   const fetchGroups = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -264,12 +323,10 @@ const WhatsAppCampaigns = () => {
     }
   };
 
-  // Filter groups based on search term
   const filteredGroups = groups.filter(group => 
     group?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Filter templates based on template search term
   const filteredTemplates = templates.filter(template =>
     template?.name?.toLowerCase().includes(templateSearchTerm.toLowerCase())
   );
@@ -282,7 +339,6 @@ const WhatsAppCampaigns = () => {
     }));
   };
 
-  // Add function to handle template parameter changes
   const handleParamChange = (e) => {
     const { name, value } = e.target;
     setCampaignData(prev => ({
@@ -305,7 +361,6 @@ const WhatsAppCampaigns = () => {
     setCampaignData(prev => ({
       ...prev,
       template: templateId,
-      // Reset template params when template changes
       templateParams: {}
     }));
     toggleDropdown('template');
@@ -324,24 +379,147 @@ const WhatsAppCampaigns = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Prepare the data including template parameters
-    const payload = {
-      ...campaignData,
-      companyId: localStorage.getItem('selectedCompanyId'),
-      // Format template parameters as needed for your API
-      templateParams: Object.keys(campaignData.templateParams).reduce((acc, key) => {
-        const paramIndex = key.replace('param', '');
-        acc[paramIndex] = campaignData.templateParams[key];
-        return acc;
-      }, {})
+    try {
+      const token = localStorage.getItem('token');
+      const companyId = localStorage.getItem('selectedCompanyId');
+      
+      if (!token || !companyId) {
+        console.error("Missing authentication token or company ID");
+        return;
+      }
+      
+      // Format template components to match backend expectations
+      const selectedTemplate = templates.find(t => t.id === campaignData.template);
+      
+      if (!selectedTemplate) {
+        console.error("Selected template not found");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Format parameters as expected by the backend
+      // Format parameters as expected by the backend
+const components = [];
+
+// Process template components
+if (selectedTemplate.components && selectedTemplate.components.length > 0) {
+  // Map each component with its parameters
+  selectedTemplate.components.forEach(component => {
+    const newComponent = {
+      type: component.type.toLowerCase(),
+      parameters: []
     };
     
+    // Add parameters for this component
+    extractedParams
+      .filter(param => param.componentType === component.type)
+      .forEach(param => {
+        if (campaignData.templateParams[param.key]) {
+          newComponent.parameters.push({
+            type: "text",
+            text: campaignData.templateParams[param.key]
+          });
+        }
+      });
+    
+    components.push(newComponent);
+  });
+} else {
+  // Fallback to simple body component
+  const bodyComponent = {
+    type: "body",
+    parameters: []
+  };
+  
+  // Add all parameters to body component
+  extractedParams.forEach(param => {
+    if (campaignData.templateParams[param.key]) {
+      bodyComponent.parameters.push({
+        type: "text",
+        text: campaignData.templateParams[param.key]
+      });
+    }
+  });
+  
+  components.push(bodyComponent);
+}
+      
+      // Create payload that matches backend expectations
+      const payload = {
+        name: campaignData.campaignName,
+        templateName: selectedTemplate.name,
+        templateLanguage: selectedTemplate.language || "en",
+        components: components,
+        groups: campaignData.selectedGroups,
+        scheduleTime: campaignData.sendType === 'later' ? campaignData.scheduledTime : null,
+        companyId: companyId
+      };
+      
+      console.log("Sending campaign data:", payload);
+      
+      let response;
+      
+      if (editingCampaignId) {
+        // Update existing campaign
+        response = await axios.put(
+          `${CAMPAIGN_ENDPOINTS.UPDATE}/${editingCampaignId}`,
+          payload,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      } else {
+        // Create new campaign
+        response = await axios.post(
+          CAMPAIGN_ENDPOINTS.CREATE,
+          payload,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      }
+      
+      if (response.data.success) {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+        fetchCampaigns(); 
+        setActiveTab('list');
+        
+        // Reset form and editing state
+        setCampaignData({
+          campaignName: '',
+          template: '',
+          sendType: 'now',
+          scheduledTime: '',
+          selectedGroups: [],
+          priority: 'normal',
+          templateParams: {}
+        });
+        setEditingCampaignId(null);
+      } else {
+        console.error("Campaign operation failed:", response.data.message);
+        // Show error message to user
+      }
+    } catch (error) {
+      console.error('Error with campaign operation:', error.response?.data || error.message);
+      // Show error message to user
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getCampaignDetails = async (campaignId) => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await axios.post(
-        CAMPAIGN_ENDPOINTS.CREATE,
-        payload,
+      const response = await axios.get(
+        `${CAMPAIGN_ENDPOINTS.GET_DETAILS}/${campaignId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -351,28 +529,151 @@ const WhatsAppCampaigns = () => {
       );
       
       if (response.data.success) {
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
-        // Reset form or navigate to campaigns list
-        fetchCampaigns(); // Refresh campaigns list
-        setActiveTab('list'); // Switch to campaigns list tab
+        return response.data.data;
+      } else {
+        alert('Failed to fetch campaign details: ' + response.data.message);
+        return null;
       }
     } catch (error) {
-      console.error('Error creating campaign:', error);
-      // Handle error (show error message)
-    } finally {
-      setIsSubmitting(false);
+      console.error('Error fetching campaign details:', error.response?.data || error.message);
+      alert('Error fetching campaign details. Please try again.');
+      return null;
     }
   };
+
+  // Add these handler functions to your component
+const handleEditCampaign = (campaignId) => {
+  // Get the campaign data
+  const campaignToEdit = campaigns.find(c => c._id === campaignId);
+  
+  if (campaignToEdit) {
+    // Populate the form with the campaign data
+    setCampaignData({
+      campaignName: campaignToEdit.name,
+      template: campaignToEdit.templateId || '', // You might need to adjust this based on your data structure
+      sendType: campaignToEdit.scheduledFor ? 'later' : 'now',
+      scheduledTime: campaignToEdit.scheduledFor ? new Date(campaignToEdit.scheduledFor).toISOString().slice(0, 16) : '',
+      selectedGroups: campaignToEdit.groups?.map(g => g._id || g) || [],
+      priority: campaignToEdit.priority || 'normal',
+      templateParams: campaignToEdit.components?.reduce((params, component) => {
+        if (component.type === 'body' && component.parameters) {
+          component.parameters.forEach((param, index) => {
+            params[`param${index + 1}`] = param.text || '';
+          });
+        }
+        return params;
+      }, {}) || {}
+    });
+    
+    // Switch to edit mode
+    setActiveTab('new');
+    // Store the campaign ID being edited
+    setEditingCampaignId(campaignId);
+  }
+};
+
+const handleDeleteCampaign = (campaignId) => {
+  // Show confirmation dialog
+  if (window.confirm('Are you sure you want to delete this campaign?')) {
+    deleteCampaign(campaignId);
+  }
+};
+
+const deleteCampaign = async (campaignId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const companyId = localStorage.getItem('selectedCompanyId');
+    
+    if (!token || !companyId) {
+      console.error("Missing authentication token or company ID");
+      return;
+    }
+    
+    const response = await axios.delete(
+      `${CAMPAIGN_ENDPOINTS.GET_DETAILS}/${campaignId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        data: { companyId } // Include companyId in the request body for DELETE
+      }
+    );
+    
+    if (response.data.success) {
+      setCampaigns(prevCampaigns => prevCampaigns.filter(c => c._id !== campaignId));
+      alert('Campaign deleted successfully');
+    } else {
+      alert('Failed to delete campaign: ' + response.data.message);
+    }
+  } catch (error) {
+    console.error('Error deleting campaign:', error.response?.data || error.message);
+    alert('Error deleting campaign. Please try again.');
+  }
+};
+
+
+const cancelCampaign = async (campaignId) => {
+  try {
+    const token = localStorage.getItem('token');
+    const companyId = localStorage.getItem('selectedCompanyId');
+    
+    if (!token || !companyId) {
+      console.error("Missing authentication token or company ID");
+      return;
+    }
+    
+    const response = await axios.put(
+      `${CAMPAIGN_ENDPOINTS.GET_DETAILS}/${campaignId}/cancel`,
+      { companyId }, // Include companyId in the request body
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (response.data.success) {
+      setCampaigns(prevCampaigns => prevCampaigns.map(c => 
+        c._id === campaignId ? { ...c, status: 'cancelled' } : c
+      ));
+      alert('Campaign cancelled successfully');
+    } else {
+      alert('Failed to cancel campaign: ' + response.data.message);
+    }
+  } catch (error) {
+    console.error('Error cancelling campaign:', error.response?.data || error.message);
+    alert('Error cancelling campaign. Please try again.');
+  }
+};
+
+
+const viewCampaignDetails = async (campaignId) => {
+  try {
+    const details = await getCampaignDetails(campaignId);
+    if (details) {
+      // You can implement a modal or redirect to a details page
+      // For now, let's console.log the details
+      console.log('Campaign Details:', details);
+      
+      // Example: Show a basic alert with some campaign info
+      alert(`Campaign: ${details.campaign.name}\nTotal Messages: ${details.messages.length}\nStatus: ${details.campaign.status}`);
+      
+      // In a real application, you'd probably show this in a modal or new page
+    }
+  } catch (error) {
+    console.error('Error viewing campaign details:', error);
+  }
+};
+
 
   const getCompletionPercentage = () => {
     let filled = 0;
     let total = 5;
     
-    // Add template fields to total if they exist
     if (extractedParams.length) {
       total += extractedParams.length;
-      // Count filled template params
       extractedParams.forEach(param => {
         if (campaignData.templateParams[param.key]) filled++;
       });
@@ -387,13 +688,11 @@ const WhatsAppCampaigns = () => {
     return (filled / total) * 100;
   };
 
-  // Format the category to display it properly
   const formatCategory = (category) => {
     if (!category) return '';
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
   };
 
-  // Generate preview with parameters replaced
   const getPreviewText = (text) => {
     if (!text) return "";
     
@@ -404,17 +703,16 @@ const WhatsAppCampaigns = () => {
     });
   };
 
-  // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleString();
   };
 
-  // Get status badge color
   const getStatusBadgeColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'completed':
+      case 'sent':
         return 'success';
       case 'in_progress':
       case 'pending':
@@ -570,15 +868,16 @@ const WhatsAppCampaigns = () => {
                         </Button>
                       </ButtonGroup>
                       {campaignData.sendType === 'later' && (
-                        <Input
-                          type="datetime-local"
-                          name="scheduledTime"
-                          value={campaignData.scheduledTime}
-                          onChange={handleInputChange}
-                          className="mt-2"
-                          required
-                        />
-                      )}
+  <Input
+    type="datetime-local"
+    name="scheduledTime"
+    value={campaignData.scheduledTime}
+    onChange={handleInputChange}
+    className="mt-2"
+    required
+    min={new Date().toISOString().slice(0, 16)} // This adds the minimum date as the current date and time
+  />
+)}
                     </FormGroup>
 
                     {/* Group Selection */}
@@ -747,20 +1046,20 @@ const WhatsAppCampaigns = () => {
                 <Row>
                   <Col>
                     <Button
-                      color="primary"
-                      type="submit"
-                      className="w-100 mt-3"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" />
-                          Creating Campaign...
-                        </>
-                      ) : (
-                        'Launch Campaign'
-                      )}
-                    </Button>
+  color="primary"
+  type="submit"
+  className="w-100 mt-3"
+  disabled={isSubmitting || !validateForm()}
+>
+  {isSubmitting ? (
+    <>
+      <span className="spinner-border spinner-border-sm me-2" />
+      Creating Campaign...
+    </>
+  ) : (
+    'Launch Campaign'
+  )}
+</Button>
                   </Col>
                 </Row>
               </Form>
@@ -786,18 +1085,19 @@ const WhatsAppCampaigns = () => {
               ) : (
                 <div className="table-responsive">
                   <Table hover className="align-middle">
-                    <thead>
-                      <tr>
-                        <th>Campaign Name</th>
-                        <th>Template</th>
-                        <th>Groups</th>
-                        <th>Status</th>
-                        <th>Scheduled</th>
-                        <th>Recipients</th>
-                        <th>Success/Fail</th>
-                        <th>Created</th>
-                      </tr>
-                    </thead>
+                  <thead>
+  <tr>
+    <th>Campaign Name</th>
+    <th>Template</th>
+    <th>Groups</th>
+    <th>Status</th>
+    <th>Scheduled</th>
+    <th>Recipients</th>
+    <th>Success/Fail</th>
+    <th>Created</th>
+    <th>Actions</th>  {/* New Actions column */}
+  </tr>
+</thead>
                     <tbody>
                       {campaigns.map(campaign => (
                         <tr key={campaign._id}>
@@ -820,17 +1120,17 @@ const WhatsAppCampaigns = () => {
                             ))}
                           </td>
                           <td>
-                            <Badge color={getStatusBadgeColor(campaign.status)} pill>
-                              {campaign.status}
-                            </Badge>
+                          <Badge color={getStatusBadgeColor(campaign.status)} pill>
+    {campaign.status}
+  </Badge>
                           </td>
                           <td>{campaign.scheduledFor ? formatDate(campaign.scheduledFor) : 'Immediate'}</td>
                           <td>{campaign.totalRecipients || 0}</td>
                           <td>
                             <div className="d-flex align-items-center">
-                              <span className="text-success me-2">{campaign.successCount || 0}</span>
-                              <span>/</span>
-                              <span className="text-danger ms-2">{campaign.failCount || 0}</span>
+                            <span className="text-success me-2">{campaign.successCount || 0}</span>
+<span>/</span>
+<span className="text-danger ms-2">{campaign.failCount || 0}</span>
                             </div>
                             {(campaign.totalRecipients > 0) && (
                               <Progress multi className="mt-1" style={{ height: '6px' }}>
@@ -853,8 +1153,51 @@ const WhatsAppCampaigns = () => {
                             )}
                           </td>
                           <td>{formatDate(campaign.createdAt)}</td>
-                        </tr>
-                      ))}
+                        {/* New Actions column */}
+                        <td>
+  <div className="d-flex gap-2">
+    <Button 
+      color="info" 
+      size="sm" 
+      onClick={() => viewCampaignDetails(campaign._id)}
+      className="p-1"
+      title="View Details"
+    >
+      <Eye size={16} />
+    </Button>
+    <Button 
+      color="primary" 
+      size="sm" 
+      onClick={() => handleEditCampaign(campaign._id)}
+      disabled={campaign.status === 'completed' || campaign.status === 'sent'}
+      className="p-1"
+      title="Edit"
+    >
+      <Edit size={16} />
+    </Button>
+    <Button 
+      color="danger" 
+      size="sm" 
+      onClick={() => handleDeleteCampaign(campaign._id)}
+      className="p-1"
+      title="Delete"
+    >
+      <Trash2 size={16} />
+    </Button>
+    <Button 
+      color="warning" 
+      size="sm" 
+      onClick={() => cancelCampaign(campaign._id)}
+      disabled={campaign.status === 'completed' || campaign.status === 'sent' || campaign.status === 'failed'}
+      className="p-1"
+      title="Cancel"
+    >
+      <X size={16} />
+    </Button>
+  </div>
+</td>
+    </tr>
+  ))}
                     </tbody>
                   </Table>
                 </div>

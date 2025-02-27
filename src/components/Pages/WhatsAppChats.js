@@ -28,7 +28,11 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import countryList from "./countryList";
 import io from "socket.io-client";
 
+
+
 const WhatsAppChats = () => {
+
+  
   const location = useLocation();
 
   useEffect(() => {
@@ -1196,339 +1200,348 @@ const WhatsAppChats = () => {
   };
 
   const renderChatWindow = () => {
-    const chatMessages = selectedUser
-      ? messages.filter(
-          (msg) =>
-            msg.from === selectedUser.phoneNumber ||
-            msg.to === selectedUser.phoneNumber
-        )
-      : [];
+  const chatMessages = selectedUser
+    ? messages.filter(
+        (msg) =>
+          msg.from === selectedUser.phoneNumber ||
+          msg.to === selectedUser.phoneNumber
+      )
+    : [];
 
-    const groupedMessages = groupMessagesByDate(chatMessages);
+  const groupedMessages = groupMessagesByDate(chatMessages);
 
-    return (
-      <Col
-        xs="12"
-        md="8"
-        style={{
-          height: "calc(100vh - 100px)",
-          padding: 0,
-          display: "flex",
-          flexDirection: "column",
-          backgroundColor: "#f4f8fb",
-          position: "relative",
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-          backgroundColor: "#efeae2",
-        }}
-      >
-        {/* Chat Header */}
-        {selectedUser && (
+  // Add function to format text with asterisks as bold
+  const formatMessageText = (text) => {
+    // Replace text between asterisks with bold text
+    return text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+  };
+
+  return (
+    <Col
+      xs="12"
+      md="8"
+      style={{
+        height: "calc(100vh - 100px)",
+        padding: 0,
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "#f4f8fb",
+        position: "relative",
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+        backgroundColor: "#efeae2",
+      }}
+    >
+      {/* Chat Header */}
+      {selectedUser && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "10px 20px",
+            backgroundColor: "rgb(0, 168, 132)",
+            borderBottom: "1px solid rgb(224, 224, 224)",
+          }}
+          className="user_select"
+        >
+          {isMobileView && (
+            <Button
+              onClick={() => setSelectedUser(null)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "white",
+                marginRight: "10px",
+                padding: 0,
+              }}
+            >
+              <FaArrowLeft size={20} />
+            </Button>
+          )}
+
           <div
             style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              backgroundColor: "#e0e0e0",
               display: "flex",
               alignItems: "center",
-              padding: "10px 20px",
-              backgroundColor: "rgb(0, 168, 132)",
-              borderBottom: "1px solid rgb(224, 224, 224)",
+              justifyContent: "center",
+              marginRight: "15px",
+              fontSize: "20px",
             }}
-            className="user_select"
           >
-            {isMobileView && (
-              <Button
-                onClick={() => setSelectedUser(null)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "white",
-                  marginRight: "10px",
-                  padding: 0,
-                }}
-              >
-                <FaArrowLeft size={20} />
-              </Button>
-            )}
-
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                backgroundColor: "#e0e0e0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: "15px",
-                fontSize: "20px",
-              }}
-            >
-              {selectedUser.flag || "👤"}
-            </div>
-
-            <div>
-              <h6
-                style={{
-                  margin: 0,
-                  fontWeight: "bold",
-                  color: "white",
-                  fontSize: "13px",
-                }}
-              >
-                {selectedUser.senderName || selectedUser.phoneNumber}
-              </h6>
-            </div>
+            {selectedUser.flag || "👤"}
           </div>
-        )}
 
-        {initialLoading && <LoaderOverlay />}
-        {selectedUser ? (
-          <>
-            <div
-              ref={chatContainerRef}
-              onScroll={handleChatScroll}
+          <div>
+            <h6
               style={{
-                flex: 1,
-                padding: "20px",
-                overflowY: "auto",
-                marginBottom: isMobileView ? "60px" : 0,
-                msOverflowStyle: "none",
-                scrollbarWidth: "none",
-                position: "relative",
-                "&::-webkit-scrollbar": {
-                  display: "none",
-                },
+                margin: 0,
+                fontWeight: "bold",
+                color: "white",
+                fontSize: "13px",
               }}
             >
-              {groupedMessages.map((group) => (
-                <div key={group.date}>
-                  {renderDateSeparator(group.timestamp)}
-                  {group.messages.map((message) => {
-                    const isReceived =
-                      message.from === selectedUser.phoneNumber;
-                    if (message.type === "template") {
-                      return renderTemplateMessage(message);
-                    } else {
-                      return (
+              {selectedUser.senderName || selectedUser.phoneNumber}
+            </h6>
+          </div>
+        </div>
+      )}
+
+      {initialLoading && <LoaderOverlay />}
+      {selectedUser ? (
+        <>
+          <div
+            ref={chatContainerRef}
+            onScroll={handleChatScroll}
+            style={{
+              flex: 1,
+              padding: "20px",
+              overflowY: "auto",
+              marginBottom: isMobileView ? "60px" : 0,
+              msOverflowStyle: "none",
+              scrollbarWidth: "none",
+              position: "relative",
+              "&::-webkit-scrollbar": {
+                display: "none",
+              },
+            }}
+          >
+            {groupedMessages.map((group) => (
+              <div key={group.date}>
+                {renderDateSeparator(group.timestamp)}
+                {group.messages.map((message) => {
+                  const isReceived =
+                    message.from === selectedUser.phoneNumber;
+                  if (message.type === "template") {
+                    return renderTemplateMessage(message);
+                  } else {
+                    return (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: isReceived ? "flex-start" : "flex-end",
+                          marginBottom: "12px",
+                        }}
+                      >
                         <div
                           style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: isReceived ? "flex-start" : "flex-end",
-                            marginBottom: "12px",
+                            maxWidth: "70%",
+                            padding: "8px 12px",
+                            backgroundColor: isReceived ? "#fff" : "#dcf8c6",
+                            borderRadius: "8px",
+                            position: "relative",
                           }}
                         >
                           <div
                             style={{
-                              maxWidth: "70%",
-                              padding: "8px 12px",
-                              backgroundColor: isReceived ? "#fff" : "#dcf8c6",
-                              borderRadius: "8px",
-                              position: "relative",
+                              fontSize: "14px",
+                              marginBottom: "4px",
+                              wordWrap: "break-word",
+                              whiteSpace: "pre-wrap",
+                            }}
+                            dangerouslySetInnerHTML={{
+                              __html: formatMessageText(message.messageBody)
+                            }}
+                          />
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "#667781",
+                              textAlign: "right",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "flex-end",
+                              gap: "4px",
                             }}
                           >
-                            <div
-                              style={{
-                                fontSize: "14px",
-                                marginBottom: "4px",
-                                wordWrap: "break-word",
-                                whiteSpace: "pre-wrap",
-                              }}
-                            >
-                              {message.messageBody}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "11px",
-                                color: "#667781",
-                                textAlign: "right",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "flex-end",
-                                gap: "4px",
-                              }}
-                            >
-                              <span>
-                                {format12HourTime(
-                                  message.sentTimestamp ||
-                                    message.currentStatusTimestamp
-                                )}
-                              </span>
-                              {!isReceived && (
-                                <MessageStatusIcon
-                                  status={message.status}
-                                  failureReason={message.failureReason}
-                                />
+                            <span>
+                              {format12HourTime(
+                                message.sentTimestamp ||
+                                  message.currentStatusTimestamp
                               )}
-                            </div>
+                            </span>
+                            {!isReceived && (
+                              <MessageStatusIcon
+                                status={message.status}
+                                failureReason={message.failureReason}
+                              />
+                            )}
                           </div>
                         </div>
-                      );
-                    }
-                  })}
-                </div>
-              ))}
-              <div ref={chatEndRef} style={{ height: "1px" }} />
-            </div>
-
-            {/* Scroll To Bottom Button */}
-            {isScrolledUp && (
-              <div
-                onClick={scrollToBottom}
-                style={{
-                  position: "absolute",
-                  bottom: isMobileView ? "70px" : "70px",
-                  right: "20px",
-                  zIndex: 10,
-                  backgroundColor: "#FFFFFF",
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-                  cursor: "pointer",
-                  transition: "transform 0.2s ease",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = "scale(1.05)";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                }}
-              >
-                <svg
-      width="24"
-      height="24"
-      fill="#00a884"
-      viewBox="0 0 24 24"
-      style={{
-        backgroundColor: "#e0f2f1",
-        borderRadius: "50%",
-        padding: "4px",
-      }}
-    >
-      <path d="M12 11l-4-4 1.4-1.4L12 8.2l2.6-2.6L16 7l-4 4zm0 6l-4-4 1.4-1.4L12 14.2l2.6-2.6L16 13l-4 4z" />
-    </svg>
+                      </div>
+                    );
+                  }
+                })}
               </div>
-            )}
+            ))}
+            <div ref={chatEndRef} style={{ height: "1px" }} />
+          </div>
 
-            {/* Message Input Section */}
+          {/* Scroll To Bottom Button */}
+          {isScrolledUp && (
             <div
+              onClick={scrollToBottom}
               style={{
-                padding: "5px 4px",
-                position: isMobileView ? "fixed" : "relative",
-                bottom: 0,
-                left: isMobileView ? 0 : "auto",
-                right: isMobileView ? 0 : "auto",
-                width: isMobileView ? "100%" : "auto",
-                zIndex: 2,
-                backgroundColor: "transparent",
+                position: "fixed",
+                bottom: isMobileView ? "77px" : "77px",
+                right: "35px",
+                zIndex: 10,
+                backgroundColor: "#FFFFFF",
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                cursor: "pointer",
+                transition: "transform 0.2s ease",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = "scale(1.05)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
               }}
             >
-              <div
+              <svg
+                width="24"
+                height="24"
+                fill="#00a884"
+                viewBox="0 0 24 24"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  // gap: "px",
-                  backgroundColor: "#fff",
-                  padding: "2px 12px",
-                  borderRadius: "24px",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  backgroundColor: "#e0f2f1",
+                  borderRadius: "50%",
+                  padding: "4px",
                 }}
               >
-                <Button
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: "8px",
-                    color: "#54656f",
-                  }}
-                >
-                  <FaPaperclip size={20} />
-                </Button>
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                  placeholder="Type a message..."
-                  style={{
-                    border: "none",
-                    padding: "4px",
-                    flex: 1,
-                    backgroundColor: "transparent",
-                    boxShadow: "none",
-                    outline: "none",
-                    resize: "none",
-                    wordWrap: "break-word",
-                    whiteSpace: "pre-wrap",
-                    height: "auto",
-                    minHeight: "24px",
-                    maxHeight: "100px",
-                    overflowY: "auto",
-                    fontFamily: "inherit",
-                    fontSize: "inherit",
-                  }}
-                />
-                <Button
-                  onClick={sendMessage}
-                  disabled={!newMessage.trim()}
-                  style={{
-                    backgroundColor: newMessage.trim() ? "#00a884" : "#e9edef",
-                    border: "none",
-                    padding: "8px",
-                    borderRadius: "50%",
-                    color: newMessage.trim() ? "#fff" : "#8696a0",
-                  }}
-                >
-                  <FaPaperPlane size={18} />
-                </Button>
-              </div>
+                <path d="M12 11l-4-4 1.4-1.4L12 8.2l2.6-2.6L16 7l-4 4zm0 6l-4-4 1.4-1.4L12 14.2l2.6-2.6L16 13l-4 4z" />
+              </svg>
             </div>
-          </>
-        ) : (
+          )}
+
+          {/* Message Input Section */}
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              color: "#667781",
-              gap: "16px",
+              padding: "5px 4px",
+              position: isMobileView ? "fixed" : "relative",
+              bottom: 0,
+              left: isMobileView ? 0 : "auto",
+              right: isMobileView ? 0 : "auto",
+              width: isMobileView ? "100%" : "auto",
+              zIndex: 2,
+              backgroundColor: "transparent",
             }}
           >
             <div
               style={{
-                width: "64px",
-                height: "64px",
-                borderRadius: "50%",
-                backgroundColor: "#f0f2f5",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                // gap: "px",
+                backgroundColor: "#fff",
+                padding: "0px 9px",
+                borderRadius: "24px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
               }}
             >
-              <FaPaperPlane size={24} style={{ color: "#8696a0" }} />
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <p
+              <Button
                 style={{
-                  fontSize: "18px",
-                  fontWeight: "500",
-                  margin: "0 0 8px 0",
+                  background: "transparent",
+                  border: "none",
+                  padding: "8px",
+                  color: "#54656f",
                 }}
               >
-                Select a chat to start messaging
-              </p>
-              <p style={{ fontSize: "14px", color: "#8696a0", margin: 0 }}>
-                Send and receive messages in real-time
-              </p>
+                <FaPaperclip size={20} />
+              </Button>
+              <textarea
+  value={newMessage}
+  onChange={(e) => setNewMessage(e.target.value)}
+  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+  placeholder="Type a message..."
+  style={{
+    border: "none",
+    padding: "4px",
+    flex: 1,
+    backgroundColor: "transparent",
+    boxShadow: "none",
+    outline: "none",
+    resize: "none",
+    wordWrap: "break-word",
+    whiteSpace: "pre-wrap",
+    height: "auto",
+    minHeight: "24px",
+    maxHeight: "100px",
+    overflowY: "auto",
+    fontFamily: "inherit",
+    fontSize: "inherit",
+    marginTop: "16px", // Yeh text area ko neeche karega
+  }}
+/>
+
+              <Button
+                onClick={sendMessage}
+                disabled={!newMessage.trim()}
+                style={{
+                  backgroundColor: newMessage.trim() ? "#00a884" : "#e9edef",
+                  border: "none",
+                  padding: "8px",
+                  borderRadius: "50%",
+                  color: newMessage.trim() ? "#fff" : "#8696a0",
+                }}
+              >
+                <FaPaperPlane size={18} />
+              </Button>
             </div>
           </div>
-        )}
-      </Col>
-    );
-  };
+        </>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            color: "#667781",
+            gap: "16px",
+          }}
+        >
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "50%",
+              backgroundColor: "#f0f2f5",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <FaPaperPlane size={24} style={{ color: "#8696a0" }} />
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <p
+              style={{
+                fontSize: "18px",
+                fontWeight: "500",
+                margin: "0 0 8px 0",
+              }}
+            >
+              Select a chat to start messaging
+            </p>
+            <p style={{ fontSize: "14px", color: "#8696a0", margin: 0 }}>
+              Send and receive messages in real-time
+            </p>
+          </div>
+        </div>
+      )}
+    </Col>
+  );
+};
 
   const LoaderOverlay = () => (
     <div

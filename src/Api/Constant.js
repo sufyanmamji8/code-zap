@@ -76,5 +76,10 @@ export const CAMPAIGN_API_ENDPOINT = 'http://192.168.0.108:25483/api/v1/campaign
 // And create campaign-specific endpoints
 export const CAMPAIGN_ENDPOINTS = {
   GET_ALL: `${CAMPAIGN_API_ENDPOINT}/all`,
-  // You can add other campaign-related endpoints here as needed
+  CREATE: `${CAMPAIGN_API_ENDPOINT}/create`,
+  GET_BY_ID: `${CAMPAIGN_API_ENDPOINT}/get`,
+  UPDATE: `${CAMPAIGN_API_ENDPOINT}/update`,
+  DELETE: `${CAMPAIGN_API_ENDPOINT}/delete`,
+  CANCEL: `${CAMPAIGN_API_ENDPOINT}/cancel`,
+  GET_DETAILS: `${CAMPAIGN_API_ENDPOINT}` // For the /:campaignId endpoint
 };
