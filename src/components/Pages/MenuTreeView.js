@@ -1,747 +1,1195 @@
 import React, { useState, useEffect } from 'react';
+import { Edit, Trash2, X } from 'lucide-react';
+
 import {
   Container,
   Row,
   Col,
   Card,
   CardBody,
-  CardHeader,
   Form,
   FormGroup,
   Label,
   Input,
   Button,
-  ListGroup,
-  ListGroupItem,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  ButtonGroup,
+  Badge,
   Alert,
-  Spinner,
-  Toast,
-  ToastHeader,
-  ToastBody,
-  InputGroup,
-  InputGroupText,
+  Progress,
   Dropdown,
   DropdownToggle,
   DropdownMenu,
-  DropdownItem
+  DropdownItem,
+  Table
+  
 } from 'reactstrap';
 import axios from 'axios';
-import { MENU_API_ENDPOINT, MENU_ACCESS_API_ENDPOINT, GROUP_ENDPOINTS } from 'Api/Constant';
-import { countryList } from './countryList'; // Import the country list
+import { GROUP_ENDPOINTS, TEMPLATE_ENDPOINTS, CAMPAIGN_ENDPOINTS } from 'Api/Constant';
 
-const WhatsAppMenuAccess = () => {
-  // State for individual menu assignment
-  const [individualFormData, setIndividualFormData] = useState({
-    phoneNumber: '',
-    group: '',
-    countryCode: '',
-    menuId: ''
+const WhatsAppCampaigns = () => {
+  const [campaignData, setCampaignData] = useState({
+    campaignName: '',
+    template: '',
+    sendType: 'now',
+    scheduledTime: '',
+    selectedGroups: [],
+    priority: 'normal',
+    templateParams: {} 
   });
 
-  // State for group management
-  const [groupFormData, setGroupFormData] = useState({
-    name: '',
-    menuId: '',
-    allowedPhoneNumbers: ['']
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState({
+    template: false,
+    groups: false
   });
-
-  // Shared state
-  const [menus, setMenus] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [alert, setAlert] = useState({ show: false, message: '', type: '' });
-  const [activeTab, setActiveTab] = useState('individual');
-  const [toast, setToast] = useState({ show: false, message: '', type: '' });
-
-  // Group management state
-  const [deleteModal, setDeleteModal] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState(null);
-  const [editMode, setEditMode] = useState(false);
-  const [editId, setEditId] = useState(null);
-
-  // Country code dropdown state
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(null);
-  const [groupCountryCodes, setGroupCountryCodes] = useState([null]);
-
-  const styles = {
-    cardHeader: {
-      background: 'linear-gradient(45deg, #25D366, #128C7E)',
-      color: 'white',
-      borderBottom: 'none',
-      borderRadius: '8px 8px 0 0',
-      padding: '1.25rem'
-    },
-    card: {
-      borderRadius: '8px',
-      border: 'none',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-      marginBottom: '2rem'
-    },
-    tabButton: (isActive) => ({
-      borderRadius: '50px',
-      padding: '0.75rem 1.5rem',
-      fontWeight: '600',
-      transition: 'all 0.3s ease',
-      background: isActive ? '#25D366' : 'white',
-      color: isActive ? 'white' : '#666',
-      border: `2px solid ${isActive ? '#25D366' : '#ddd'}`,
-      marginRight: '1rem',
-      boxShadow: isActive ? '0 4px 6px rgba(37, 211, 102, 0.2)' : 'none'
-    }),
-    submitButton: {
-      background: '#25D366',
-      border: 'none',
-      borderRadius: '50px',
-      padding: '0.75rem 2rem',
-      fontWeight: '600',
-      boxShadow: '0 4px 6px rgba(37, 211, 102, 0.2)',
-      transition: 'all 0.3s ease'
-    },
-    input: {
-      borderRadius: '8px',
-      padding: '0.75rem',
-      border: '2px solid #ddd',
-      transition: 'all 0.3s ease'
-    },
-    listItem: {
-      borderRadius: '8px',
-      marginBottom: '1rem',
-      border: '2px solid #f0f0f0',
-      transition: 'all 0.3s ease',
-      padding: '1.25rem'
-    },
-    actionButton: (color) => ({
-      borderRadius: '50px',
-      padding: '0.5rem 1rem',
-      fontWeight: '600',
-      transition: 'all 0.3s ease'
-    }),
-    icon: {
-      marginRight: '12px' // Increased spacing for icons
-    },
-    toast: {
-      position: 'fixed',
-      top: '20px',
-      right: '20px',
-      zIndex: 1050,
-      minWidth: '300px',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-      border: 'none',
-      borderRadius: '8px'
-    },
-    toastHeader: (type) => ({
-      background: type === 'success' ? '#25D366' : 
-                 type === 'danger' ? '#dc3545' : 
-                 type === 'warning' ? '#ffc107' : '#17a2b8',
-      color: 'white',
-      borderRadius: '8px 8px 0 0'
-    }),
-    countryDropdown: {
-      maxHeight: '250px',
-      overflowY: 'auto',
-      width: '100%'
-    },
-    countryItem: {
-      display: 'flex',
-      alignItems: 'center',
-      cursor: 'pointer',
-      padding: '8px 12px'
-    },
-    countryFlag: {
-      fontSize: '20px',
-      marginRight: '8px'
-    },
-    searchInput: {
-      padding: '8px 12px',
-      borderBottom: '1px solid #ddd',
-      position: 'sticky',
-      top: 0,
-      backgroundColor: 'white',
-      zIndex: 1
-    }
-  };
   
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [groups, setGroups] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [templateSearchTerm, setTemplateSearchTerm] = useState('');
+  const [selectedTemplateDetails, setSelectedTemplateDetails] = useState(null);
+  const [extractedParams, setExtractedParams] = useState([]);
+  const [editingCampaignId, setEditingCampaignId] = useState(null);
+  const [campaigns, setCampaigns] = useState([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('new'); 
+
   useEffect(() => {
-    fetchMenus();
     fetchGroups();
+    fetchTemplates();
+    fetchCampaigns();
   }, []);
 
-  const showAlert = (message, type) => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
-  };
-
-  const fetchMenus = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${MENU_API_ENDPOINT}/getAllMenus`);
-      if (response.data?.data) {
-        const defaultMenus = response.data.data.filter(menu => menu.isDefault === true);
-        setMenus(defaultMenus);
-      }
-    } catch (error) {
-      showAlert('Failed to fetch menus', 'danger');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchGroups = async () => {
-    try {
-      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL);
-      setGroups(response.data.groups || []);
-    } catch (error) {
-      showAlert('Failed to fetch groups', 'danger');
-    }
-  };
-
-  // Toggle dropdown
-  const toggleDropdown = () => setDropdownOpen(prevState => !prevState);
-
-  // Filter countries based on search term
-  const filteredCountries = countryList.filter(country => 
-    country.country.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    country.code.includes(searchTerm)
-  );
-
-  // Handle country selection
-  const handleCountrySelect = (country) => {
-    setSelectedCountry(country);
-    setIndividualFormData(prev => ({ ...prev, countryCode: country.code }));
-    setDropdownOpen(false);
-  };
-
-  // Handle group country selection
-  const handleGroupCountrySelect = (country, index) => {
-    const newGroupCountryCodes = [...groupCountryCodes];
-    newGroupCountryCodes[index] = country;
-    setGroupCountryCodes(newGroupCountryCodes);
-    
-    const newPhoneNumbers = [...groupFormData.allowedPhoneNumbers];
-    if (newPhoneNumbers[index]) {
-      // Remove any existing country code (+ followed by digits)
-      const phoneWithoutCode = newPhoneNumbers[index].replace(/^\+\d+\s*/, '');
-      newPhoneNumbers[index] = `+${country.code} ${phoneWithoutCode}`;
+  useEffect(() => {
+    if (campaignData.template) {
+      fetchTemplateDetails(campaignData.template);
     } else {
-      newPhoneNumbers[index] = `+${country.code} `;
+      setSelectedTemplateDetails(null);
+      setExtractedParams([]);
+    }
+  }, [campaignData.template]);
+
+  const extractParameters = (templateText) => {
+    const paramRegex = /\{\{(\d+)\}\}/g;
+    let match;
+    const params = [];
+    const usedIndexes = new Set();
+    
+    while ((match = paramRegex.exec(templateText)) !== null) {
+      const paramIndex = match[1];
+      
+      if (!usedIndexes.has(paramIndex)) {
+        usedIndexes.add(paramIndex);
+        
+        let paramLabel = "Parameter";
+        
+        const contextBefore = templateText.substring(
+          Math.max(0, match.index - 30), 
+          match.index
+        ).toLowerCase();
+        
+        if (contextBefore.includes("movie") || paramIndex === "1") {
+          paramLabel = "Movie Name";
+        } else if (contextBefore.includes("time") || paramIndex === "2") {
+          paramLabel = "Time";
+        } else if (contextBefore.includes("venue") || paramIndex === "3") {
+          paramLabel = "Venue";
+        } else if (contextBefore.includes("seat") || paramIndex === "4") {
+          paramLabel = "Seats";
+        }
+        
+        params.push({
+          index: paramIndex,
+          key: `param${paramIndex}`,
+          name: paramLabel,
+          type: 'text'
+        });
+      }
     }
     
-    setGroupFormData(prev => ({
-      ...prev,
-      allowedPhoneNumbers: newPhoneNumbers
-    }));
+    params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
+    return params;
   };
 
-  // Individual menu assignment handlers
-  const handleIndividualSubmit = async (e) => {
-    e.preventDefault();
+  
+
+  const fetchCampaigns = async () => {
     try {
-      setLoading(true);
-      if (!individualFormData.phoneNumber && !individualFormData.group && !individualFormData.countryCode) {
-        showAlert('Please provide at least one identifier', 'warning');
+      const token = localStorage.getItem('token');
+      const companyId = localStorage.getItem('selectedCompanyId');
+      
+      if (!token || !companyId) {
+        setCampaignsLoading(false);
         return;
       }
       
-      await axios.post(`${MENU_ACCESS_API_ENDPOINT}/create-menu-access`, individualFormData);
-      showAlert('Menu assigned successfully', 'success');
-      setIndividualFormData({
-        phoneNumber: '',
-        group: '',
-        countryCode: '',
-        menuId: ''
+      setCampaignsLoading(true);
+      const response = await axios.post(
+        CAMPAIGN_ENDPOINTS.GET_ALL, 
+        { companyId },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        // Process campaigns to match your frontend display requirements
+        const processedCampaigns = (response.data.data || []).map(campaign => {
+          return {
+            ...campaign,
+            status: campaign.status || 'draft',
+            pendingCount: campaign.pendingCount || (campaign.totalRecipients - (campaign.successCount + campaign.failCount)),
+            successCount: campaign.successCount || 0,
+            failCount: campaign.failCount || 0
+          };
+        });
+        
+        setCampaigns(processedCampaigns);
+      }
+    } catch (error) {
+      console.error('Error fetching campaigns:', error.response?.data || error.message);
+    } finally {
+      setCampaignsLoading(false);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    const token = localStorage.getItem("token");
+    const companyId = localStorage.getItem("selectedCompanyId");
+    
+    if (!companyId || !token) {
+      setTemplatesLoading(false);
+      return;
+    }
+
+    try {
+      setTemplatesLoading(true);
+      const response = await axios.post(
+        TEMPLATE_ENDPOINTS.FETCH,
+        { companyId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success && response.data.templates) {
+        const approvedTemplates = response.data.templates.filter(
+          template => template.status === "APPROVED"
+        );
+        setTemplates(approvedTemplates);
+      }
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  // Update your fetchTemplateDetails function by adding header parameter detection
+const fetchTemplateDetails = async (templateId) => {
+  try {
+    const selectedTemplate = templates.find(t => t.id === templateId);
+    
+    if (selectedTemplate) {
+      // Initialize params array and template text
+      let templateText = "";
+      let params = [];
+      
+      // Extract components and their texts
+      if (selectedTemplate.components && selectedTemplate.components.length > 0) {
+        // Process header component specifically
+        const headerComponent = selectedTemplate.components.find(c => c.type === "HEADER" || c.type === "header");
+        if (headerComponent) {
+          const headerFormat = headerComponent.format || "TEXT";
+          
+          // Add a specific parameter for header based on format
+          switch (headerFormat.toUpperCase()) {
+            case "TEXT":
+              params.push({
+                index: "header",
+                key: "headerText",
+                name: "Header Text",
+                type: "text"
+              });
+              break;
+            case "IMAGE":
+              params.push({
+                index: "header",
+                key: "headerImage",
+                name: "Header Image URL",
+                type: "text" // Still using text input for image URL
+              });
+              break;
+            case "DOCUMENT":
+              params.push({
+                index: "header",
+                key: "headerDocument",
+                name: "Header Document URL",
+                type: "text" 
+              });
+              break;
+            case "VIDEO":
+              params.push({
+                index: "header",
+                key: "headerVideo",
+                name: "Header Video URL",
+                type: "text"
+              });
+              break;
+          }
+        }
+        
+        // Find body component text
+        const bodyComponent = selectedTemplate.components.find(c => c.type === "BODY" || c.type === "body");
+        if (bodyComponent) {
+          templateText = bodyComponent.text || "";
+          
+          // Get body parameters
+          const bodyParams = extractParameters(templateText);
+          params = [...params, ...bodyParams];
+        } else {
+          templateText = selectedTemplate.components.map(component => 
+            component.text || ""
+          ).join(" ");
+        }
+        
+        // Check for footer component
+        const footerComponent = selectedTemplate.components.find(c => c.type === "FOOTER" || c.type === "footer");
+        if (footerComponent && footerComponent.text) {
+          params.push({
+            index: "footer",
+            key: "footerText",
+            name: "Footer Text",
+            type: "text"
+          });
+        }
+      } else if (selectedTemplate.text) {
+        templateText = selectedTemplate.text;
+        params = extractParameters(templateText);
+      }
+      
+      // Set extracted parameters
+      setExtractedParams(params);
+      
+      // Initialize parameter values
+      const initialParams = {};
+      params.forEach(param => {
+        initialParams[param.key] = '';
       });
-      setSelectedCountry(null);
+      
+      setCampaignData(prev => ({
+        ...prev,
+        templateParams: initialParams
+      }));
+      
+      setSelectedTemplateDetails({
+        ...selectedTemplate,
+        text: templateText
+      });
+    }
+  } catch (error) {
+    console.error("Error processing template details:", error);
+  }
+};
+
+
+  const validateForm = () => {
+    // Required fields
+    if (!campaignData.campaignName || !campaignData.template || campaignData.selectedGroups.length === 0) {
+      return false;
+    }
+    
+    // If scheduled, must have a valid date
+    if (campaignData.sendType === 'later' && !campaignData.scheduledTime) {
+      return false;
+    }
+    
+    // Check that all template parameters are filled
+    for (const param of extractedParams) {
+      if (!campaignData.templateParams[param.key]) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+
+  const fetchGroups = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      });
+      
+      if (response.data.success) {
+        setGroups(response.data.groups);
+      }
     } catch (error) {
-      showAlert(error.response?.data?.message || 'Failed to assign menu', 'danger');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching groups:', error);
     }
   };
 
-  // Group management handlers
-  const handleGroupSubmit = async (e) => {
+  const filteredGroups = groups.filter(group => 
+    group?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredTemplates = templates.filter(template =>
+    template?.name?.toLowerCase().includes(templateSearchTerm.toLowerCase())
+  );
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCampaignData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleParamChange = (e) => {
+    const { name, value } = e.target;
+    setCampaignData(prev => ({
+      ...prev,
+      templateParams: {
+        ...prev.templateParams,
+        [name]: value
+      }
+    }));
+  };
+
+  const toggleDropdown = (type) => {
+    setDropdownOpen(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
+  };
+
+  const handleTemplateSelect = (templateId) => {
+    setCampaignData(prev => ({
+      ...prev,
+      template: templateId,
+      templateParams: {}
+    }));
+    toggleDropdown('template');
+  };
+
+  const handleGroupSelect = (groupId) => {
+    setCampaignData(prev => ({
+      ...prev,
+      selectedGroups: prev.selectedGroups.includes(groupId)
+        ? prev.selectedGroups.filter(id => id !== groupId)
+        : [...prev.selectedGroups, groupId]
+    }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    
     try {
-      setLoading(true);
-      if (editMode) {
-        await axios.put(GROUP_ENDPOINTS.UPDATE(editId), groupFormData);
-        showAlert('Group updated successfully', 'success');
+      const token = localStorage.getItem('token');
+      const companyId = localStorage.getItem('selectedCompanyId');
+      
+      if (!token || !companyId) {
+        console.error("Missing authentication token or company ID");
+        return;
+      }
+      
+      // Format template components to match backend expectations
+      const selectedTemplate = templates.find(t => t.id === campaignData.template);
+      
+      if (!selectedTemplate) {
+        console.error("Selected template not found");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Format parameters as expected by the backend
+      const components = [];
+      
+      // Add header component if it exists
+      // Replace the header component creation block in handleSubmit function with:
+if (selectedTemplate.components && selectedTemplate.components.some(c => c.type === "HEADER")) {
+  const headerComponent = {
+    type: "header",
+    parameters: []
+  };
+  
+  // Get the header component to determine its format
+  const templateHeaderComponent = selectedTemplate.components.find(c => c.type === "HEADER");
+  
+  // Handle different header formats (TEXT, IMAGE, DOCUMENT, VIDEO)
+  if (templateHeaderComponent && templateHeaderComponent.format) {
+    switch (templateHeaderComponent.format) {
+      case "TEXT":
+        // If we have a text parameter for header
+        if (campaignData.templateParams.headerText) {
+          headerComponent.parameters.push({
+            type: "text",
+            text: campaignData.templateParams.headerText
+          });
+        }
+        break;
+      case "IMAGE":
+        // If we have an image parameter for header
+        if (campaignData.templateParams.headerImage) {
+          headerComponent.parameters.push({
+            type: "image",
+            image: {
+              link: campaignData.templateParams.headerImage
+            }
+          });
+        }
+        break;
+      case "DOCUMENT":
+        // If we have a document parameter for header
+        if (campaignData.templateParams.headerDocument) {
+          headerComponent.parameters.push({
+            type: "document",
+            document: {
+              link: campaignData.templateParams.headerDocument
+            }
+          });
+        }
+        break;
+      case "VIDEO":
+        // If we have a video parameter for header
+        if (campaignData.templateParams.headerVideo) {
+          headerComponent.parameters.push({
+            type: "video",
+            video: {
+              link: campaignData.templateParams.headerVideo
+            }
+          });
+        }
+        break;
+    }
+  }
+  
+  components.push(headerComponent);
+}
+      
+      // Create payload that matches backend expectations
+      const payload = {
+        name: campaignData.campaignName,
+        templateName: selectedTemplate.name,
+        templateLanguage: selectedTemplate.language || "en",
+        components: components,
+        groups: campaignData.selectedGroups,
+        scheduleTime: campaignData.sendType === 'later' ? campaignData.scheduledTime : null,
+        companyId: companyId
+      };
+      
+      console.log("Sending campaign data:", payload);
+      
+      let response;
+      
+      if (editingCampaignId) {
+        // Update existing campaign
+        response = await axios.put(
+          `${CAMPAIGN_ENDPOINTS.UPDATE}/${editingCampaignId}`,
+          payload,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
       } else {
-        await axios.post(GROUP_ENDPOINTS.CREATE, groupFormData);
-        showAlert('Group created successfully', 'success');
+        // Create new campaign
+        response = await axios.post(
+          CAMPAIGN_ENDPOINTS.CREATE,
+          payload,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
       }
-      resetGroupForm();
-      fetchGroups();
+      
+      if (response.data.success) {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+        fetchCampaigns(); 
+        setActiveTab('list');
+        
+        // Reset form and editing state
+        setCampaignData({
+          campaignName: '',
+          template: '',
+          sendType: 'now',
+          scheduledTime: '',
+          selectedGroups: [],
+          priority: 'normal',
+          templateParams: {}
+        });
+        setEditingCampaignId(null);
+      } else {
+        console.error("Campaign operation failed:", response.data.message);
+        // Show error message to user
+      }
     } catch (error) {
-      showAlert(error.response?.data?.message || 'Operation failed', 'danger');
+      console.error('Error with campaign operation:', error.response?.data || error.message);
+      // Show error message to user
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleDeleteGroup = async () => {
-    try {
-      setLoading(true);
-      await axios.delete(GROUP_ENDPOINTS.DELETE(selectedGroupId));
-      showAlert('Group deleted successfully', 'success');
-      fetchGroups();
-      setDeleteModal(false);
-    } catch (error) {
-      showAlert('Failed to delete group', 'danger');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEditGroup = (group) => {
-    setEditMode(true);
-    setEditId(group._id);
-    setGroupFormData({
-      name: group.name,
-      menuId: group.menuId,
-      allowedPhoneNumbers: group.allowedPhoneNumbers
+  // Add these handler functions to your component
+const handleEditCampaign = (campaignId) => {
+  // Get the campaign data
+  const campaignToEdit = campaigns.find(c => c._id === campaignId);
+  
+  if (campaignToEdit) {
+    // Populate the form with the campaign data
+    setCampaignData({
+      campaignName: campaignToEdit.name,
+      template: campaignToEdit.templateId || '', // You might need to adjust this based on your data structure
+      sendType: campaignToEdit.scheduledFor ? 'later' : 'now',
+      scheduledTime: campaignToEdit.scheduledFor ? new Date(campaignToEdit.scheduledFor).toISOString().slice(0, 16) : '',
+      selectedGroups: campaignToEdit.groups?.map(g => g._id || g) || [],
+      priority: campaignToEdit.priority || 'normal',
+      templateParams: campaignToEdit.components?.reduce((params, component) => {
+        if (component.type === 'body' && component.parameters) {
+          component.parameters.forEach((param, index) => {
+            params[`param${index + 1}`] = param.text || '';
+          });
+        }
+        return params;
+      }, {}) || {}
     });
     
-    // Set country codes for existing phone numbers
-    const newGroupCountryCodes = group.allowedPhoneNumbers.map(phoneNumber => {
-      const codeMatch = phoneNumber.match(/^\+(\d+)/);
-      if (codeMatch) {
-        const matchedCountry = countryList.find(country => country.code === codeMatch[1]);
-        return matchedCountry || null;
+    // Switch to edit mode
+    setActiveTab('new');
+    // Store the campaign ID being edited
+    setEditingCampaignId(campaignId);
+  }
+};
+
+const handleDeleteCampaign = (campaignId) => {
+  // Show confirmation dialog
+  if (window.confirm('Are you sure you want to delete this campaign?')) {
+    deleteCampaign(campaignId);
+  }
+};
+
+const handleCancelCampaign = (campaignId) => {
+  // Show confirmation dialog
+  if (window.confirm('Are you sure you want to cancel this campaign?')) {
+    cancelCampaign(campaignId);
+  }
+};
+
+const deleteCampaign = async (campaignId) => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    const response = await axios.delete(
+      `${CAMPAIGN_ENDPOINTS.DELETE}/${campaignId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       }
-      return null;
-    });
+    );
     
-    setGroupCountryCodes(newGroupCountryCodes);
-    setActiveTab('group');
+    if (response.data.success) {
+      // Remove from local state
+      setCampaigns(prevCampaigns => prevCampaigns.filter(c => c._id !== campaignId));
+      alert('Campaign deleted successfully');
+    } else {
+      alert('Failed to delete campaign: ' + response.data.message);
+    }
+  } catch (error) {
+    console.error('Error deleting campaign:', error.response?.data || error.message);
+    alert('Error deleting campaign. Please try again.');
+  }
+};
+
+const cancelCampaign = async (campaignId) => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    const response = await axios.post(
+      CAMPAIGN_ENDPOINTS.CANCEL,
+      { campaignId },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (response.data.success) {
+      // Update campaign status in local state
+      setCampaigns(prevCampaigns => prevCampaigns.map(c => 
+        c._id === campaignId ? { ...c, status: 'cancelled' } : c
+      ));
+      alert('Campaign cancelled successfully');
+    } else {
+      alert('Failed to cancel campaign: ' + response.data.message);
+    }
+  } catch (error) {
+    console.error('Error cancelling campaign:', error.response?.data || error.message);
+    alert('Error cancelling campaign. Please try again.');
+  }
+};
+
+
+  const getCompletionPercentage = () => {
+    let filled = 0;
+    let total = 5;
+    
+    if (extractedParams.length) {
+      total += extractedParams.length;
+      extractedParams.forEach(param => {
+        if (campaignData.templateParams[param.key]) filled++;
+      });
+    }
+    
+    if (campaignData.campaignName) filled++;
+    if (campaignData.template) filled++;
+    if (campaignData.selectedGroups.length > 0) filled++;
+    if (campaignData.sendType === 'now' || campaignData.scheduledTime) filled++;
+    if (campaignData.priority) filled++;
+    
+    return (filled / total) * 100;
   };
 
-  const resetGroupForm = () => {
-    setGroupFormData({
-      name: '',
-      menuId: '',
-      allowedPhoneNumbers: ['']
+  const formatCategory = (category) => {
+    if (!category) return '';
+    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+  };
+
+  const getPreviewText = (text) => {
+    if (!text) return "";
+    
+    return text.replace(/\{\{(\d+)\}\}/g, (match, paramIndex) => {
+      const paramKey = `param${paramIndex}`;
+      const paramValue = campaignData.templateParams[paramKey];
+      return paramValue ? paramValue : match;
     });
-    setGroupCountryCodes([null]);
-    setEditMode(false);
-    setEditId(null);
   };
 
-  const addPhoneNumber = () => {
-    setGroupFormData(prev => ({
-      ...prev,
-      allowedPhoneNumbers: [...prev.allowedPhoneNumbers, '']
-    }));
-    setGroupCountryCodes(prev => [...prev, null]);
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString();
   };
 
-  const removePhoneNumber = (index) => {
-    setGroupFormData(prev => ({
-      ...prev,
-      allowedPhoneNumbers: prev.allowedPhoneNumbers.filter((_, i) => i !== index)
-    }));
-    setGroupCountryCodes(prev => prev.filter((_, i) => i !== index));
+  const getStatusBadgeColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+      case 'sent':
+        return 'success';
+      case 'in_progress':
+      case 'pending':
+        return 'warning';
+      case 'failed':
+        return 'danger';
+      case 'scheduled':
+        return 'info';
+      default:
+        return 'secondary';
+    }
   };
 
   return (
-    <Container fluid className="p-4 bg-light min-vh-100">
-      {/* Toast Notification */}
-      <div style={styles.toast}>
-        <Toast isOpen={toast.show}>
-          <ToastHeader 
-            style={styles.toastHeader(toast.type)}
-            toggle={() => setToast({ ...toast, show: false })}
-          >
-            {toast.type === 'success' && <i className="fas fa-check-circle" style={styles.icon}></i>}
-            {toast.type === 'danger' && <i className="fas fa-exclamation-circle" style={styles.icon}></i>}
-            {toast.type === 'warning' && <i className="fas fa-exclamation-triangle" style={styles.icon}></i>}
-            {toast.type.charAt(0).toUpperCase() + toast.type.slice(1)}
-          </ToastHeader>
-          <ToastBody>
-            {toast.message}
-          </ToastBody>
-        </Toast>
-      </div>
+    <div className="py-4">
+      <Container>
+        {/* Tabs for Create and List */}
+        <div className="mb-4">
+          <ButtonGroup className="w-100">
+            <Button
+              color={activeTab === 'new' ? 'primary' : 'light'}
+              onClick={() => setActiveTab('new')}
+              className="w-50"
+            >
+              Create New Campaign
+            </Button>
+            <Button
+              color={activeTab === 'list' ? 'primary' : 'light'}
+              onClick={() => setActiveTab('list')}
+              className="w-50"
+            >
+              View All Campaigns
+            </Button>
+          </ButtonGroup>
+        </div>
 
-      <div className="mb-4 d-flex justify-content-center">
-        <Button
-          style={styles.tabButton(activeTab === 'individual')}
-          onClick={() => setActiveTab('individual')}
-        >
-          <i className="fas fa-user" style={styles.icon}></i>
-          Individual Assignment
-        </Button>
-        <Button
-          style={styles.tabButton(activeTab === 'group')}
-          onClick={() => setActiveTab('group')}
-        >
-          <i className="fas fa-users" style={styles.icon}></i>
-          Group Management
-        </Button>
-      </div>
+        {activeTab === 'new' ? (
+          <Card className="shadow-sm">
+            <CardBody>
+              {showSuccess && (
+                <Alert color="success" className="mb-4">
+                  Campaign created successfully!
+                </Alert>
+              )}
 
-      {activeTab === 'individual' ? (
-        <Card style={styles.card}>
-          <CardHeader style={styles.cardHeader}>
-            <h4 className="mb-0">
-              <i className="fas fa-user-plus" style={styles.icon}></i>
-              Assign Individual WhatsApp Menu Access
-            </h4>
-          </CardHeader>
-          <CardBody className="p-4">
-            <Form onSubmit={handleIndividualSubmit}>
-              <Row>
-                <Col md={6}>
-                  <FormGroup>
-                    <Label className="fw-bold">Phone Number</Label>
-                    <InputGroup>
-                      <InputGroupText>
-                        <Dropdown isOpen={dropdownOpen} toggle={toggleDropdown}>
-                          <DropdownToggle color="light" className="text-start" style={{ minWidth: '120px' }}>
-                            {selectedCountry ? 
-                              <span>{selectedCountry.flag} +{selectedCountry.code}</span> : 
-                              <span>Country <i className="fas fa-caret-down ms-1"></i></span>
-                            }
-                          </DropdownToggle>
-                          <DropdownMenu style={styles.countryDropdown}>
-                            <div style={styles.searchInput}>
-                              <Input
-                                type="text"
-                                placeholder="Search country or code..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                            {filteredCountries.map((country) => (
-                              <DropdownItem 
-                                key={`${country.code}-${country.country}`}
-                                onClick={() => handleCountrySelect(country)}
-                                style={styles.countryItem}
-                              >
-                                <span style={styles.countryFlag}>{country.flag}</span>
-                                <span>{country.country} (+{country.code})</span>
-                              </DropdownItem>
-                            ))}
-                          </DropdownMenu>
-                        </Dropdown>
-                      </InputGroupText>
-                      <Input
-                        style={styles.input}
-                        type="text"
-                        value={individualFormData.phoneNumber}
-                        onChange={(e) => setIndividualFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                        placeholder="Enter phone number"
-                      />
-                    </InputGroup>
-                  </FormGroup>
-                </Col>
-                <Col md={6}>
-                  <FormGroup>
-                    <Label className="fw-bold">Country Code</Label>
-                    <Input
-                      style={styles.input}
-                      type="text"
-                      value={individualFormData.countryCode ? `+${individualFormData.countryCode}` : ''}
-                      disabled
-                      placeholder="Selected from dropdown"
-                    />
-                  </FormGroup>
-                </Col>
-                <Col md={12}>
-                  <FormGroup>
-                    <Label className="fw-bold">Select Menu</Label>
-                    <Input
-                      style={styles.input}
-                      type="select"
-                      value={individualFormData.menuId}
-                      onChange={(e) => setIndividualFormData(prev => ({ ...prev, menuId: e.target.value }))}
-                    >
-                      <option value="">Select a menu...</option>
-                      {menus.map((menu) => (
-                        <option key={menu._id} value={menu._id}>
-                          {menu.menuName || menu.menuTitle || 'Unnamed Menu'}
-                        </option>
-                      ))}
-                    </Input>
-                  </FormGroup>
-                </Col>
-              </Row>
-              <div className="text-center mt-4">
-                <Button style={styles.submitButton} type="submit" disabled={loading}>
-                  {loading ? <Spinner size="sm" className="me-2" /> : <i className="fas fa-check me-2"></i>}
-                  Assign Menu
-                </Button>
+              <div className="mb-4">
+                <h4>Campaign Progress</h4>
+                <Progress value={getCompletionPercentage()} className="mt-2" />
               </div>
-            </Form>
-          </CardBody>
-        </Card>
-      ) :  (
-        <Row>
-          <Col md={12} lg={5}>
-            <Card style={styles.card}>
-              <CardHeader style={styles.cardHeader}>
-                <h4 className="mb-0">
-                  <i className={`fas ${editMode ? 'fa-edit' : 'fa-plus-circle'}`} style={styles.icon}></i>
-                  {editMode ? 'Edit Group' : 'Create New Group'}
-                </h4>
-              </CardHeader>
-              <CardBody className="p-4">
-                <Form onSubmit={handleGroupSubmit}>
-                  <FormGroup>
-                    <Label className="fw-bold">Group Name</Label>
-                    <Input
-                      style={styles.input}
-                      value={groupFormData.name}
-                      onChange={(e) => setGroupFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter group name"
-                      required
-                    />
-                  </FormGroup>
 
-                  <FormGroup>
-                    <Label className="fw-bold">Select Menu</Label>
-                    <Input
-                      style={styles.input}
-                      type="select"
-                      value={groupFormData.menuId}
-                      onChange={(e) => setGroupFormData(prev => ({ ...prev, menuId: e.target.value }))}
-                      required
-                    >
-                      <option value="">Choose menu...</option>
-                      {menus.map(menu => (
-                        <option key={menu._id} value={menu._id}>
-                          {menu.menuTitle || menu.menuName || 'Unnamed Menu'}
-                        </option>
-                      ))}
-                    </Input>
-                  </FormGroup>
+              <Form onSubmit={handleSubmit}>
+                <Row>
+                  {/* Column 1 */}
+                  <Col md={6}>
+                    {/* Campaign Name */}
+                    <FormGroup className="mb-4">
+                      <Label className="fw-bold">
+                        Campaign Name
+                        <Badge color="primary" pill className="ms-2">Required</Badge>
+                      </Label>
+                      <Input
+                        type="text"
+                        name="campaignName"
+                        value={campaignData.campaignName}
+                        onChange={handleInputChange}
+                        placeholder="Enter campaign name"
+                        required
+                      />
+                    </FormGroup>
 
-                  <FormGroup>
-                    <Label className="fw-bold">Phone Numbers</Label>
-                    {groupFormData.allowedPhoneNumbers.map((number, index) => (
-                      <div key={index} className="d-flex mb-3">
-                        <InputGroup>
-                          <InputGroupText>
-                            <Dropdown isOpen={dropdownOpen === `group-${index}`} toggle={() => setDropdownOpen(prev => prev === `group-${index}` ? false : `group-${index}`)}>
-                              <DropdownToggle color="light" className="text-start" style={{ minWidth: '90px' }}>
-                                {groupCountryCodes[index] ? 
-                                  <span>{groupCountryCodes[index].flag}</span> : 
-                                  <span><i className="fas fa-globe-americas"></i></span>
-                                }
-                              </DropdownToggle>
-                              <DropdownMenu style={styles.countryDropdown}>
-                                <div style={styles.searchInput}>
-                                  <Input
-                                    type="text"
-                                    placeholder="Search country or code..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                </div>
-                                {filteredCountries.map((country) => (
-                                  <DropdownItem 
-                                    key={`${country.code}-${country.country}-${index}`}
-                                    onClick={() => handleGroupCountrySelect(country, index)}
-                                    style={styles.countryItem}
-                                  >
-                                    <span style={styles.countryFlag}>{country.flag}</span>
-                                    <span>{country.country} (+{country.code})</span>
-                                  </DropdownItem>
-                                ))}
-                              </DropdownMenu>
-                            </Dropdown>
-                          </InputGroupText>
-                          <Input
-                            style={styles.input}
-                            value={number}
-                            onChange={(e) => {
-                              const newNumbers = [...groupFormData.allowedPhoneNumbers];
-                              newNumbers[index] = e.target.value;
-                              setGroupFormData(prev => ({ ...prev, allowedPhoneNumbers: newNumbers }));
-                            }}
-                            placeholder="Enter phone number"
-                            className="me-2"
-                            required
-                          />
-                          {groupFormData.allowedPhoneNumbers.length > 1 && (
-                            <Button
-                              color="danger"
-                              outline
-                              style={styles.actionButton('danger')}
-                              onClick={() => removePhoneNumber(index)}
-                            >
-                              <i className="fas fa-trash"></i>
-                            </Button>
-                          )}
-                        </InputGroup>
-                      </div>
-                    ))}
-                    <Button
-                      color="secondary"
-                      outline
-                      style={styles.actionButton('secondary')}
-                      onClick={addPhoneNumber}
-                    >
-                      <i className="fas fa-plus me-2"></i>
-                      Add Phone Number
-                    </Button>
-                  </FormGroup>
-
-                  <div className="d-flex justify-content-center mt-4 gap-3">
-                    <Button 
-                      style={styles.submitButton}
-                      type="submit" 
-                      disabled={loading}
-                    >
-                      {loading ? <Spinner size="sm" className="me-2" /> : 
-                        <i className={`fas ${editMode ? 'fa-save' : 'fa-plus'} me-2`}></i>}
-                      {editMode ? 'Update Group' : 'Create Group'}
-                    </Button>
-                    {editMode && (
-                      <Button 
-                        color="secondary"
-                        outline
-                        style={styles.actionButton('secondary')}
-                        onClick={resetGroupForm}
-                        disabled={loading}
-                      >
-                        <i className="fas fa-times me-2"></i>
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                </Form>
-              </CardBody>
-            </Card>
-          </Col>
-
-          <Col md={12} lg={7}>
-            <Card style={styles.card}>
-              <CardHeader style={styles.cardHeader}>
-                <h4 className="mb-0">
-                  <i className="fas fa-users" style={styles.icon}></i>
-                  Groups List
-                </h4>
-              </CardHeader>
-              <CardBody className="p-4">
-                <ListGroup>
-                  {groups.map(group => (
-                    <ListGroupItem key={group._id} style={styles.listItem}>
-                      <div className="d-flex justify-content-between align-items-start">
-                        <div>
-                          <h5 className="mb-2 fw-bold">{group.name}</h5>
-                          <p className="mb-2 text-muted">
-                            <i className="fas fa-list-ul" style={styles.icon}></i>
-                            Menu: {menus.find(m => m._id === group.menuId)?.menuName || 'Not Assign'}
-                          </p>
-                          <div className="mb-0">
-                            <p className="mb-2 fw-bold">
-                              <i className="fas fa-phone" style={styles.icon}></i>
-                              Phone Numbers:
-                            </p>
-                            <ul className="list-unstyled ps-4">
-                              {group.allowedPhoneNumbers.map((number, index) => {
-                                // Get country info based on phone number
-                                const codeMatch = number.match(/^\+?(\d+)/);
-                                let flagEmoji = '';
-                                if (codeMatch) {
-                                  const matchedCountry = countryList.find(c => c.code === codeMatch[1]);
-                                  if (matchedCountry) {
-                                    flagEmoji = matchedCountry.flag;
-                                  }
-                                }
-                                
-                                return (
-                                  <li key={index} className="mb-1">
-                                    <span className="me-2">{flagEmoji}</span>
-                                    {number}
-                                  </li>
-                                );
-                              })}
-                            </ul>
+                    {/* Template Selection - Updated with API data */}
+                    <FormGroup className="mb-4 position-relative">
+                      <Label className="fw-bold">
+                        Message Template
+                        <Badge color="primary" pill className="ms-2">Required</Badge>
+                      </Label>
+                      <Dropdown isOpen={dropdownOpen.template} toggle={() => toggleDropdown('template')} className="w-100">
+                        <DropdownToggle caret color="light" className="w-100 text-start">
+                          {campaignData.template 
+                            ? templates.find(t => t.id === campaignData.template)?.name 
+                            : 'Select a template...'}
+                        </DropdownToggle>
+                        <DropdownMenu className="w-100">
+                          {/* Added search input for templates */}
+                          <div className="px-3 py-2 border-bottom">
+                            <Input
+                              type="text"
+                              placeholder="Search templates..."
+                              value={templateSearchTerm}
+                              onChange={(e) => setTemplateSearchTerm(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
                           </div>
-                        </div>
-                        <div className="d-flex gap-2">
-                          <Button
-                            color="primary"
-                            outline
-                            style={styles.actionButton('primary')}
-                            onClick={() => handleEditGroup(group)}
-                            disabled={loading}
-                          >
-                            <i className="fas fa-edit"></i>
-                          </Button>
-                          <Button
-                            color="danger"
-                            outline
-                            style={styles.actionButton('danger')}
-                            onClick={() => {
-                              setSelectedGroupId(group._id);
-                              setDeleteModal(true);
-                            }}
-                            disabled={loading}
-                          >
-                            <i className="fas fa-trash"></i>
-                          </Button>
+                          <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                            {templatesLoading ? (
+                              <DropdownItem disabled>
+                                <span className="spinner-border spinner-border-sm me-2" />
+                                Loading templates...
+                              </DropdownItem>
+                            ) : filteredTemplates.length > 0 ? (
+                              filteredTemplates.map(template => (
+                                <DropdownItem 
+                                  key={template.id}
+                                  onClick={() => handleTemplateSelect(template.id)}
+                                >
+                                  <div>
+                                    <span className="fw-bold">{template.name}</span>
+                                    <div className="d-flex mt-1">
+                                      <Badge 
+                                        color="primary" 
+                                        pill 
+                                        className="me-2"
+                                        style={{ textTransform: 'none' }}
+                                      >
+                                        {formatCategory(template.category)}
+                                      </Badge>
+                                      <Badge color="info" pill>
+                                        {template.language}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </DropdownItem>
+                              ))
+                            ) : (
+                              <DropdownItem disabled>No templates found</DropdownItem>
+                            )}
+                          </div>
+                        </DropdownMenu>
+                      </Dropdown>
+                    </FormGroup>
+                  </Col>
+
+                  {/* Column 2 */}
+                  <Col md={6}>
+                    {/* Send Type */}
+                    <FormGroup className="mb-4">
+                      <Label className="fw-bold">
+                        Sending Schedule
+                        <Badge color="primary" pill className="ms-2">Required</Badge>
+                      </Label>
+                      <ButtonGroup className="w-100">
+                        <Button
+                          color={campaignData.sendType === 'now' ? 'primary' : 'light'}
+                          onClick={() => setCampaignData(prev => ({ ...prev, sendType: 'now' }))}
+                        >
+                          Send Now
+                        </Button>
+                        <Button
+                          color={campaignData.sendType === 'later' ? 'primary' : 'light'}
+                          onClick={() => setCampaignData(prev => ({ ...prev, sendType: 'later' }))}
+                        >
+                          Schedule
+                        </Button>
+                      </ButtonGroup>
+                      {campaignData.sendType === 'later' && (
+                        <Input
+                          type="datetime-local"
+                          name="scheduledTime"
+                          value={campaignData.scheduledTime}
+                          onChange={handleInputChange}
+                          className="mt-2"
+                          required
+                        />
+                      )}
+                    </FormGroup>
+
+                    {/* Group Selection */}
+                    <FormGroup className="mb-4 position-relative">
+                      <Label className="fw-bold">
+                        Target Groups
+                        <Badge color="primary" pill className="ms-2">Required</Badge>
+                      </Label>
+                      <Dropdown isOpen={dropdownOpen.groups} toggle={() => toggleDropdown('groups')} className="w-100">
+                        <DropdownToggle caret color="light" className="w-100 text-start">
+                          {campaignData.selectedGroups.length 
+                            ? `${campaignData.selectedGroups.length} groups selected`
+                            : 'Select target groups...'}
+                        </DropdownToggle>
+                        <DropdownMenu className="w-100">
+                          {/* Search input for groups */}
+                          <div className="px-3 py-2 border-bottom">
+                            <Input
+                              type="text"
+                              placeholder="Search groups..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                            {filteredGroups.length > 0 ? (
+                              filteredGroups.map(group => (
+                                <DropdownItem 
+                                  key={group._id}
+                                  onClick={() => handleGroupSelect(group._id)}
+                                  className="d-flex align-items-center"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={campaignData.selectedGroups.includes(group._id)}
+                                    onChange={() => {}}
+                                    className="me-2"
+                                  />
+                                  <div className="d-flex justify-content-between w-100">
+                                    <span>{group.name}</span>
+                                    <Badge color="info" pill>
+                                      {group.allowedPhoneNumbers?.length || 0} members
+                                    </Badge>
+                                  </div>
+                                </DropdownItem>
+                              ))
+                            ) : (
+                              <DropdownItem disabled>No groups found</DropdownItem>
+                            )}
+                          </div>
+                        </DropdownMenu>
+                      </Dropdown>
+                    </FormGroup>
+                  </Col>
+                </Row>
+
+                {/* Selected Template Preview with Parameters - NEW SECTION */}
+                {campaignData.template && selectedTemplateDetails && (
+                  <Row className="mb-3">
+                    <Col>
+                      <Card className="border">
+                        <CardBody>
+                          <h5 className="mb-3">Template: {selectedTemplateDetails.name || "Selected Template"}</h5>
+                          
+                          {/* Display template badges if available */}
+                          <div className="d-flex mb-3">
+                            {selectedTemplateDetails.category && (
+                              <Badge 
+                                color="primary" 
+                                pill 
+                                className="me-2"
+                                style={{ textTransform: 'none' }}
+                              >
+                                {formatCategory(selectedTemplateDetails.category)}
+                              </Badge>
+                            )}
+                            {selectedTemplateDetails.language && (
+                              <Badge color="info" pill>
+                                {selectedTemplateDetails.language}
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Display template preview with live parameter replacement */}
+                          <div className="mb-4">
+                            <Label className="fw-bold">Template Preview</Label>
+                            <div className="border rounded p-3 bg-light mb-3">
+                              <div className="text-muted mb-2">(Header)</div>
+                              <div className="mb-2">
+                                {getPreviewText(selectedTemplateDetails.text)}
+                              </div>
+                              <div className="text-muted small">This message is from an unverified business.</div>
+                            </div>
+                          </div>
+
+                          {/* Template Parameters Section */}
+                          <div className="mb-3">
+                            <Label className="fw-bold">
+                              Template Parameters
+                              <Badge color="primary" pill className="ms-2">Required</Badge>
+                            </Label>
+                            {extractedParams.length > 0 ? (
+                              <Row className="mt-2">
+                                {extractedParams.map((param) => (
+                                  <Col md={6} key={param.key} className="mb-3">
+                                    <FormGroup>
+                                      <Label className="fw-bold text-secondary">
+                                        {param.name} ({`{${param.index}}`})
+                                      </Label>
+                                      <Input
+                                        type={param.type}
+                                        name={param.key}
+                                        value={campaignData.templateParams[param.key] || ''}
+                                        onChange={handleParamChange}
+                                        placeholder={`Enter ${param.name}`}
+                                        required
+                                      />
+                                    </FormGroup>
+                                  </Col>
+                                ))}
+                              </Row>
+                            ) : (
+                              <p className="text-muted">This template has no editable parameters.</p>
+                            )}
+                          </div>
+                        </CardBody>
+                      </Card>
+                    </Col>
+                  </Row>
+                )}
+
+                {/* Selected Groups Preview */}
+                {campaignData.selectedGroups.length > 0 && (
+                  <Row className="mb-3">
+                    <Col>
+                      <Label className="fw-bold">Selected Groups</Label>
+                      <div className="border rounded p-3">
+                        <div className="d-flex flex-wrap gap-2">
+                          {campaignData.selectedGroups.map(groupId => {
+                            const group = groups.find(g => g._id === groupId);
+                            return group ? (
+                              <Badge 
+                                key={groupId} 
+                                color="primary" 
+                                className="p-2 d-flex align-items-center"
+                              >
+                                {group.name}
+                                <span 
+                                  className="ms-2 cursor-pointer" 
+                                  onClick={() => handleGroupSelect(groupId)}
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  ×
+                                </span>
+                              </Badge>
+                            ) : null;
+                          })}
                         </div>
                       </div>
-                    </ListGroupItem>
-                  ))}
-                  {!loading && groups.length === 0 && (
-                    <div className="text-center p-5">
-                      <i className="fas fa-users fa-3x text-muted mb-3"></i>
-                      <p className="text-muted">No groups found</p>
-                    </div>
-                  )}
-                </ListGroup>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      )}
+                    </Col>
+                  </Row>
+                )}
 
-      {/* Delete Confirmation Modal */}
-      <Modal isOpen={deleteModal} toggle={() => setDeleteModal(false)}>
-        <ModalHeader style={styles.cardHeader} toggle={() => setDeleteModal(false)}>
-          <i className="fas fa-trash" style={styles.icon}></i>
-          Delete Group
-        </ModalHeader>
-        <ModalBody className="p-4">
-          <div className="text-center">
-            <i className="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-            <p className="mb-0">Are you sure you want to delete this group? This action cannot be undone.</p>
-          </div>
-        </ModalBody>
-        <ModalFooter className="p-3">
-          <Button 
-            color="secondary" 
-            outline
-            style={styles.actionButton('secondary')}
-            onClick={() => setDeleteModal(false)}
-          >
-            <i className="fas fa-times" style={styles.icon}></i>
-            Cancel
-          </Button>
-          <Button 
-            color="danger"
-            style={{...styles.actionButton('danger'), background: '#dc3545', color: 'white'}}
-            onClick={handleDeleteGroup}
-          >
-            <i className="fas fa-trash" style={styles.icon}></i>
-            Delete
-          </Button>
-        </ModalFooter>
-      </Modal>
-    </Container>
+                {/* Submit Button - Full Width */}
+                <Row>
+                  <Col>
+                    <Button
+  color="primary"
+  type="submit"
+  className="w-100 mt-3"
+  disabled={isSubmitting || !validateForm()}
+>
+  {isSubmitting ? (
+    <>
+      <span className="spinner-border spinner-border-sm me-2" />
+      Creating Campaign...
+    </>
+  ) : (
+    'Launch Campaign'
+  )}
+</Button>
+                  </Col>
+                </Row>
+              </Form>
+            </CardBody>
+          </Card>
+        ) : (
+          // Campaign List View
+          <Card className="shadow-sm">
+            <CardBody>
+              <h4 className="mb-4">All WhatsApp Campaigns</h4>
+              
+              {campaignsLoading ? (
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                  <p className="mt-3">Loading campaigns...</p>
+                </div>
+              ) : campaigns.length === 0 ? (
+                <Alert color="info">
+                  No campaigns found. Create your first campaign to get started.
+                </Alert>
+              ) : (
+                <div className="table-responsive">
+                  <Table hover className="align-middle">
+                  <thead>
+  <tr>
+    <th>Campaign Name</th>
+    <th>Template</th>
+    <th>Groups</th>
+    <th>Status</th>
+    <th>Scheduled</th>
+    <th>Recipients</th>
+    <th>Success/Fail</th>
+    <th>Created</th>
+    <th>Actions</th>  {/* New Actions column */}
+  </tr>
+</thead>
+                    <tbody>
+                      {campaigns.map(campaign => (
+                        <tr key={campaign._id}>
+                          <td>
+                            <span className="fw-bold">{campaign.name}</span>
+                          </td>
+                          <td>
+                            {campaign.templateName}
+                            <div>
+                              <Badge color="secondary" pill className="mt-1">
+                                {campaign.templateLanguage}
+                              </Badge>
+                            </div>
+                          </td>
+                          <td>
+                            {campaign.groups && campaign.groups.map(group => (
+                              <Badge key={group._id} color="primary" pill className="me-1">
+                                {group.name}
+                              </Badge>
+                            ))}
+                          </td>
+                          <td>
+                          <Badge color={getStatusBadgeColor(campaign.status)} pill>
+    {campaign.status}
+  </Badge>
+                          </td>
+                          <td>{campaign.scheduledFor ? formatDate(campaign.scheduledFor) : 'Immediate'}</td>
+                          <td>{campaign.totalRecipients || 0}</td>
+                          <td>
+                            <div className="d-flex align-items-center">
+                            <span className="text-success me-2">{campaign.successCount || 0}</span>
+<span>/</span>
+<span className="text-danger ms-2">{campaign.failCount || 0}</span>
+                            </div>
+                            {(campaign.totalRecipients > 0) && (
+                              <Progress multi className="mt-1" style={{ height: '6px' }}>
+                                <Progress
+                                  bar
+                                  color="success"
+                                  value={(campaign.successCount / campaign.totalRecipients) * 100}
+                                />
+                                <Progress
+                                  bar
+                                  color="danger"
+                                  value={(campaign.failCount / campaign.totalRecipients) * 100}
+                                />
+                                <Progress
+                                  bar
+                                  color="warning"
+                                  value={(campaign.pendingCount / campaign.totalRecipients) * 100}
+                                />
+                              </Progress>
+                            )}
+                          </td>
+                          <td>{formatDate(campaign.createdAt)}</td>
+                        {/* New Actions column */}
+                        <td>
+  <div className="d-flex gap-2">
+    <Button 
+      color="primary" 
+      size="sm" 
+      onClick={() => handleEditCampaign(campaign._id)}
+      disabled={campaign.status === 'completed' || campaign.status === 'sent'}
+      className="p-1"
+    >
+      <Edit size={16} />
+    </Button>
+    <Button 
+      color="danger" 
+      size="sm" 
+      onClick={() => handleDeleteCampaign(campaign._id)}
+      className="p-1"
+    >
+      <Trash2 size={16} />
+    </Button>
+    <Button 
+      color="warning" 
+      size="sm" 
+      onClick={() => handleCancelCampaign(campaign._id)}
+      disabled={campaign.status === 'completed' || campaign.status === 'sent' || campaign.status === 'failed'}
+      className="p-1"
+    >
+      <X size={16} />
+    </Button>
+  </div>
+</td>
+    </tr>
+  ))}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
+              
+              <Button
+                color="primary"
+                className="mt-3"
+                onClick={() => setActiveTab('new')}
+              >
+                Create New Campaign
+              </Button>
+            </CardBody>
+          </Card>
+        )}
+      </Container>
+    </div>
   );
 };
 
-export default WhatsAppMenuAccess;
+export default WhatsAppCampaigns;

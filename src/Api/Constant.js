@@ -81,5 +81,5 @@ export const CAMPAIGN_ENDPOINTS = {
   UPDATE: `${CAMPAIGN_API_ENDPOINT}/update`,
   DELETE: `${CAMPAIGN_API_ENDPOINT}/delete`,
   CANCEL: `${CAMPAIGN_API_ENDPOINT}/cancel`,
-  GET_DETAILS: `${CAMPAIGN_API_ENDPOINT}` // For the /:campaignId endpoint
+  GET_DETAILS: `${CAMPAIGN_API_ENDPOINT}` 
 };
