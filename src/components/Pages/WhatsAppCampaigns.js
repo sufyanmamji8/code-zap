@@ -75,42 +75,28 @@ const WhatsAppCampaigns = () => {
   }, [campaignData.template]);
 
   const extractParameters = (templateText) => {
+    if (!templateText) return [];
+    
     const paramRegex = /\{\{(\d+)\}\}/g;
     let match;
     const params = [];
     const usedIndexes = new Set();
-
+  
     while ((match = paramRegex.exec(templateText)) !== null) {
       const paramIndex = match[1];
-
+      
       if (!usedIndexes.has(paramIndex)) {
         usedIndexes.add(paramIndex);
-
-        let paramLabel = "Parameter";
-
-        const contextBefore = templateText
-          .substring(Math.max(0, match.index - 30), match.index)
-          .toLowerCase();
-
-        if (contextBefore.includes("movie") || paramIndex === "1") {
-          paramLabel = "Movie Name";
-        } else if (contextBefore.includes("time") || paramIndex === "2") {
-          paramLabel = "Time";
-        } else if (contextBefore.includes("venue") || paramIndex === "3") {
-          paramLabel = "Venue";
-        } else if (contextBefore.includes("seat") || paramIndex === "4") {
-          paramLabel = "Seats";
-        }
-
+        
         params.push({
           index: paramIndex,
           key: `param${paramIndex}`,
-          name: paramLabel,
+          name: `Parameter ${paramIndex}`,
           type: "text",
         });
       }
     }
-
+  
     params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
     return params;
   };
@@ -169,12 +155,12 @@ const WhatsAppCampaigns = () => {
   const fetchTemplates = async () => {
     const token = localStorage.getItem("token");
     const companyId = localStorage.getItem("selectedCompanyId");
-
+  
     if (!companyId || !token) {
       setTemplatesLoading(false);
       return;
     }
-
+  
     try {
       setTemplatesLoading(true);
       const response = await axios.post(
@@ -187,15 +173,22 @@ const WhatsAppCampaigns = () => {
           },
         }
       );
-
+  
       if (response.data.success && response.data.templates) {
-        const approvedTemplates = response.data.templates.filter(
-          (template) => template.status === "APPROVED"
-        );
-        setTemplates(approvedTemplates);
+        setTemplates(response.data.templates);
+      } else {
+        console.error("Failed to fetch templates");
+        // Add toast notification here if you're using it in this component
+        // toast.error("Failed to fetch templates");
       }
     } catch (error) {
       console.error("Error fetching templates:", error);
+      if (error.response?.status === 401) {
+        // Add navigation to login if needed
+        // navigate("/auth/login");
+      } else {
+        // toast.error("Error loading templates");
+      }
     } finally {
       setTemplatesLoading(false);
     }
@@ -204,47 +197,51 @@ const WhatsAppCampaigns = () => {
   const fetchTemplateDetails = async (templateId) => {
     try {
       const selectedTemplate = templates.find((t) => t.id === templateId);
-
+  
       if (selectedTemplate) {
-        // Extract text from components or fallback to template text
+        console.log("Selected template:", selectedTemplate); // Debug log
+        
+        // Get the template text from the appropriate place in the template object
         let templateText = "";
-        if (
-          selectedTemplate.components &&
-          selectedTemplate.components.length > 0
-        ) {
-          // Find body component text
-          const bodyComponent = selectedTemplate.components.find(
-            (c) => c.type === "BODY" || c.type === "body"
+        
+        if (selectedTemplate.components && selectedTemplate.components.length > 0) {
+          // Find body component
+          const bodyComponent = selectedTemplate.components.find(c => 
+            c.type === "BODY" || c.type === "body"
           );
+          
           if (bodyComponent) {
             templateText = bodyComponent.text || "";
-          } else {
-            templateText = selectedTemplate.components
-              .map((component) => component.text || "")
-              .join(" ");
           }
         } else if (selectedTemplate.text) {
           templateText = selectedTemplate.text;
+        } else if (selectedTemplate.content) {
+          // Check other possible property names
+          templateText = selectedTemplate.content;
         }
-
-        // Extract parameters from template text
+        
+        console.log("Template text for parameter extraction:", templateText); // Debug log
+        
+        // Extract parameters
         const params = extractParameters(templateText);
+        console.log("Extracted parameters:", params); // Debug log
+        
         setExtractedParams(params);
-
+        
         // Initialize parameter values
         const initialParams = {};
-        params.forEach((param) => {
+        params.forEach(param => {
           initialParams[param.key] = "";
         });
-
-        setCampaignData((prev) => ({
+        
+        setCampaignData(prev => ({
           ...prev,
-          templateParams: initialParams,
+          templateParams: initialParams
         }));
-
+        
         setSelectedTemplateDetails({
           ...selectedTemplate,
-          text: templateText,
+          text: templateText
         });
       }
     } catch (error) {
@@ -261,19 +258,22 @@ const WhatsAppCampaigns = () => {
     ) {
       return false;
     }
-
+  
     // If scheduled, must have a valid date
     if (campaignData.sendType === "later" && !campaignData.scheduledTime) {
       return false;
     }
-
+  
     // Check that all template parameters are filled
     for (const param of extractedParams) {
-      if (!campaignData.templateParams[param.key]) {
+      if (campaignData.templateParams[param.key] === undefined || 
+          campaignData.templateParams[param.key] === null || 
+          campaignData.templateParams[param.key] === "") {
+        console.log(`Missing template parameter: ${param.key}`);
         return false;
       }
     }
-
+  
     return true;
   };
 
@@ -391,36 +391,41 @@ const WhatsAppCampaigns = () => {
       }
 
       // Add body component (always present)
-      const bodyComponent = {
-        type: "body",
-        parameters: [],
-      };
+      // Add body component (always present)
+const bodyComponent = {
+  type: "body",
+  parameters: [],
+};
 
-      // Add parameters from template to body component
-      extractedParams.forEach((param) => {
-        if (campaignData.templateParams[param.key]) {
-          bodyComponent.parameters.push({
-            type: "text",
-            text: campaignData.templateParams[param.key],
-          });
-        }
-      });
+// Debug logs
+console.log("Extracted params before sending:", extractedParams);
+console.log("Template param values:", campaignData.templateParams);
 
-      components.push(bodyComponent);
+// Add ALL parameters from template to body component
+extractedParams.forEach((param) => {
+  bodyComponent.parameters.push({
+    type: "text",
+    text: campaignData.templateParams[param.key] || "",  // Empty string fallback
+  });
+});
 
-      // Create payload that matches backend expectations
-      const payload = {
-        name: campaignData.campaignName,
-        templateName: selectedTemplate.name,
-        templateLanguage: selectedTemplate.language || "en",
-        components: components,
-        groups: campaignData.selectedGroups,
-        scheduleTime:
-          campaignData.sendType === "later" ? campaignData.scheduledTime : null,
-        companyId: companyId,
-      };
+console.log("Final body component with parameters:", bodyComponent);
 
-      console.log("Sending campaign data:", payload);
+components.push(bodyComponent);
+
+// Create payload that matches backend expectations
+const payload = {
+  name: campaignData.campaignName,
+  templateName: selectedTemplate.name,
+  templateLanguage: selectedTemplate.language || "en",
+  components: components,
+  groups: campaignData.selectedGroups,
+  scheduleTime:
+    campaignData.sendType === "later" ? campaignData.scheduledTime : null,
+  companyId: companyId,
+};
+
+console.log("Final API payload:", payload);
 
       let response;
 
