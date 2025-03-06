@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Edit, Trash2, X } from "lucide-react";
+import { Edit, Trash2, X, Image, FileVideo, File } from "lucide-react";
 
 import {
   Container,
@@ -74,51 +74,58 @@ const WhatsAppCampaigns = () => {
     }
   }, [campaignData.template]);
 
-  const extractParameters = (templateText) => {
-    const paramRegex = /\{\{(\d+)\}\}/g;
-    let match;
+  const extractParameters = (templateText, components) => {
+    if (!templateText) return [];
+    
     const params = [];
     const usedIndexes = new Set();
   
+    // Extract text parameters using regex
+    const paramRegex = /\{\{(\d+)\}\}/g;
+    let match;
+    
     while ((match = paramRegex.exec(templateText)) !== null) {
       const paramIndex = match[1];
-  
+      
       if (!usedIndexes.has(paramIndex)) {
         usedIndexes.add(paramIndex);
-  
-        let paramLabel = `Parameter ${paramIndex}`;
-  
-        const contextBefore = templateText
-          .substring(Math.max(0, match.index - 30), match.index)
-          .toLowerCase();
-  
-        if (contextBefore.includes("movie") || paramIndex === "1") {
-          paramLabel = "Movie Name";
-        } else if (contextBefore.includes("time") || paramIndex === "2") {
-          paramLabel = "Time";
-        } else if (contextBefore.includes("venue") || paramIndex === "3") {
-          paramLabel = "Venue";
-        } else if (contextBefore.includes("seat") || paramIndex === "4") {
-          paramLabel = "Seats";
-        } else if (contextBefore.includes("name")) {
-          paramLabel = "Name";
-        } else if (contextBefore.includes("date")) {
-          paramLabel = "Date";
-        }
-  
+        
         params.push({
           index: paramIndex,
           key: `param${paramIndex}`,
-          name: paramLabel,
+          name: `Parameter ${paramIndex}`,
           type: "text",
         });
       }
     }
+    
+    // Add media parameters from components if they exist
+    if (components && Array.isArray(components)) {
+      components.forEach(component => {
+        if (component.type === "HEADER" && component.format) {
+          const mediaType = component.format.toLowerCase();
+          if (["image", "video", "document"].includes(mediaType)) {
+            // Find the next available parameter index
+            const nextIndex = params.length > 0 
+              ? Math.max(...params.map(p => parseInt(p.index))) + 1 
+              : 1;
+            
+            params.push({
+              index: nextIndex.toString(),
+              key: `media${nextIndex}`,
+              name: `${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} Parameter`,
+              type: mediaType,
+            });
+          }
+        }
+      });
+    }
   
+    // Sort parameters by index
     params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
     return params;
   };
-  
+
   const fetchCampaigns = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -173,12 +180,12 @@ const WhatsAppCampaigns = () => {
   const fetchTemplates = async () => {
     const token = localStorage.getItem("token");
     const companyId = localStorage.getItem("selectedCompanyId");
-
+  
     if (!companyId || !token) {
       setTemplatesLoading(false);
       return;
     }
-
+  
     try {
       setTemplatesLoading(true);
       const response = await axios.post(
@@ -191,15 +198,22 @@ const WhatsAppCampaigns = () => {
           },
         }
       );
-
+  
       if (response.data.success && response.data.templates) {
-        const approvedTemplates = response.data.templates.filter(
-          (template) => template.status === "APPROVED"
-        );
-        setTemplates(approvedTemplates);
+        setTemplates(response.data.templates);
+      } else {
+        console.error("Failed to fetch templates");
+        // Add toast notification here if you're using it in this component
+        // toast.error("Failed to fetch templates");
       }
     } catch (error) {
       console.error("Error fetching templates:", error);
+      if (error.response?.status === 401) {
+        // Add navigation to login if needed
+        // navigate("/auth/login");
+      } else {
+        // toast.error("Error loading templates");
+      }
     } finally {
       setTemplatesLoading(false);
     }
@@ -210,56 +224,50 @@ const WhatsAppCampaigns = () => {
       const selectedTemplate = templates.find((t) => t.id === templateId);
   
       if (selectedTemplate) {
-        // Initialize template parameters based on components
-        const initialParams = {};
-        let extractedParametersList = [];
+        console.log("Selected template:", selectedTemplate); // Debug log
         
-        // Process template components properly
+        // Get the template text from the appropriate place in the template object
+        let templateText = "";
+        
         if (selectedTemplate.components && selectedTemplate.components.length > 0) {
-          // Process all components in order (header, body, footer)
-          selectedTemplate.components.forEach((component, compIndex) => {
-            // Extract text from component
-            const componentText = component.text || "";
-            
-            // Extract parameters with component context
-            if (componentText) {
-              const componentParams = extractParameters(componentText);
-              
-              // Add component type to parameter info for later use
-              const enhancedParams = componentParams.map(param => ({
-                ...param,
-                componentType: component.type,
-                componentIndex: compIndex
-              }));
-              
-              extractedParametersList = [...extractedParametersList, ...enhancedParams];
-              
-              // Initialize parameters for this component
-              componentParams.forEach(param => {
-                initialParams[param.key] = "";
-              });
-            }
-          });
+          // Find body component
+          const bodyComponent = selectedTemplate.components.find(c => 
+            c.type === "BODY" || c.type === "body"
+          );
+          
+          if (bodyComponent) {
+            templateText = bodyComponent.text || "";
+          }
         } else if (selectedTemplate.text) {
-          // Fallback to template text if no components
-          const params = extractParameters(selectedTemplate.text);
-          extractedParametersList = params;
-          params.forEach(param => {
-            initialParams[param.key] = "";
-          });
+          templateText = selectedTemplate.text;
+        } else if (selectedTemplate.content) {
+          // Check other possible property names
+          templateText = selectedTemplate.content;
         }
         
-        // Set extracted parameters for form
-        setExtractedParams(extractedParametersList);
+        console.log("Template text for parameter extraction:", templateText); // Debug log
+        
+        // Extract parameters - pass the components as well
+        const params = extractParameters(templateText, selectedTemplate.components);
+        console.log("Extracted parameters:", params); // Debug log
+        
+        setExtractedParams(params);
         
         // Initialize parameter values
+        const initialParams = {};
+        params.forEach(param => {
+          initialParams[param.key] = "";
+        });
+        
         setCampaignData(prev => ({
           ...prev,
-          templateParams: initialParams,
+          templateParams: initialParams
         }));
         
-        // Store full template details for later use
-        setSelectedTemplateDetails(selectedTemplate);
+        setSelectedTemplateDetails({
+          ...selectedTemplate,
+          text: templateText
+        });
       }
     } catch (error) {
       console.error("Error processing template details:", error);
@@ -275,19 +283,22 @@ const WhatsAppCampaigns = () => {
     ) {
       return false;
     }
-
+  
     // If scheduled, must have a valid date
     if (campaignData.sendType === "later" && !campaignData.scheduledTime) {
       return false;
     }
-
+  
     // Check that all template parameters are filled
     for (const param of extractedParams) {
-      if (!campaignData.templateParams[param.key]) {
+      if (campaignData.templateParams[param.key] === undefined || 
+          campaignData.templateParams[param.key] === null || 
+          campaignData.templateParams[param.key] === "") {
+        console.log(`Missing template parameter: ${param.key}`);
         return false;
       }
     }
-
+  
     return true;
   };
 
@@ -366,94 +377,91 @@ const WhatsAppCampaigns = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-  
+
     try {
       const token = localStorage.getItem("token");
       const companyId = localStorage.getItem("selectedCompanyId");
-  
+
       if (!token || !companyId) {
         console.error("Missing authentication token or company ID");
         return;
       }
-  
+
+      // Format template components to match backend expectations
       const selectedTemplate = templates.find(
         (t) => t.id === campaignData.template
       );
-  
+
       if (!selectedTemplate) {
         console.error("Selected template not found");
         setIsSubmitting(false);
         return;
       }
-  
-      // Group parameters by component type
-      const paramsByComponent = {};
-      
-      extractedParams.forEach(param => {
-        const componentType = param.componentType || "body"; // Default to body if not specified
-        if (!paramsByComponent[componentType]) {
-          paramsByComponent[componentType] = [];
-        }
-        
-        paramsByComponent[componentType].push({
-          paramIndex: param.index,
-          key: param.key,
-          value: campaignData.templateParams[param.key] || ""
-        });
-      });
-  
-      // Build components array dynamically based on the original template structure
-      let components = [];
-      
-      // If the template has components, follow its structure
-      if (selectedTemplate.components && selectedTemplate.components.length > 0) {
-        // Map through original components to maintain order and structure
-        components = selectedTemplate.components.map(component => {
-          const componentType = component.type.toLowerCase();
-          const baseComponent = {
-            type: componentType,
-            parameters: []
-          };
-          
-          // Add parameters if they exist for this component
-          if (paramsByComponent[componentType]) {
-            baseComponent.parameters = paramsByComponent[componentType].map(param => ({
-              type: "text",
-              text: param.value
-            }));
-          }
-          
-          return baseComponent;
-        });
-      } else {
-        // Fallback to a simple body component if no components in template
-        const bodyComponent = {
-          type: "body",
-          parameters: Object.keys(campaignData.templateParams).map(key => ({
-            type: "text",
-            text: campaignData.templateParams[key]
-          }))
-        };
-        
-        components.push(bodyComponent);
-      }
-  
-      // Create payload with properly formatted components
-      const payload = {
-        name: campaignData.campaignName,
-        templateName: selectedTemplate.name,
-        templateLanguage: selectedTemplate.language || "en",
-        components: components,
-        groups: campaignData.selectedGroups,
-        scheduleTime:
-          campaignData.sendType === "later" ? campaignData.scheduledTime : null,
-        companyId: companyId,
-      };
-  
-      console.log("Sending campaign data:", payload);
-  
+
+      // Format parameters as expected by the backend
+      // Inside handleSubmit function
+// Format parameters as expected by the backend
+const components = [];
+
+// Add header component if it exists
+if (
+  selectedTemplate.components &&
+  selectedTemplate.components.some((c) => c.type === "HEADER")
+) {
+  const headerComponent = {
+    type: "header",
+    parameters: [],
+  };
+
+  // Handle header media parameters
+  const mediaParams = extractedParams.filter(p => p.type !== "text");
+  if (mediaParams.length > 0) {
+    // You'll need to upload the file and get a media ID
+    // This is an example of how you might structure this
+    headerComponent.parameters.push({
+      type: mediaParams[0].type,
+      // For the actual implementation, you'd need to upload the file first
+      // and get the media ID from WhatsApp's API
+      [mediaParams[0].type]: campaignData.templateParams[mediaParams[0].key]
+    });
+  }
+
+  components.push(headerComponent);
+}
+
+// Add body component with text parameters
+const bodyComponent = {
+  type: "body",
+  parameters: [],
+};
+
+// Add text parameters to body component
+const textParams = extractedParams.filter(p => p.type === "text");
+textParams.forEach((param) => {
+  bodyComponent.parameters.push({
+    type: "text",
+    text: campaignData.templateParams[param.key] || "",
+  });
+});
+
+components.push(bodyComponent);
+
+// Create payload that matches backend expectations
+const payload = {
+  name: campaignData.campaignName,
+  templateName: selectedTemplate.name,
+  templateLanguage: selectedTemplate.language || "en",
+  components: components,
+  groups: campaignData.selectedGroups,
+  scheduleTime:
+    campaignData.sendType === "later" ? campaignData.scheduledTime : null,
+  companyId: companyId,
+};
+
+console.log("Final API payload:", payload);
+
       let response;
-  
+
       if (editingCampaignId) {
         // Update existing campaign
         response = await axios.put(
@@ -475,13 +483,13 @@ const WhatsAppCampaigns = () => {
           },
         });
       }
-  
+
       if (response.data.success) {
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
         fetchCampaigns();
         setActiveTab("list");
-  
+
         // Reset form and editing state
         setCampaignData({
           campaignName: "",
@@ -622,6 +630,21 @@ const WhatsAppCampaigns = () => {
       alert("Error cancelling campaign. Please try again.");
     }
   };
+
+
+  const handleMediaParamChange = (e) => {
+    const { name, files } = e.target;
+    if (files && files[0]) {
+      setCampaignData((prev) => ({
+        ...prev,
+        templateParams: {
+          ...prev.templateParams,
+          [name]: files[0],
+        },
+      }));
+    }
+  };
+
 
   const getCompletionPercentage = () => {
     let filled = 0;
@@ -998,43 +1021,75 @@ const WhatsAppCampaigns = () => {
                           </div>
 
                           {/* Template Parameters Section */}
-                          <div className="mb-3">
-                            <Label className="fw-bold">
-                              Template Parameters
-                              <Badge color="primary" pill className="ms-2">
-                                Required
-                              </Badge>
-                            </Label>
-                            {extractedParams.length > 0 ? (
-                              <Row className="mt-2">
-                                {extractedParams.map((param) => (
-                                  <Col md={6} key={param.key} className="mb-3">
-                                    <FormGroup>
-                                      <Label className="fw-bold text-secondary">
-                                        {param.name} ({`{${param.index}}`})
-                                      </Label>
-                                      <Input
-                                        type={param.type}
-                                        name={param.key}
-                                        value={
-                                          campaignData.templateParams[
-                                            param.key
-                                          ] || ""
-                                        }
-                                        onChange={handleParamChange}
-                                        placeholder={`Enter ${param.name}`}
-                                        required
-                                      />
-                                    </FormGroup>
-                                  </Col>
-                                ))}
-                              </Row>
-                            ) : (
-                              <p className="text-muted">
-                                This template has no editable parameters.
-                              </p>
-                            )}
-                          </div>
+                          {extractedParams.length > 0 ? (
+  <Row className="mt-2">
+    {extractedParams.map((param) => (
+      <Col md={6} key={param.key} className="mb-3">
+        <FormGroup>
+          <Label className="fw-bold text-secondary">
+            {param.name} ({`{${param.index}}`})
+            {param.type !== "text" && (
+              <Badge color="info" className="ms-2">
+                {param.type === "image" && <Image size={12} className="me-1" />}
+                {param.type === "video" && <FileVideo size={12} className="me-1" />}
+                {param.type === "document" && <File size={12} className="me-1" />}
+                {param.type}
+              </Badge>
+            )}
+          </Label>
+          {param.type === "text" ? (
+            <Input
+              type="text"
+              name={param.key}
+              value={campaignData.templateParams[param.key] || ""}
+              onChange={handleParamChange}
+              placeholder={`Enter ${param.name}`}
+              required
+            />
+          ) : param.type === "image" ? (
+            <Input
+              type="file"
+              name={param.key}
+              onChange={handleMediaParamChange}
+              accept="image/*"
+              required
+            />
+          ) : param.type === "video" ? (
+            <Input
+              type="file"
+              name={param.key}
+              onChange={handleMediaParamChange}
+              accept="video/*"
+              required
+            />
+          ) : param.type === "document" ? (
+            <Input
+              type="file"
+              name={param.key}
+              onChange={handleMediaParamChange}
+              accept=".pdf,.doc,.docx,.txt"
+              required
+            />
+          ) : (
+            <Input
+              type="text"
+              name={param.key}
+              value={campaignData.templateParams[param.key] || ""}
+              onChange={handleParamChange}
+              placeholder={`Enter ${param.name}`}
+              required
+            />
+          )}
+        </FormGroup>
+      </Col>
+    ))}
+  </Row>
+) : (
+  <p className="text-muted">
+    This template has no editable parameters.
+  </p>
+)}
+                          
                         </CardBody>
                       </Card>
                     </Col>

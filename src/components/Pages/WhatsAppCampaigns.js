@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Edit, Trash2, X } from "lucide-react";
+import { Edit, Trash2, X, Image, FileVideo, File } from "lucide-react";
 
 import {
   Container,
@@ -74,14 +74,16 @@ const WhatsAppCampaigns = () => {
     }
   }, [campaignData.template]);
 
-  const extractParameters = (templateText) => {
+  const extractParameters = (templateText, components) => {
     if (!templateText) return [];
     
-    const paramRegex = /\{\{(\d+)\}\}/g;
-    let match;
     const params = [];
     const usedIndexes = new Set();
   
+    // Extract text parameters using regex
+    const paramRegex = /\{\{(\d+)\}\}/g;
+    let match;
+    
     while ((match = paramRegex.exec(templateText)) !== null) {
       const paramIndex = match[1];
       
@@ -96,7 +98,30 @@ const WhatsAppCampaigns = () => {
         });
       }
     }
+    
+    // Add media parameters from components if they exist
+    if (components && Array.isArray(components)) {
+      components.forEach(component => {
+        if (component.type === "HEADER" && component.format) {
+          const mediaType = component.format.toLowerCase();
+          if (["image", "video", "document"].includes(mediaType)) {
+            // Find the next available parameter index
+            const nextIndex = params.length > 0 
+              ? Math.max(...params.map(p => parseInt(p.index))) + 1 
+              : 1;
+            
+            params.push({
+              index: nextIndex.toString(),
+              key: `media${nextIndex}`,
+              name: `${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} Parameter`,
+              type: mediaType,
+            });
+          }
+        }
+      });
+    }
   
+    // Sort parameters by index
     params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
     return params;
   };
@@ -222,8 +247,8 @@ const WhatsAppCampaigns = () => {
         
         console.log("Template text for parameter extraction:", templateText); // Debug log
         
-        // Extract parameters
-        const params = extractParameters(templateText);
+        // Extract parameters - pass the components as well
+        const params = extractParameters(templateText, selectedTemplate.components);
         console.log("Extracted parameters:", params); // Debug log
         
         setExtractedParams(params);
@@ -374,42 +399,50 @@ const WhatsAppCampaigns = () => {
       }
 
       // Format parameters as expected by the backend
-      const components = [];
+      // Inside handleSubmit function
+// Format parameters as expected by the backend
+const components = [];
 
-      // Add header component if it exists
-      if (
-        selectedTemplate.components &&
-        selectedTemplate.components.some((c) => c.type === "HEADER")
-      ) {
-        const headerComponent = {
-          type: "header",
-          parameters: [],
-        };
+// Add header component if it exists
+if (
+  selectedTemplate.components &&
+  selectedTemplate.components.some((c) => c.type === "HEADER")
+) {
+  const headerComponent = {
+    type: "header",
+    parameters: [],
+  };
 
-        // Add header parameters if any
-        components.push(headerComponent);
-      }
+  // Handle header media parameters
+  const mediaParams = extractedParams.filter(p => p.type !== "text");
+  if (mediaParams.length > 0) {
+    // You'll need to upload the file and get a media ID
+    // This is an example of how you might structure this
+    headerComponent.parameters.push({
+      type: mediaParams[0].type,
+      // For the actual implementation, you'd need to upload the file first
+      // and get the media ID from WhatsApp's API
+      [mediaParams[0].type]: campaignData.templateParams[mediaParams[0].key]
+    });
+  }
 
-      // Add body component (always present)
-      // Add body component (always present)
+  components.push(headerComponent);
+}
+
+// Add body component with text parameters
 const bodyComponent = {
   type: "body",
   parameters: [],
 };
 
-// Debug logs
-console.log("Extracted params before sending:", extractedParams);
-console.log("Template param values:", campaignData.templateParams);
-
-// Add ALL parameters from template to body component
-extractedParams.forEach((param) => {
+// Add text parameters to body component
+const textParams = extractedParams.filter(p => p.type === "text");
+textParams.forEach((param) => {
   bodyComponent.parameters.push({
     type: "text",
-    text: campaignData.templateParams[param.key] || "",  // Empty string fallback
+    text: campaignData.templateParams[param.key] || "",
   });
 });
-
-console.log("Final body component with parameters:", bodyComponent);
 
 components.push(bodyComponent);
 
@@ -597,6 +630,21 @@ console.log("Final API payload:", payload);
       alert("Error cancelling campaign. Please try again.");
     }
   };
+
+
+  const handleMediaParamChange = (e) => {
+    const { name, files } = e.target;
+    if (files && files[0]) {
+      setCampaignData((prev) => ({
+        ...prev,
+        templateParams: {
+          ...prev.templateParams,
+          [name]: files[0],
+        },
+      }));
+    }
+  };
+
 
   const getCompletionPercentage = () => {
     let filled = 0;
@@ -973,43 +1021,75 @@ console.log("Final API payload:", payload);
                           </div>
 
                           {/* Template Parameters Section */}
-                          <div className="mb-3">
-                            <Label className="fw-bold">
-                              Template Parameters
-                              <Badge color="primary" pill className="ms-2">
-                                Required
-                              </Badge>
-                            </Label>
-                            {extractedParams.length > 0 ? (
-                              <Row className="mt-2">
-                                {extractedParams.map((param) => (
-                                  <Col md={6} key={param.key} className="mb-3">
-                                    <FormGroup>
-                                      <Label className="fw-bold text-secondary">
-                                        {param.name} ({`{${param.index}}`})
-                                      </Label>
-                                      <Input
-                                        type={param.type}
-                                        name={param.key}
-                                        value={
-                                          campaignData.templateParams[
-                                            param.key
-                                          ] || ""
-                                        }
-                                        onChange={handleParamChange}
-                                        placeholder={`Enter ${param.name}`}
-                                        required
-                                      />
-                                    </FormGroup>
-                                  </Col>
-                                ))}
-                              </Row>
-                            ) : (
-                              <p className="text-muted">
-                                This template has no editable parameters.
-                              </p>
-                            )}
-                          </div>
+                          {extractedParams.length > 0 ? (
+  <Row className="mt-2">
+    {extractedParams.map((param) => (
+      <Col md={6} key={param.key} className="mb-3">
+        <FormGroup>
+          <Label className="fw-bold text-secondary">
+            {param.name} ({`{${param.index}}`})
+            {param.type !== "text" && (
+              <Badge color="info" className="ms-2">
+                {param.type === "image" && <Image size={12} className="me-1" />}
+                {param.type === "video" && <FileVideo size={12} className="me-1" />}
+                {param.type === "document" && <File size={12} className="me-1" />}
+                {param.type}
+              </Badge>
+            )}
+          </Label>
+          {param.type === "text" ? (
+            <Input
+              type="text"
+              name={param.key}
+              value={campaignData.templateParams[param.key] || ""}
+              onChange={handleParamChange}
+              placeholder={`Enter ${param.name}`}
+              required
+            />
+          ) : param.type === "image" ? (
+            <Input
+              type="file"
+              name={param.key}
+              onChange={handleMediaParamChange}
+              accept="image/*"
+              required
+            />
+          ) : param.type === "video" ? (
+            <Input
+              type="file"
+              name={param.key}
+              onChange={handleMediaParamChange}
+              accept="video/*"
+              required
+            />
+          ) : param.type === "document" ? (
+            <Input
+              type="file"
+              name={param.key}
+              onChange={handleMediaParamChange}
+              accept=".pdf,.doc,.docx,.txt"
+              required
+            />
+          ) : (
+            <Input
+              type="text"
+              name={param.key}
+              value={campaignData.templateParams[param.key] || ""}
+              onChange={handleParamChange}
+              placeholder={`Enter ${param.name}`}
+              required
+            />
+          )}
+        </FormGroup>
+      </Col>
+    ))}
+  </Row>
+) : (
+  <p className="text-muted">
+    This template has no editable parameters.
+  </p>
+)}
+                          
                         </CardBody>
                       </Card>
                     </Col>
