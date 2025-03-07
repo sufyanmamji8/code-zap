@@ -76,20 +76,20 @@ const WhatsAppCampaigns = () => {
 
   const extractParameters = (templateText, components) => {
     if (!templateText) return [];
-    
+
     const params = [];
     const usedIndexes = new Set();
-  
+
     // Extract text parameters using regex
     const paramRegex = /\{\{(\d+)\}\}/g;
     let match;
-    
+
     while ((match = paramRegex.exec(templateText)) !== null) {
       const paramIndex = match[1];
-      
+
       if (!usedIndexes.has(paramIndex)) {
         usedIndexes.add(paramIndex);
-        
+
         params.push({
           index: paramIndex,
           key: `param${paramIndex}`,
@@ -98,29 +98,32 @@ const WhatsAppCampaigns = () => {
         });
       }
     }
-    
+
     // Add media parameters from components if they exist
     if (components && Array.isArray(components)) {
-      components.forEach(component => {
+      components.forEach((component) => {
         if (component.type === "HEADER" && component.format) {
           const mediaType = component.format.toLowerCase();
           if (["image", "video", "document"].includes(mediaType)) {
             // Find the next available parameter index
-            const nextIndex = params.length > 0 
-              ? Math.max(...params.map(p => parseInt(p.index))) + 1 
-              : 1;
-            
+            const nextIndex =
+              params.length > 0
+                ? Math.max(...params.map((p) => parseInt(p.index))) + 1
+                : 1;
+
             params.push({
               index: nextIndex.toString(),
               key: `media${nextIndex}`,
-              name: `${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} Parameter`,
+              name: `${
+                mediaType.charAt(0).toUpperCase() + mediaType.slice(1)
+              } Parameter`,
               type: mediaType,
             });
           }
         }
       });
     }
-  
+
     // Sort parameters by index
     params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
     return params;
@@ -180,12 +183,12 @@ const WhatsAppCampaigns = () => {
   const fetchTemplates = async () => {
     const token = localStorage.getItem("token");
     const companyId = localStorage.getItem("selectedCompanyId");
-  
+
     if (!companyId || !token) {
       setTemplatesLoading(false);
       return;
     }
-  
+
     try {
       setTemplatesLoading(true);
       const response = await axios.post(
@@ -198,7 +201,7 @@ const WhatsAppCampaigns = () => {
           },
         }
       );
-  
+
       if (response.data.success && response.data.templates) {
         setTemplates(response.data.templates);
       } else {
@@ -222,19 +225,22 @@ const WhatsAppCampaigns = () => {
   const fetchTemplateDetails = async (templateId) => {
     try {
       const selectedTemplate = templates.find((t) => t.id === templateId);
-  
+
       if (selectedTemplate) {
         console.log("Selected template:", selectedTemplate); // Debug log
-        
+
         // Get the template text from the appropriate place in the template object
         let templateText = "";
-        
-        if (selectedTemplate.components && selectedTemplate.components.length > 0) {
+
+        if (
+          selectedTemplate.components &&
+          selectedTemplate.components.length > 0
+        ) {
           // Find body component
-          const bodyComponent = selectedTemplate.components.find(c => 
-            c.type === "BODY" || c.type === "body"
+          const bodyComponent = selectedTemplate.components.find(
+            (c) => c.type === "BODY" || c.type === "body"
           );
-          
+
           if (bodyComponent) {
             templateText = bodyComponent.text || "";
           }
@@ -244,29 +250,32 @@ const WhatsAppCampaigns = () => {
           // Check other possible property names
           templateText = selectedTemplate.content;
         }
-        
+
         console.log("Template text for parameter extraction:", templateText); // Debug log
-        
+
         // Extract parameters - pass the components as well
-        const params = extractParameters(templateText, selectedTemplate.components);
+        const params = extractParameters(
+          templateText,
+          selectedTemplate.components
+        );
         console.log("Extracted parameters:", params); // Debug log
-        
+
         setExtractedParams(params);
-        
+
         // Initialize parameter values
         const initialParams = {};
-        params.forEach(param => {
+        params.forEach((param) => {
           initialParams[param.key] = "";
         });
-        
-        setCampaignData(prev => ({
+
+        setCampaignData((prev) => ({
           ...prev,
-          templateParams: initialParams
+          templateParams: initialParams,
         }));
-        
+
         setSelectedTemplateDetails({
           ...selectedTemplate,
-          text: templateText
+          text: templateText,
         });
       }
     } catch (error) {
@@ -283,37 +292,45 @@ const WhatsAppCampaigns = () => {
     ) {
       return false;
     }
-  
+
     // If scheduled, must have a valid date
     if (campaignData.sendType === "later" && !campaignData.scheduledTime) {
       return false;
     }
-  
+
     // Check that all template parameters are filled
     for (const param of extractedParams) {
-      if (campaignData.templateParams[param.key] === undefined || 
-          campaignData.templateParams[param.key] === null || 
-          campaignData.templateParams[param.key] === "") {
+      if (
+        campaignData.templateParams[param.key] === undefined ||
+        campaignData.templateParams[param.key] === null ||
+        campaignData.templateParams[param.key] === ""
+      ) {
         console.log(`Missing template parameter: ${param.key}`);
         return false;
       }
     }
-  
+
     return true;
   };
 
   const fetchGroups = async () => {
     try {
       const token = localStorage.getItem("token");
-
-      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      });
-
+      const companyId = localStorage.getItem("selectedCompanyId");
+  
+      // Updated to include companyId in request body
+      const response = await axios.post(
+        GROUP_ENDPOINTS.GET_ALL,
+        { companyId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+  
       if (response.data.success) {
         setGroups(response.data.groups);
       }
@@ -400,8 +417,8 @@ const WhatsAppCampaigns = () => {
 
       // Format parameters as expected by the backend
       // Inside handleSubmit function
-// Format parameters as expected by the backend
-const components = [];
+      // Format parameters as expected by the backend
+      const components = [];
 
 // Add header component if it exists
 if (
@@ -413,23 +430,23 @@ if (
     parameters: [],
   };
 
-  // Handle header media parameters
+  // Handle header media parameters with URLs instead of files
   const mediaParams = extractedParams.filter(p => p.type !== "text");
   if (mediaParams.length > 0) {
-    // You'll need to upload the file and get a media ID
-    // This is an example of how you might structure this
+    // Use the URL directly from the input field
     headerComponent.parameters.push({
       type: mediaParams[0].type,
-      // For the actual implementation, you'd need to upload the file first
-      // and get the media ID from WhatsApp's API
-      [mediaParams[0].type]: campaignData.templateParams[mediaParams[0].key]
+      // For URLs, we use the parameter value directly
+      [mediaParams[0].type]: {
+        link: campaignData.templateParams[mediaParams[0].key]
+      }
     });
   }
 
   components.push(headerComponent);
 }
 
-// Add body component with text parameters
+// Add body component with text parameters - this remains the same
 const bodyComponent = {
   type: "body",
   parameters: [],
@@ -446,19 +463,19 @@ textParams.forEach((param) => {
 
 components.push(bodyComponent);
 
-// Create payload that matches backend expectations
-const payload = {
-  name: campaignData.campaignName,
-  templateName: selectedTemplate.name,
-  templateLanguage: selectedTemplate.language || "en",
-  components: components,
-  groups: campaignData.selectedGroups,
-  scheduleTime:
-    campaignData.sendType === "later" ? campaignData.scheduledTime : null,
-  companyId: companyId,
-};
+      // Create payload that matches backend expectations
+      const payload = {
+        name: campaignData.campaignName,
+        templateName: selectedTemplate.name,
+        templateLanguage: selectedTemplate.language || "en",
+        components: components,
+        groups: campaignData.selectedGroups,
+        scheduleTime:
+          campaignData.sendType === "later" ? campaignData.scheduledTime : null,
+        companyId: companyId,
+      };
 
-console.log("Final API payload:", payload);
+      console.log("Final API payload:", payload);
 
       let response;
 
@@ -566,43 +583,39 @@ console.log("Final API payload:", payload);
 
   const deleteCampaign = async (campaignId) => {
     try {
-      const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token");
+        const companyId = localStorage.getItem("selectedCompanyId");
 
-      const response = await axios.delete(
-        `${CAMPAIGN_ENDPOINTS.DELETE}/${campaignId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        // Remove from local state
-        setCampaigns((prevCampaigns) =>
-          prevCampaigns.filter((c) => c._id !== campaignId)
+        const response = await axios.delete(
+            CAMPAIGN_ENDPOINTS.DELETE, // Change to POST endpoint
+            { campaignId, companyId }, // Sending campaignId in the body
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+                withCredentials: true,
+            }
         );
-        alert("Campaign deleted successfully");
-      } else {
-        alert("Failed to delete campaign: " + response.data.message);
-      }
+
+        console.log("Campaign deleted successfully:", response.data);
     } catch (error) {
-      console.error(
-        "Error deleting campaign:",
-        error.response?.data || error.message
-      );
-      alert("Error deleting campaign. Please try again.");
+        console.error("Error deleting campaign:", error.response?.data || error.message);
+        alert("Error deleting campaign. Please try again.");
     }
-  };
+};
+
+  
 
   const cancelCampaign = async (campaignId) => {
     try {
       const token = localStorage.getItem("token");
-
-      const response = await axios.post(
+      const companyId = localStorage.getItem("selectedCompanyId");
+  
+      // Updated to include companyId in request body
+      const response = await axios.put(
         CAMPAIGN_ENDPOINTS.CANCEL,
-        { campaignId },
+        { campaignId, companyId },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -623,28 +636,23 @@ console.log("Final API payload:", payload);
         alert("Failed to cancel campaign: " + response.data.message);
       }
     } catch (error) {
-      console.error(
-        "Error cancelling campaign:",
-        error.response?.data || error.message
-      );
+      console.error("Error cancelling campaign:", error.response?.data || error.message);
       alert("Error cancelling campaign. Please try again.");
     }
   };
 
-
-  const handleMediaParamChange = (e) => {
-    const { name, files } = e.target;
-    if (files && files[0]) {
-      setCampaignData((prev) => ({
-        ...prev,
-        templateParams: {
-          ...prev.templateParams,
-          [name]: files[0],
-        },
-      }));
-    }
-  };
-
+//   const handleMediaParamChange = (e) => {
+//   const { name, files } = e.target;
+//   if (files && files[0]) {
+//     setCampaignData((prev) => ({
+//       ...prev,
+//       templateParams: {
+//         ...prev.templateParams,
+//         [name]: files[0],
+//       },
+//     }));
+//   }
+// };
 
   const getCompletionPercentage = () => {
     let filled = 0;
@@ -1021,75 +1029,58 @@ console.log("Final API payload:", payload);
                           </div>
 
                           {/* Template Parameters Section */}
+
                           {extractedParams.length > 0 ? (
-  <Row className="mt-2">
-    {extractedParams.map((param) => (
-      <Col md={6} key={param.key} className="mb-3">
-        <FormGroup>
-          <Label className="fw-bold text-secondary">
-            {param.name} ({`{${param.index}}`})
-            {param.type !== "text" && (
-              <Badge color="info" className="ms-2">
-                {param.type === "image" && <Image size={12} className="me-1" />}
-                {param.type === "video" && <FileVideo size={12} className="me-1" />}
-                {param.type === "document" && <File size={12} className="me-1" />}
-                {param.type}
-              </Badge>
-            )}
-          </Label>
-          {param.type === "text" ? (
-            <Input
-              type="text"
-              name={param.key}
-              value={campaignData.templateParams[param.key] || ""}
-              onChange={handleParamChange}
-              placeholder={`Enter ${param.name}`}
-              required
-            />
-          ) : param.type === "image" ? (
-            <Input
-              type="file"
-              name={param.key}
-              onChange={handleMediaParamChange}
-              accept="image/*"
-              required
-            />
-          ) : param.type === "video" ? (
-            <Input
-              type="file"
-              name={param.key}
-              onChange={handleMediaParamChange}
-              accept="video/*"
-              required
-            />
-          ) : param.type === "document" ? (
-            <Input
-              type="file"
-              name={param.key}
-              onChange={handleMediaParamChange}
-              accept=".pdf,.doc,.docx,.txt"
-              required
-            />
-          ) : (
-            <Input
-              type="text"
-              name={param.key}
-              value={campaignData.templateParams[param.key] || ""}
-              onChange={handleParamChange}
-              placeholder={`Enter ${param.name}`}
-              required
-            />
-          )}
-        </FormGroup>
-      </Col>
-    ))}
-  </Row>
-) : (
-  <p className="text-muted">
-    This template has no editable parameters.
-  </p>
-)}
-                          
+                            <Row className="mt-2">
+                              {extractedParams.map((param) => (
+                                <Col md={6} key={param.key} className="mb-3">
+                                  <FormGroup>
+                                    <Label className="fw-bold text-secondary">
+                                      {param.name} ({`{${param.index}}`})
+                                      {param.type !== "text" && (
+                                        <Badge color="info" className="ms-2">
+                                          {param.type === "image" && (
+                                            <Image size={12} className="me-1" />
+                                          )}
+                                          {param.type === "video" && (
+                                            <FileVideo
+                                              size={12}
+                                              className="me-1"
+                                            />
+                                          )}
+                                          {param.type === "document" && (
+                                            <File size={12} className="me-1" />
+                                          )}
+                                          {param.type}
+                                        </Badge>
+                                      )}
+                                    </Label>
+                                    {/* Replace file inputs with URL text inputs for all media types */}
+                                    <Input
+                                      type="text"
+                                      name={param.key}
+                                      value={
+                                        campaignData.templateParams[
+                                          param.key
+                                        ] || ""
+                                      }
+                                      onChange={handleParamChange}
+                                      placeholder={
+                                        param.type === "text"
+                                          ? `Enter ${param.name}`
+                                          : `Enter ${param.type} URL`
+                                      }
+                                      required
+                                    />
+                                  </FormGroup>
+                                </Col>
+                              ))}
+                            </Row>
+                          ) : (
+                            <p className="text-muted">
+                              This template has no editable parameters.
+                            </p>
+                          )}
                         </CardBody>
                       </Card>
                     </Col>

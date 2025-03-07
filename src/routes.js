@@ -22,6 +22,7 @@ import WhatsAppCampaigns from "components/Pages/WhatsAppCampaigns";
 import WhatsAppCreateMenus from "components/Pages/WhatsAppCreateMenus";
 import WhatsAppMenusAccess from "components/Pages/WhatsAppMenusAccess";
 import WhatsappGroup from "components/Pages/WhatsappGroup";
+import WhatsappWeb from "components/Pages/WhatsappWeb";
 
 var routes = [
   {
@@ -29,6 +30,13 @@ var routes = [
     name: "Dashboard",
     icon: "ni ni-tv-2 text-gray",
     component: <Dashboard />,
+    layout: "/admin",
+  },
+  {
+    path: "/whatsappweb",
+    name: "WhatsApp Web",
+    icon: "ni ni-world-2",
+    component: <WhatsappWeb />,
     layout: "/admin",
   },
   {

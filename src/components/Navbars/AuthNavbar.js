@@ -31,10 +31,10 @@ const AdminNavbar = () => {
           >
             <img
               alt="..."
-              src={require("../../assets/img/brand/free-waba-logo.png")}
+              src={require("../../assets/img/brand/LOGO 5.png")}
             />
             <span className="ml-3 mb-0 font-weight-bold" style={{ color: "white" }}>
-                CodoZap
+                
               </span> 
           </NavbarBrand>
           <button className="navbar-toggler" id="navbar-collapse-main">

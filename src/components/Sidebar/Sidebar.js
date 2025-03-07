@@ -125,16 +125,18 @@ const Sidebar = (props) => {
 
 
   // Default routes
-  const defaultRoutes = [
-    { name: "Dashboard", icon: "ni ni-tv-2", path: "/dashboard", layout: "/admin" },
-    { name: "Whatsapp", icon: "ni ni-chat-round", path: "/whatsapp", layout: "/admin", dropdown: true, subRoutes: [
-      { name: "List", path: "/whatsapplist" },
-      { name: "Add WhatsApp", path: "/addwhatsapp" }
-    ]},
-    { name: "Profile", icon: "ni ni-single-02", path: "/profile", layout: "/admin" },
-    { name: "Login", icon: "ni ni-key-25", path: "/login", layout: "/auth" },
-    { name: "Register", icon: "ni ni-circle-08", path: "/register", layout: "/auth" }
-  ];
+  // Default routes
+const defaultRoutes = [
+  { name: "Dashboard", icon: "ni ni-tv-2", path: "/dashboard", layout: "/admin" },
+  { name: "Whatsapp", icon: "ni ni-chat-round", path: "/whatsapp", layout: "/admin", dropdown: true, subRoutes: [
+    { name: "List", path: "/whatsapplist" },
+    { name: "Add WhatsApp", path: "/addwhatsapp" }
+  ]},
+  { name: "WhatsApp Web", icon: "ni ni-world-2", path: "/whatsappweb", layout: "/admin" },
+  { name: "Profile", icon: "ni ni-single-02", path: "/profile", layout: "/admin" },
+  { name: "Login", icon: "ni ni-key-25", path: "/login", layout: "/auth" },
+  { name: "Register", icon: "ni ni-circle-08", path: "/register", layout: "/auth" },
+];
 
   // Handle the log out process and show the success toast
   const handleLogOut = () => {
@@ -342,11 +344,13 @@ const Sidebar = (props) => {
                 alt={logo.imgAlt}
                 className="navbar-brand-img"
                 src={require("../../assets/img/brand/free-waba-logo.png")}
-                style={{ height: "40px", width: "auto" }}
+                style={{ height: "100%", width: "auto" }}
               />
-              <h2 className="ml-3 mb-0">CodoZap</h2>
               </div>
+              <h2>CodoZap</h2>
+
             </div>
+
           </NavbarBrand>
         ) : null}
 
