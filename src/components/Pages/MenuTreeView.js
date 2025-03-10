@@ -1,1259 +1,550 @@
-import React, { useState, useEffect } from "react";
-import { Edit, Trash2, X } from "lucide-react";
-
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Row,
   Col,
   Card,
+  CardHeader,
   CardBody,
+  CardFooter,
+  Button,
   Form,
   FormGroup,
   Label,
   Input,
-  Button,
-  ButtonGroup,
-  Badge,
   Alert,
-  Progress,
-  Dropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem,
+  Spinner,
+  Badge,
+  TabContent,
+  TabPane,
+  Nav,
+  NavItem,
+  NavLink,
   Table,
-} from "reactstrap";
-import axios from "axios";
-import {
-  GROUP_ENDPOINTS,
-  TEMPLATE_ENDPOINTS,
-  CAMPAIGN_ENDPOINTS,
-} from "Api/Constant";
+  Progress
+} from 'reactstrap';
+import axios from 'axios';
+import classnames from 'classnames';
 
-const WhatsAppCampaigns = () => {
-  const [campaignData, setCampaignData] = useState({
-    campaignName: "",
-    template: "",
-    sendType: "now",
-    scheduledTime: "",
-    selectedGroups: [],
-    priority: "normal",
-    templateParams: {},
-  });
+// Constants for API endpoints
+const WHATSAPP_API_ENDPOINT = 'http://192.168.0.107:25483/api/v1/whatsapp';
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState({
-    template: false,
-    groups: false,
-  });
+const WhatsappWeb = () => {
+  const [qrCode, setQrCode] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+  const [activeTab, setActiveTab] = useState('1');
+  const [sentMessages, setSentMessages] = useState([]);
 
-  const [templates, setTemplates] = useState([]);
-  const [templatesLoading, setTemplatesLoading] = useState(true);
-  const [groups, setGroups] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [templateSearchTerm, setTemplateSearchTerm] = useState("");
-  const [selectedTemplateDetails, setSelectedTemplateDetails] = useState(null);
-  const [extractedParams, setExtractedParams] = useState([]);
-  const [editingCampaignId, setEditingCampaignId] = useState(null);
-  const [campaigns, setCampaigns] = useState([]);
-  const [campaignsLoading, setCampaignsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("new");
+  // Get auth token from local storage
+  const getAuthToken = () => {
+    return localStorage.getItem('token');
+  };
 
+  // Toggle between tabs
+  const toggle = (tab) => {
+    if (activeTab !== tab) setActiveTab(tab);
+  };
+
+  // Function to generate QR code
+  const generateQRCode = async () => {
+    setLoading(true);
+    setStatusMessage({ type: '', text: '' });
+    
+    try {
+      const response = await axios.post(`${WHATSAPP_API_ENDPOINT}/generate-qr`, {}, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+      
+      if (response.data.qrCode) {
+        setQrCode(response.data.qrCode);
+      } else if (response.data.message === "Already connected") {
+        setIsConnected(true);
+        setStatusMessage({ type: 'success', text: 'WhatsApp is already connected!' });
+      }
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      setStatusMessage({ 
+        type: 'danger', 
+        text: error.response?.data?.message || 'Failed to generate QR code' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to send message
+  const sendWhatsAppMessage = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatusMessage({ type: '', text: '' });
+    
+    try {
+      const response = await axios.post(`${WHATSAPP_API_ENDPOINT}/send-message`, {
+        number: phoneNumber,
+        message: message
+      }, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+      
+      setStatusMessage({ type: 'success', text: 'Message sent successfully!' });
+      
+      // Add to sent messages history
+      setSentMessages([
+        ...sentMessages,
+        {
+          id: Date.now(),
+          number: phoneNumber,
+          message: message,
+          timestamp: new Date().toLocaleString(),
+          status: 'delivered'
+        }
+      ]);
+      
+      setMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setStatusMessage({ 
+        type: 'danger', 
+        text: error.response?.data?.message || 'Failed to send message' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to disconnect WhatsApp
+  const disconnectWhatsApp = async () => {
+    setLoading(true);
+    setStatusMessage({ type: '', text: '' });
+    
+    try {
+      const response = await axios.post(`${WHATSAPP_API_ENDPOINT}/disconnect`, {}, {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`
+        }
+      });
+      
+      setIsConnected(false);
+      setQrCode('');
+      setStatusMessage({ type: 'success', text: 'Disconnected successfully!' });
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+      setStatusMessage({ 
+        type: 'danger', 
+        text: error.response?.data?.message || 'Failed to disconnect' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Check connection status when component mounts
   useEffect(() => {
-    fetchGroups();
-    fetchTemplates();
-    fetchCampaigns();
+    const checkConnection = async () => {
+      try {
+        // Try sending a test message to check connection
+        await axios.post(`${WHATSAPP_API_ENDPOINT}/send-message`, {
+          number: 'test',
+          message: 'Connection test'
+        }, {
+          headers: {
+            'Authorization': `Bearer ${getAuthToken()}`
+          }
+        });
+        
+        setIsConnected(true);
+      } catch (error) {
+        // If error is "User not connected", we know the connection status
+        if (error.response?.data?.message === "User not connected") {
+          setIsConnected(false);
+        }
+        // Otherwise, we don't update the state
+      }
+    };
+    
+    checkConnection();
+    
+    // Optional: Polling to check connection status periodically
+    const interval = setInterval(checkConnection, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (campaignData.template) {
-      fetchTemplateDetails(campaignData.template);
-    } else {
-      setSelectedTemplateDetails(null);
-      setExtractedParams([]);
-    }
-  }, [campaignData.template]);
-
-  const extractParameters = (templateText) => {
-    if (!templateText) return [];
-    
-    const paramRegex = /\{\{(\d+)\}\}/g;
-    let match;
-    const params = [];
-    const usedIndexes = new Set();
-  
-    while ((match = paramRegex.exec(templateText)) !== null) {
-      const paramIndex = match[1];
-      
-      if (!usedIndexes.has(paramIndex)) {
-        usedIndexes.add(paramIndex);
-        
-        params.push({
-          index: paramIndex,
-          key: `param${paramIndex}`,
-          name: `Parameter ${paramIndex}`,
-          type: "text",
-        });
-      }
-    }
-  
-    params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
-    return params;
-  };
-
-  const fetchCampaigns = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const companyId = localStorage.getItem("selectedCompanyId");
-
-      if (!token || !companyId) {
-        setCampaignsLoading(false);
-        return;
-      }
-
-      setCampaignsLoading(true);
-      const response = await axios.post(
-        CAMPAIGN_ENDPOINTS.GET_ALL,
-        { companyId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        // Process campaigns to match your frontend display requirements
-        const processedCampaigns = (response.data.data || []).map(
-          (campaign) => {
-            return {
-              ...campaign,
-              status: campaign.status || "draft",
-              pendingCount:
-                campaign.pendingCount ||
-                campaign.totalRecipients -
-                  (campaign.successCount + campaign.failCount),
-              successCount: campaign.successCount || 0,
-              failCount: campaign.failCount || 0,
-            };
-          }
-        );
-
-        setCampaigns(processedCampaigns);
-      }
-    } catch (error) {
-      console.error(
-        "Error fetching campaigns:",
-        error.response?.data || error.message
-      );
-    } finally {
-      setCampaignsLoading(false);
-    }
-  };
-
-  const fetchTemplates = async () => {
-    const token = localStorage.getItem("token");
-    const companyId = localStorage.getItem("selectedCompanyId");
-  
-    if (!companyId || !token) {
-      setTemplatesLoading(false);
-      return;
-    }
-  
-    try {
-      setTemplatesLoading(true);
-      const response = await axios.post(
-        TEMPLATE_ENDPOINTS.FETCH,
-        { companyId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-  
-      if (response.data.success && response.data.templates) {
-        setTemplates(response.data.templates);
-      } else {
-        console.error("Failed to fetch templates");
-        // Add toast notification here if you're using it in this component
-        // toast.error("Failed to fetch templates");
-      }
-    } catch (error) {
-      console.error("Error fetching templates:", error);
-      if (error.response?.status === 401) {
-        // Add navigation to login if needed
-        // navigate("/auth/login");
-      } else {
-        // toast.error("Error loading templates");
-      }
-    } finally {
-      setTemplatesLoading(false);
-    }
-  };
-
-  const fetchTemplateDetails = async (templateId) => {
-    try {
-      const selectedTemplate = templates.find((t) => t.id === templateId);
-  
-      if (selectedTemplate) {
-        console.log("Selected template:", selectedTemplate); // Debug log
-        
-        // Get the template text from the appropriate place in the template object
-        let templateText = "";
-        
-        if (selectedTemplate.components && selectedTemplate.components.length > 0) {
-          // Find body component
-          const bodyComponent = selectedTemplate.components.find(c => 
-            c.type === "BODY" || c.type === "body"
-          );
-          
-          if (bodyComponent) {
-            templateText = bodyComponent.text || "";
-          }
-        } else if (selectedTemplate.text) {
-          templateText = selectedTemplate.text;
-        } else if (selectedTemplate.content) {
-          // Check other possible property names
-          templateText = selectedTemplate.content;
-        }
-        
-        console.log("Template text for parameter extraction:", templateText); // Debug log
-        
-        // Extract parameters
-        const params = extractParameters(templateText);
-        console.log("Extracted parameters:", params); // Debug log
-        
-        setExtractedParams(params);
-        
-        // Initialize parameter values
-        const initialParams = {};
-        params.forEach(param => {
-          initialParams[param.key] = "";
-        });
-        
-        setCampaignData(prev => ({
-          ...prev,
-          templateParams: initialParams
-        }));
-        
-        setSelectedTemplateDetails({
-          ...selectedTemplate,
-          text: templateText
-        });
-      }
-    } catch (error) {
-      console.error("Error processing template details:", error);
-    }
-  };
-
-  const validateForm = () => {
-    // Required fields
-    if (
-      !campaignData.campaignName ||
-      !campaignData.template ||
-      campaignData.selectedGroups.length === 0
-    ) {
-      return false;
-    }
-  
-    // If scheduled, must have a valid date
-    if (campaignData.sendType === "later" && !campaignData.scheduledTime) {
-      return false;
-    }
-  
-    // Check that all template parameters are filled
-    for (const param of extractedParams) {
-      if (campaignData.templateParams[param.key] === undefined || 
-          campaignData.templateParams[param.key] === null || 
-          campaignData.templateParams[param.key] === "") {
-        console.log(`Missing template parameter: ${param.key}`);
-        return false;
-      }
-    }
-  
-    return true;
-  };
-
-  const fetchGroups = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      });
-
-      if (response.data.success) {
-        setGroups(response.data.groups);
-      }
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    }
-  };
-
-  const filteredGroups = groups.filter((group) =>
-    group?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredTemplates = templates.filter((template) =>
-    template?.name?.toLowerCase().includes(templateSearchTerm.toLowerCase())
-  );
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setCampaignData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleParamChange = (e) => {
-    const { name, value } = e.target;
-    setCampaignData((prev) => ({
-      ...prev,
-      templateParams: {
-        ...prev.templateParams,
-        [name]: value,
-      },
-    }));
-  };
-
-  const toggleDropdown = (type) => {
-    setDropdownOpen((prev) => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
-  };
-
-  const handleTemplateSelect = (templateId) => {
-    setCampaignData((prev) => ({
-      ...prev,
-      template: templateId,
-      templateParams: {},
-    }));
-    toggleDropdown("template");
-  };
-
-  const handleGroupSelect = (groupId) => {
-    setCampaignData((prev) => ({
-      ...prev,
-      selectedGroups: prev.selectedGroups.includes(groupId)
-        ? prev.selectedGroups.filter((id) => id !== groupId)
-        : [...prev.selectedGroups, groupId],
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const token = localStorage.getItem("token");
-      const companyId = localStorage.getItem("selectedCompanyId");
-
-      if (!token || !companyId) {
-        console.error("Missing authentication token or company ID");
-        return;
-      }
-
-      // Format template components to match backend expectations
-      const selectedTemplate = templates.find(
-        (t) => t.id === campaignData.template
-      );
-
-      if (!selectedTemplate) {
-        console.error("Selected template not found");
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Format parameters as expected by the backend
-      const components = [];
-
-      // Add header component if it exists
-      if (
-        selectedTemplate.components &&
-        selectedTemplate.components.some((c) => c.type === "HEADER")
-      ) {
-        const headerComponent = {
-          type: "header",
-          parameters: [],
-        };
-
-        // Add header parameters if any
-        components.push(headerComponent);
-      }
-
-      // Add body component (always present)
-      // Add body component (always present)
-const bodyComponent = {
-  type: "body",
-  parameters: [],
-};
-
-// Debug logs
-console.log("Extracted params before sending:", extractedParams);
-console.log("Template param values:", campaignData.templateParams);
-
-// Add ALL parameters from template to body component
-extractedParams.forEach((param) => {
-  bodyComponent.parameters.push({
-    type: "text",
-    text: campaignData.templateParams[param.key] || "",  // Empty string fallback
-  });
-});
-
-console.log("Final body component with parameters:", bodyComponent);
-
-components.push(bodyComponent);
-
-// Create payload that matches backend expectations
-const payload = {
-  name: campaignData.campaignName,
-  templateName: selectedTemplate.name,
-  templateLanguage: selectedTemplate.language || "en",
-  components: components,
-  groups: campaignData.selectedGroups,
-  scheduleTime:
-    campaignData.sendType === "later" ? campaignData.scheduledTime : null,
-  companyId: companyId,
-};
-
-console.log("Final API payload:", payload);
-
-      let response;
-
-      if (editingCampaignId) {
-        // Update existing campaign
-        response = await axios.put(
-          `${CAMPAIGN_ENDPOINTS.UPDATE}/${editingCampaignId}`,
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      } else {
-        // Create new campaign
-        response = await axios.post(CAMPAIGN_ENDPOINTS.CREATE, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-      }
-
-      if (response.data.success) {
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
-        fetchCampaigns();
-        setActiveTab("list");
-
-        // Reset form and editing state
-        setCampaignData({
-          campaignName: "",
-          template: "",
-          sendType: "now",
-          scheduledTime: "",
-          selectedGroups: [],
-          priority: "normal",
-          templateParams: {},
-        });
-        setEditingCampaignId(null);
-      } else {
-        console.error("Campaign operation failed:", response.data.message);
-        // Show error message to user
-      }
-    } catch (error) {
-      console.error(
-        "Error with campaign operation:",
-        error.response?.data || error.message
-      );
-      // Show error message to user
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Add these handler functions to your component
-  const handleEditCampaign = (campaignId) => {
-    // Get the campaign data
-    const campaignToEdit = campaigns.find((c) => c._id === campaignId);
-
-    if (campaignToEdit) {
-      // Populate the form with the campaign data
-      setCampaignData({
-        campaignName: campaignToEdit.name,
-        template: campaignToEdit.templateId || "", // You might need to adjust this based on your data structure
-        sendType: campaignToEdit.scheduledFor ? "later" : "now",
-        scheduledTime: campaignToEdit.scheduledFor
-          ? new Date(campaignToEdit.scheduledFor).toISOString().slice(0, 16)
-          : "",
-        selectedGroups: campaignToEdit.groups?.map((g) => g._id || g) || [],
-        priority: campaignToEdit.priority || "normal",
-        templateParams:
-          campaignToEdit.components?.reduce((params, component) => {
-            if (component.type === "body" && component.parameters) {
-              component.parameters.forEach((param, index) => {
-                params[`param${index + 1}`] = param.text || "";
-              });
-            }
-            return params;
-          }, {}) || {},
-      });
-
-      // Switch to edit mode
-      setActiveTab("new");
-      // Store the campaign ID being edited
-      setEditingCampaignId(campaignId);
-    }
-  };
-
-  const handleDeleteCampaign = (campaignId) => {
-    // Show confirmation dialog
-    if (window.confirm("Are you sure you want to delete this campaign?")) {
-      deleteCampaign(campaignId);
-    }
-  };
-
-  const handleCancelCampaign = (campaignId) => {
-    // Show confirmation dialog
-    if (window.confirm("Are you sure you want to cancel this campaign?")) {
-      cancelCampaign(campaignId);
-    }
-  };
-
-  const deleteCampaign = async (campaignId) => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await axios.delete(
-        `${CAMPAIGN_ENDPOINTS.DELETE}/${campaignId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        // Remove from local state
-        setCampaigns((prevCampaigns) =>
-          prevCampaigns.filter((c) => c._id !== campaignId)
-        );
-        alert("Campaign deleted successfully");
-      } else {
-        alert("Failed to delete campaign: " + response.data.message);
-      }
-    } catch (error) {
-      console.error(
-        "Error deleting campaign:",
-        error.response?.data || error.message
-      );
-      alert("Error deleting campaign. Please try again.");
-    }
-  };
-
-  const cancelCampaign = async (campaignId) => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await axios.post(
-        CAMPAIGN_ENDPOINTS.CANCEL,
-        { campaignId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        // Update campaign status in local state
-        setCampaigns((prevCampaigns) =>
-          prevCampaigns.map((c) =>
-            c._id === campaignId ? { ...c, status: "cancelled" } : c
-          )
-        );
-        alert("Campaign cancelled successfully");
-      } else {
-        alert("Failed to cancel campaign: " + response.data.message);
-      }
-    } catch (error) {
-      console.error(
-        "Error cancelling campaign:",
-        error.response?.data || error.message
-      );
-      alert("Error cancelling campaign. Please try again.");
-    }
-  };
-
-  const getCompletionPercentage = () => {
-    let filled = 0;
-    let total = 5;
-
-    if (extractedParams.length) {
-      total += extractedParams.length;
-      extractedParams.forEach((param) => {
-        if (campaignData.templateParams[param.key]) filled++;
-      });
-    }
-
-    if (campaignData.campaignName) filled++;
-    if (campaignData.template) filled++;
-    if (campaignData.selectedGroups.length > 0) filled++;
-    if (campaignData.sendType === "now" || campaignData.scheduledTime) filled++;
-    if (campaignData.priority) filled++;
-
-    return (filled / total) * 100;
-  };
-
-  const formatCategory = (category) => {
-    if (!category) return "";
-    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
-  };
-
-  const getPreviewText = (text) => {
-    if (!text) return "";
-
-    return text.replace(/\{\{(\d+)\}\}/g, (match, paramIndex) => {
-      const paramKey = `param${paramIndex}`;
-      const paramValue = campaignData.templateParams[paramKey];
-      return paramValue ? paramValue : match;
-    });
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  };
-
-  const getStatusBadgeColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-      case "sent":
-        return "success";
-      case "in_progress":
-      case "pending":
-        return "warning";
-      case "failed":
-        return "danger";
-      case "scheduled":
-        return "info";
-      default:
-        return "secondary";
-    }
-  };
-
   return (
-    <div className="py-4">
-      <Container>
-        {/* Tabs for Create and List */}
-        <div className="mb-4">
-          <ButtonGroup className="w-100">
-            <Button
-              color={activeTab === "new" ? "primary" : "light"}
-              onClick={() => setActiveTab("new")}
-              className="w-50"
-            >
-              Create New Campaign
-            </Button>
-            <Button
-              color={activeTab === "list" ? "primary" : "light"}
-              onClick={() => setActiveTab("list")}
-              className="w-50"
-            >
-              View All Campaigns
-            </Button>
-          </ButtonGroup>
-        </div>
-
-        {activeTab === "new" ? (
-          <Card className="shadow-sm">
-            <CardBody>
-              {showSuccess && (
-                <Alert color="success" className="mb-4">
-                  Campaign created successfully!
+    <Container className="mt-4">
+      <Row>
+        <Col md={12}>
+          <Card className="shadow border-0 rounded-lg">
+            <CardHeader className="bg-success text-white d-flex justify-content-between align-items-center" style={{ borderRadius: '0.5rem 0.5rem 0 0' }}>
+              <div className="d-flex align-items-center">
+                <i className="fa fa-whatsapp me-2" style={{ fontSize: '1.5rem' }}></i>
+                <h3 className="mb-0">WhatsApp Web Integration</h3>
+              </div>
+              {isConnected && (
+                <Badge color="light" className="text-success px-3 py-2">
+                  <i className="fa fa-check-circle me-1"></i> Connected
+                </Badge>
+              )}
+            </CardHeader>
+            
+            <CardBody className="px-4 py-4">
+              {statusMessage.text && (
+                <Alert color={statusMessage.type} toggle={() => setStatusMessage({ type: '', text: '' })} className="rounded-lg border-0 shadow-sm">
+                  <div className="d-flex align-items-center">
+                    <i className={`fa fa-${statusMessage.type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2`}></i>
+                    {statusMessage.text}
+                  </div>
                 </Alert>
               )}
-
-              <div className="mb-4">
-                <h4>Campaign Progress</h4>
-                <Progress value={getCompletionPercentage()} className="mt-2" />
-              </div>
-
-              <Form onSubmit={handleSubmit}>
-                <Row>
-                  {/* Column 1 */}
-                  <Col md={6}>
-                    {/* Campaign Name */}
-                    <FormGroup className="mb-4">
-                      <Label className="fw-bold">
-                        Campaign Name
-                        <Badge color="primary" pill className="ms-2">
-                          Required
-                        </Badge>
-                      </Label>
-                      <Input
-                        type="text"
-                        name="campaignName"
-                        value={campaignData.campaignName}
-                        onChange={handleInputChange}
-                        placeholder="Enter campaign name"
-                        required
-                      />
-                    </FormGroup>
-
-                    {/* Template Selection - Updated with API data */}
-                    <FormGroup className="mb-4 position-relative">
-                      <Label className="fw-bold">
-                        Message Template
-                        <Badge color="primary" pill className="ms-2">
-                          Required
-                        </Badge>
-                      </Label>
-                      <Dropdown
-                        isOpen={dropdownOpen.template}
-                        toggle={() => toggleDropdown("template")}
-                        className="w-100"
-                      >
-                        <DropdownToggle
-                          caret
-                          color="light"
-                          className="w-100 text-start"
-                        >
-                          {campaignData.template
-                            ? templates.find(
-                                (t) => t.id === campaignData.template
-                              )?.name
-                            : "Select a template..."}
-                        </DropdownToggle>
-                        <DropdownMenu className="w-100">
-                          {/* Added search input for templates */}
-                          <div className="px-3 py-2 border-bottom">
-                            <Input
-                              type="text"
-                              placeholder="Search templates..."
-                              value={templateSearchTerm}
-                              onChange={(e) =>
-                                setTemplateSearchTerm(e.target.value)
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                          <div
-                            style={{ maxHeight: "200px", overflowY: "auto" }}
-                          >
-                            {templatesLoading ? (
-                              <DropdownItem disabled>
-                                <span className="spinner-border spinner-border-sm me-2" />
-                                Loading templates...
-                              </DropdownItem>
-                            ) : filteredTemplates.length > 0 ? (
-                              filteredTemplates.map((template) => (
-                                <DropdownItem
-                                  key={template.id}
-                                  onClick={() =>
-                                    handleTemplateSelect(template.id)
-                                  }
-                                >
-                                  <div>
-                                    <span className="fw-bold">
-                                      {template.name}
-                                    </span>
-                                    <div className="d-flex mt-1">
-                                      <Badge
-                                        color="primary"
-                                        pill
-                                        className="me-2"
-                                        style={{ textTransform: "none" }}
-                                      >
-                                        {formatCategory(template.category)}
-                                      </Badge>
-                                      <Badge color="info" pill>
-                                        {template.language}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </DropdownItem>
-                              ))
-                            ) : (
-                              <DropdownItem disabled>
-                                No templates found
-                              </DropdownItem>
-                            )}
-                          </div>
-                        </DropdownMenu>
-                      </Dropdown>
-                    </FormGroup>
-                  </Col>
-
-                  {/* Column 2 */}
-                  <Col md={6}>
-                    {/* Send Type */}
-                    <FormGroup className="mb-4">
-                      <Label className="fw-bold">
-                        Sending Schedule
-                        <Badge color="primary" pill className="ms-2">
-                          Required
-                        </Badge>
-                      </Label>
-                      <ButtonGroup className="w-100">
-                        <Button
-                          color={
-                            campaignData.sendType === "now"
-                              ? "primary"
-                              : "light"
-                          }
-                          onClick={() =>
-                            setCampaignData((prev) => ({
-                              ...prev,
-                              sendType: "now",
-                            }))
-                          }
-                        >
-                          Send Now
-                        </Button>
-                        <Button
-                          color={
-                            campaignData.sendType === "later"
-                              ? "primary"
-                              : "light"
-                          }
-                          onClick={() =>
-                            setCampaignData((prev) => ({
-                              ...prev,
-                              sendType: "later",
-                            }))
-                          }
-                        >
-                          Schedule
-                        </Button>
-                      </ButtonGroup>
-                      {campaignData.sendType === "later" && (
-                        <Input
-                          type="datetime-local"
-                          name="scheduledTime"
-                          value={campaignData.scheduledTime}
-                          onChange={handleInputChange}
-                          className="mt-2"
-                          required
-                        />
-                      )}
-                    </FormGroup>
-
-                    {/* Group Selection */}
-                    <FormGroup className="mb-4 position-relative">
-                      <Label className="fw-bold">
-                        Target Groups
-                        <Badge color="primary" pill className="ms-2">
-                          Required
-                        </Badge>
-                      </Label>
-                      <Dropdown
-                        isOpen={dropdownOpen.groups}
-                        toggle={() => toggleDropdown("groups")}
-                        className="w-100"
-                      >
-                        <DropdownToggle
-                          caret
-                          color="light"
-                          className="w-100 text-start"
-                        >
-                          {campaignData.selectedGroups.length
-                            ? `${campaignData.selectedGroups.length} groups selected`
-                            : "Select target groups..."}
-                        </DropdownToggle>
-                        <DropdownMenu className="w-100">
-                          {/* Search input for groups */}
-                          <div className="px-3 py-2 border-bottom">
-                            <Input
-                              type="text"
-                              placeholder="Search groups..."
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                          <div
-                            style={{ maxHeight: "200px", overflowY: "auto" }}
-                          >
-                            {filteredGroups.length > 0 ? (
-                              filteredGroups.map((group) => (
-                                <DropdownItem
-                                  key={group._id}
-                                  onClick={() => handleGroupSelect(group._id)}
-                                  className="d-flex align-items-center"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={campaignData.selectedGroups.includes(
-                                      group._id
-                                    )}
-                                    onChange={() => {}}
-                                    className="me-2"
-                                  />
-                                  <div className="d-flex justify-content-between w-100">
-                                    <span>{group.name}</span>
-                                    <Badge color="info" pill>
-                                      {group.allowedPhoneNumbers?.length || 0}{" "}
-                                      members
-                                    </Badge>
-                                  </div>
-                                </DropdownItem>
-                              ))
-                            ) : (
-                              <DropdownItem disabled>
-                                No groups found
-                              </DropdownItem>
-                            )}
-                          </div>
-                        </DropdownMenu>
-                      </Dropdown>
-                    </FormGroup>
-                  </Col>
-                </Row>
-
-                {/* Selected Template Preview with Parameters - NEW SECTION */}
-                {campaignData.template && selectedTemplateDetails && (
-                  <Row className="mb-3">
-                    <Col>
-                      <Card className="border">
-                        <CardBody>
-                          <h5 className="mb-3">
-                            Template:{" "}
-                            {selectedTemplateDetails.name ||
-                              "Selected Template"}
-                          </h5>
-
-                          {/* Display template badges if available */}
-                          <div className="d-flex mb-3">
-                            {selectedTemplateDetails.category && (
-                              <Badge
-                                color="primary"
-                                pill
-                                className="me-2"
-                                style={{ textTransform: "none" }}
-                              >
-                                {formatCategory(
-                                  selectedTemplateDetails.category
-                                )}
-                              </Badge>
-                            )}
-                            {selectedTemplateDetails.language && (
-                              <Badge color="info" pill>
-                                {selectedTemplateDetails.language}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Display template preview with live parameter replacement */}
-                          <div className="mb-4">
-                            <Label className="fw-bold">Template Preview</Label>
-                            <div className="border rounded p-3 bg-light mb-3">
-                              <div className="text-muted mb-2">(Header)</div>
-                              <div className="mb-2">
-                                {getPreviewText(selectedTemplateDetails.text)}
-                              </div>
-                              <div className="text-muted small">
-                                This message is from an unverified business.
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Template Parameters Section */}
-                          <div className="mb-3">
-                            <Label className="fw-bold">
-                              Template Parameters
-                              <Badge color="primary" pill className="ms-2">
-                                Required
-                              </Badge>
-                            </Label>
-                            {extractedParams.length > 0 ? (
-                              <Row className="mt-2">
-                                {extractedParams.map((param) => (
-                                  <Col md={6} key={param.key} className="mb-3">
-                                    <FormGroup>
-                                      <Label className="fw-bold text-secondary">
-                                        {param.name} ({`{${param.index}}`})
-                                      </Label>
-                                      <Input
-                                        type={param.type}
-                                        name={param.key}
-                                        value={
-                                          campaignData.templateParams[
-                                            param.key
-                                          ] || ""
-                                        }
-                                        onChange={handleParamChange}
-                                        placeholder={`Enter ${param.name}`}
-                                        required
-                                      />
-                                    </FormGroup>
-                                  </Col>
-                                ))}
-                              </Row>
-                            ) : (
-                              <p className="text-muted">
-                                This template has no editable parameters.
-                              </p>
-                            )}
-                          </div>
-                        </CardBody>
-                      </Card>
-                    </Col>
-                  </Row>
-                )}
-
-                {/* Selected Groups Preview */}
-                {campaignData.selectedGroups.length > 0 && (
-                  <Row className="mb-3">
-                    <Col>
-                      <Label className="fw-bold">Selected Groups</Label>
-                      <div className="border rounded p-3">
-                        <div className="d-flex flex-wrap gap-2">
-                          {campaignData.selectedGroups.map((groupId) => {
-                            const group = groups.find((g) => g._id === groupId);
-                            return group ? (
-                              <Badge
-                                key={groupId}
-                                color="primary"
-                                className="p-2 d-flex align-items-center"
-                              >
-                                {group.name}
-                                <span
-                                  className="ms-2 cursor-pointer"
-                                  onClick={() => handleGroupSelect(groupId)}
-                                  style={{ cursor: "pointer" }}
-                                >
-                                  ×
-                                </span>
-                              </Badge>
-                            ) : null;
-                          })}
+              
+              {!isConnected ? (
+                <div className="text-center py-4">
+                  <div className="mb-4">
+                    <div className="bg-light p-4 rounded-circle d-inline-block mb-3">
+                      <i className="fa fa-whatsapp" style={{ fontSize: '3.5rem', color: '#25D366' }}></i>
+                    </div>
+                    <h4 className="mt-3 fw-bold">Connect to WhatsApp Web</h4>
+                    <p className="text-muted px-md-5 mx-md-5">
+                      Link your WhatsApp account to start sending messages directly from this platform.
+                      All your conversations will be synced with your phone.
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    color="success" 
+                    size="lg"
+                    onClick={generateQRCode} 
+                    disabled={loading}
+                    className="px-4 rounded-pill shadow-sm"
+                  >
+                    {loading ? (
+                      <>
+                        <Spinner size="sm" className="me-2" /> Generating QR Code...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa fa-qrcode me-2"></i> Generate QR Code
+                      </>
+                    )}
+                  </Button>
+                  
+                  {qrCode && (
+                    <div className="mt-5 p-4 border rounded-lg bg-light shadow-sm mx-auto" style={{ maxWidth: '450px' }}>
+                      <h5 className="text-success fw-bold mb-3">
+                        <i className="fa fa-qrcode me-2"></i> Scan QR Code
+                      </h5>
+                      
+                      <div className="d-flex justify-content-center mb-4">
+                        <div className="p-3 bg-white rounded-lg shadow-sm" style={{ padding: '8px', border: '2px solid #25D366' }}>
+                          <img 
+                            src={qrCode} 
+                            alt="WhatsApp QR Code" 
+                            style={{ maxWidth: '250px' }} 
+                            className="img-fluid"
+                          />
                         </div>
                       </div>
-                    </Col>
-                  </Row>
-                )}
-
-                {/* Submit Button - Full Width */}
-                <Row>
-                  <Col>
-                    <Button
-                      color="primary"
-                      type="submit"
-                      className="w-100 mt-3"
-                      disabled={isSubmitting || !validateForm()}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" />
-                          Creating Campaign...
-                        </>
-                      ) : (
-                        "Launch Campaign"
-                      )}
-                    </Button>
-                  </Col>
-                </Row>
-              </Form>
-            </CardBody>
-          </Card>
-        ) : (
-          // Campaign List View
-          <Card className="shadow-sm">
-            <CardBody>
-              <h4 className="mb-4">All WhatsApp Campaigns</h4>
-
-              {campaignsLoading ? (
-                <div className="text-center py-5">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                  <p className="mt-3">Loading campaigns...</p>
+                      
+                      <div className="bg-white p-3 rounded-lg shadow-sm">
+                        <h6 className="text-dark mb-3 fw-bold">How to connect:</h6>
+                        <ol className="text-start text-muted mb-0 ps-3">
+                          <li className="mb-2">Open WhatsApp on your phone</li>
+                          <li className="mb-2">Tap Menu <i className="fa fa-ellipsis-v mx-1 text-success"></i> or Settings <i className="fa fa-cog mx-1 text-success"></i></li>
+                          <li className="mb-2">Select <strong>Linked Devices</strong></li>
+                          <li>Point your phone camera at this screen</li>
+                        </ol>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <Progress animated color="success" value={30} className="mb-2" style={{ height: '6px' }} />
+                        <small className="text-muted">Waiting for connection...</small>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : campaigns.length === 0 ? (
-                <Alert color="info">
-                  No campaigns found. Create your first campaign to get started.
-                </Alert>
               ) : (
-                <div className="table-responsive">
-                  <Table hover className="align-middle">
-                    <thead>
-                      <tr>
-                        <th>Campaign Name</th>
-                        <th>Template</th>
-                        <th>Groups</th>
-                        <th>Status</th>
-                        <th>Scheduled</th>
-                        <th>Recipients</th>
-                        <th>Success/Fail</th>
-                        <th>Created</th>
-                        <th>Actions</th> {/* New Actions column */}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {campaigns.map((campaign) => (
-                        <tr key={campaign._id}>
-                          <td>
-                            <span className="fw-bold">{campaign.name}</span>
-                          </td>
-                          <td>
-                            {campaign.templateName}
-                            <div>
-                              <Badge color="secondary" pill className="mt-1">
-                                {campaign.templateLanguage}
-                              </Badge>
-                            </div>
-                          </td>
-                          <td>
-                            {campaign.groups &&
-                              campaign.groups.map((group) => (
-                                <Badge
-                                  key={group._id}
-                                  color="primary"
-                                  pill
-                                  className="me-1"
-                                >
-                                  {group.name}
-                                </Badge>
-                              ))}
-                          </td>
-                          <td>
-                            <Badge
-                              color={getStatusBadgeColor(campaign.status)}
-                              pill
-                            >
-                              {campaign.status}
-                            </Badge>
-                          </td>
-                          <td>
-                            {campaign.scheduledFor
-                              ? formatDate(campaign.scheduledFor)
-                              : "Immediate"}
-                          </td>
-                          <td>{campaign.totalRecipients || 0}</td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <span className="text-success me-2">
-                                {campaign.successCount || 0}
-                              </span>
-                              <span>/</span>
-                              <span className="text-danger ms-2">
-                                {campaign.failCount || 0}
-                              </span>
-                            </div>
-                            {campaign.totalRecipients > 0 && (
-                              <Progress
-                                multi
-                                className="mt-1"
-                                style={{ height: "6px" }}
-                              >
-                                <Progress
-                                  bar
-                                  color="success"
-                                  value={
-                                    (campaign.successCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
+                <div>
+                  <Nav tabs className="mb-4 border-0">
+                    {['Send Message', 'Message History', 'Settings'].map((tabName, index) => (
+                      <NavItem key={index}>
+                        <NavLink
+                          className={classnames({ 
+                            active: activeTab === (index + 1).toString(),
+                            'text-success': activeTab === (index + 1).toString(),
+                            'border-0': true,
+                            'rounded-pill': true,
+                            'mx-1': true,
+                            'px-4': true,
+                            'shadow-sm': activeTab === (index + 1).toString()
+                          })}
+                          onClick={() => { toggle((index + 1).toString()); }}
+                        >
+                          <i className={`fa fa-${
+                            index === 0 ? 'paper-plane' : 
+                            index === 1 ? 'history' : 'cog'
+                          } me-2`}></i>
+                          {tabName}
+                        </NavLink>
+                      </NavItem>
+                    ))}
+                  </Nav>
+                  
+                  <TabContent activeTab={activeTab}>
+                    <TabPane tabId="1">
+                      <Card className="border-0 shadow-sm rounded-lg">
+                        <CardBody className="p-4">
+                          <h5 className="text-success mb-4">
+                            <i className="fa fa-paper-plane me-2"></i>
+                            Send New Message
+                          </h5>
+                          
+                          <Form onSubmit={sendWhatsAppMessage}>
+                            <FormGroup className="mb-4">
+                              <Label for="phoneNumber" className="fw-bold">Phone Number</Label>
+                              <div className="input-group">
+                                <span className="input-group-text bg-light">
+                                  <i className="fa fa-phone text-success"></i>
+                                </span>
+                                <Input
+                                  type="text"
+                                  id="phoneNumber"
+                                  placeholder="e.g., 919876543210"
+                                  value={phoneNumber}
+                                  onChange={(e) => setPhoneNumber(e.target.value)}
+                                  className="form-control-lg border-start-0"
+                                  required
                                 />
-                                <Progress
-                                  bar
-                                  color="danger"
-                                  value={
-                                    (campaign.failCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
+                              </div>
+                              <small className="form-text text-muted">
+                                <i className="fa fa-info-circle me-1"></i>
+                                Include country code without + or 00 (e.g., 91 for India)
+                              </small>
+                            </FormGroup>
+                            
+                            <FormGroup className="mb-4">
+                              <Label for="message" className="fw-bold">Message</Label>
+                              <div className="input-group">
+                                <span className="input-group-text bg-light">
+                                  <i className="fa fa-comment text-success"></i>
+                                </span>
+                                <Input
+                                  type="textarea"
+                                  id="message"
+                                  rows="5"
+                                  placeholder="Type your message here..."
+                                  value={message}
+                                  onChange={(e) => setMessage(e.target.value)}
+                                  className="border-start-0"
+                                  required
                                 />
-                                <Progress
-                                  bar
-                                  color="warning"
-                                  value={
-                                    (campaign.pendingCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
-                                />
-                              </Progress>
-                            )}
-                          </td>
-                          <td>{formatDate(campaign.createdAt)}</td>
-                          {/* New Actions column */}
-                          <td>
-                            <div className="d-flex gap-2">
-                              <Button
-                                color="primary"
-                                size="sm"
-                                onClick={() => handleEditCampaign(campaign._id)}
-                                disabled={
-                                  campaign.status === "completed" ||
-                                  campaign.status === "sent"
-                                }
-                                className="p-1"
+                              </div>
+                            </FormGroup>
+                            
+                            <div className="d-grid gap-2 d-md-flex justify-content-md-end">
+                              <Button 
+                                color="success" 
+                                type="submit" 
+                                disabled={loading}
+                                className="px-4 py-2 rounded-pill"
+                                size="lg"
                               >
-                                <Edit size={16} />
-                              </Button>
-                              <Button
-                                color="danger"
-                                size="sm"
-                                onClick={() =>
-                                  handleDeleteCampaign(campaign._id)
-                                }
-                                className="p-1"
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                              <Button
-                                color="warning"
-                                size="sm"
-                                onClick={() =>
-                                  handleCancelCampaign(campaign._id)
-                                }
-                                disabled={
-                                  campaign.status === "completed" ||
-                                  campaign.status === "sent" ||
-                                  campaign.status === "failed"
-                                }
-                                className="p-1"
-                              >
-                                <X size={16} />
+                                {loading ? (
+                                  <>
+                                    <Spinner size="sm" className="me-2" /> Sending...
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="fa fa-paper-plane me-2"></i> Send Message
+                                  </>
+                                )}
                               </Button>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
+                          </Form>
+                        </CardBody>
+                      </Card>
+                    </TabPane>
+                    
+                    <TabPane tabId="2">
+                      <Card className="border-0 shadow-sm rounded-lg">
+                        <CardBody className="p-4">
+                          <h5 className="text-success mb-4">
+                            <i className="fa fa-history me-2"></i>
+                            Message History
+                          </h5>
+                          
+                          {sentMessages.length > 0 ? (
+                            <div className="table-responsive">
+                              <Table hover className="align-middle">
+                                <thead className="table-light">
+                                  <tr>
+                                    <th>Phone Number</th>
+                                    <th>Message</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {sentMessages.map(msg => (
+                                    <tr key={msg.id}>
+                                      <td>
+                                        <div className="d-flex align-items-center">
+                                          <span className="bg-light rounded-circle p-2 me-2">
+                                            <i className="fa fa-user text-secondary"></i>
+                                          </span>
+                                          {msg.number}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <div style={{ 
+                                          maxWidth: '300px', 
+                                          overflow: 'hidden', 
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap'
+                                        }}>
+                                          {msg.message}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        <i className="fa fa-clock-o me-1 text-muted"></i>
+                                        {msg.timestamp}
+                                      </td>
+                                      <td>
+                                        <Badge color="success" className="rounded-pill px-3">
+                                          <i className="fa fa-check me-1"></i>
+                                          {msg.status || 'Sent'}
+                                        </Badge>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </Table>
+                              <div className="d-flex justify-content-between mt-3">
+                                <Button color="light" outline size="sm" className="rounded-pill">
+                                  <i className="fa fa-download me-1"></i> Export History
+                                </Button>
+                                <Button color="light" outline size="sm" className="rounded-pill">
+                                  <i className="fa fa-trash me-1"></i> Clear History
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Alert color="info" className="rounded-lg">
+                              <div className="d-flex align-items-center">
+                                <i className="fa fa-info-circle me-3 fs-4"></i>
+                                <div>
+                                  <h6 className="mb-1">No messages yet</h6>
+                                  <p className="mb-0">Your sent messages will appear here.</p>
+                                </div>
+                              </div>
+                            </Alert>
+                          )}
+                        </CardBody>
+                      </Card>
+                    </TabPane>
+                    
+                    <TabPane tabId="3">
+                      <Row>
+                        <Col md={6}>
+                          <Card className="border-0 shadow-sm rounded-lg mb-4">
+                            <CardBody className="p-4">
+                              <div className="d-flex align-items-center mb-4">
+                                <div className="bg-success rounded-circle p-3 me-3">
+                                  <i className="fa fa-whatsapp text-white fs-4"></i>
+                                </div>
+                                <div>
+                                  <h5 className="mb-1">Connection Status</h5>
+                                  <p className="text-success mb-0">
+                                    <i className="fa fa-check-circle me-1"></i> Active
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <Alert color="light" className="rounded-lg mb-4">
+                                <p className="mb-0">
+                                  <i className="fa fa-info-circle me-2 text-primary"></i>
+                                  Your WhatsApp Web session is currently active. You can use multiple devices while keeping your phone connected.
+                                </p>
+                              </Alert>
+                              
+                              <Button 
+                                color="danger" 
+                                onClick={disconnectWhatsApp}
+                                disabled={loading}
+                                className="rounded-pill w-100"
+                                outline
+                              >
+                                {loading ? <Spinner size="sm" /> : <><i className="fa fa-sign-out me-2"></i> Disconnect WhatsApp</>}
+                              </Button>
+                            </CardBody>
+                          </Card>
+                        </Col>
+                        
+                        <Col md={6}>
+                          <Card className="border-0 shadow-sm rounded-lg mb-4">
+                            <CardBody className="p-4">
+                              <h5 className="mb-4">
+                                <i className="fa fa-cog me-2"></i> Preferences
+                              </h5>
+                              
+                              <div className="mb-3">
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                  <Label className="form-check-label fw-bold">Notification Sounds</Label>
+                                  <div className="form-check form-switch">
+                                    <Input type="checkbox" className="form-check-input" defaultChecked />
+                                  </div>
+                                </div>
+                                <small className="text-muted">Play sounds when messages are sent or received</small>
+                              </div>
+                              
+                              <div className="mb-3">
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                  <Label className="form-check-label fw-bold">Desktop Notifications</Label>
+                                  <div className="form-check form-switch">
+                                    <Input type="checkbox" className="form-check-input" defaultChecked />
+                                  </div>
+                                </div>
+                                <small className="text-muted">Show desktop notifications for incoming messages</small>
+                              </div>
+                              
+                              <div>
+                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                  <Label className="form-check-label fw-bold">Auto Reconnect</Label>
+                                  <div className="form-check form-switch">
+                                    <Input type="checkbox" className="form-check-input" defaultChecked />
+                                  </div>
+                                </div>
+                                <small className="text-muted">Automatically reconnect if connection is lost</small>
+                              </div>
+                            </CardBody>
+                          </Card>
+                        </Col>
+                      </Row>
+                    </TabPane>
+                  </TabContent>
                 </div>
               )}
-
-              <Button
-                color="primary"
-                className="mt-3"
-                onClick={() => setActiveTab("new")}
-              >
-                Create New Campaign
-              </Button>
             </CardBody>
+            
+            <CardFooter className="text-muted text-center py-3" style={{ borderRadius: '0 0 0.5rem 0.5rem' }}>
+              <small>
+                <i className="fa fa-shield me-1"></i> Your conversations are end-to-end encrypted
+                <span className="mx-2">•</span>
+                <span>WhatsApp and WhatsApp Web are registered trademarks of Meta Platforms, Inc.</span>
+              </small>
+            </CardFooter>
           </Card>
-        )}
-      </Container>
-    </div>
+        </Col>
+      </Row>
+    </Container>
   );
 };
 
-export default WhatsAppCampaigns;
+export default WhatsappWeb;

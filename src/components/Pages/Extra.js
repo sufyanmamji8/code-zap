@@ -49,6 +49,8 @@ const WhatsAppCampaigns = () => {
 
   const [templates, setTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+const [campaignsPerPage] = useState(10);
   const [groups, setGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [templateSearchTerm, setTemplateSearchTerm] = useState("");
@@ -80,7 +82,7 @@ const WhatsAppCampaigns = () => {
     const params = [];
     const usedIndexes = new Set();
 
-    // Extract text parameters using regex
+    
     const paramRegex = /\{\{(\d+)\}\}/g;
     let match;
 
@@ -99,13 +101,13 @@ const WhatsAppCampaigns = () => {
       }
     }
 
-    // Add media parameters from components if they exist
+    
     if (components && Array.isArray(components)) {
       components.forEach((component) => {
         if (component.type === "HEADER" && component.format) {
           const mediaType = component.format.toLowerCase();
           if (["image", "video", "document"].includes(mediaType)) {
-            // Find the next available parameter index
+            
             const nextIndex =
               params.length > 0
                 ? Math.max(...params.map((p) => parseInt(p.index))) + 1
@@ -124,7 +126,7 @@ const WhatsAppCampaigns = () => {
       });
     }
 
-    // Sort parameters by index
+    
     params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
     return params;
   };
@@ -152,7 +154,7 @@ const WhatsAppCampaigns = () => {
       );
 
       if (response.data.success) {
-        // Process campaigns to match your frontend display requirements
+        
         const processedCampaigns = (response.data.data || []).map(
           (campaign) => {
             return {
@@ -206,16 +208,16 @@ const WhatsAppCampaigns = () => {
         setTemplates(response.data.templates);
       } else {
         console.error("Failed to fetch templates");
-        // Add toast notification here if you're using it in this component
-        // toast.error("Failed to fetch templates");
+        
+        
       }
     } catch (error) {
       console.error("Error fetching templates:", error);
       if (error.response?.status === 401) {
-        // Add navigation to login if needed
-        // navigate("/auth/login");
+        
+        
       } else {
-        // toast.error("Error loading templates");
+        
       }
     } finally {
       setTemplatesLoading(false);
@@ -227,16 +229,16 @@ const WhatsAppCampaigns = () => {
       const selectedTemplate = templates.find((t) => t.id === templateId);
 
       if (selectedTemplate) {
-        console.log("Selected template:", selectedTemplate); // Debug log
+        console.log("Selected template:", selectedTemplate); 
 
-        // Get the template text from the appropriate place in the template object
+        
         let templateText = "";
 
         if (
           selectedTemplate.components &&
           selectedTemplate.components.length > 0
         ) {
-          // Find body component
+          
           const bodyComponent = selectedTemplate.components.find(
             (c) => c.type === "BODY" || c.type === "body"
           );
@@ -247,22 +249,22 @@ const WhatsAppCampaigns = () => {
         } else if (selectedTemplate.text) {
           templateText = selectedTemplate.text;
         } else if (selectedTemplate.content) {
-          // Check other possible property names
+          
           templateText = selectedTemplate.content;
         }
 
-        console.log("Template text for parameter extraction:", templateText); // Debug log
+        console.log("Template text for parameter extraction:", templateText); 
 
-        // Extract parameters - pass the components as well
+        
         const params = extractParameters(
           templateText,
           selectedTemplate.components
         );
-        console.log("Extracted parameters:", params); // Debug log
+        console.log("Extracted parameters:", params); 
 
         setExtractedParams(params);
 
-        // Initialize parameter values
+        
         const initialParams = {};
         params.forEach((param) => {
           initialParams[param.key] = "";
@@ -284,7 +286,7 @@ const WhatsAppCampaigns = () => {
   };
 
   const validateForm = () => {
-    // Required fields
+    
     if (
       !campaignData.campaignName ||
       !campaignData.template ||
@@ -293,12 +295,12 @@ const WhatsAppCampaigns = () => {
       return false;
     }
 
-    // If scheduled, must have a valid date
+    
     if (campaignData.sendType === "later" && !campaignData.scheduledTime) {
       return false;
     }
 
-    // Check that all template parameters are filled
+    
     for (const param of extractedParams) {
       if (
         campaignData.templateParams[param.key] === undefined ||
@@ -316,21 +318,15 @@ const WhatsAppCampaigns = () => {
   const fetchGroups = async () => {
     try {
       const token = localStorage.getItem("token");
-      const companyId = localStorage.getItem("selectedCompanyId");
-  
-      // Updated to include companyId in request body
-      const response = await axios.post(
-        GROUP_ENDPOINTS.GET_ALL,
-        { companyId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-  
+
+      const response = await axios.get(GROUP_ENDPOINTS.GET_ALL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+
       if (response.data.success) {
         setGroups(response.data.groups);
       }
@@ -404,7 +400,7 @@ const WhatsAppCampaigns = () => {
         return;
       }
 
-      // Format template components to match backend expectations
+      
       const selectedTemplate = templates.find(
         (t) => t.id === campaignData.template
       );
@@ -415,12 +411,9 @@ const WhatsAppCampaigns = () => {
         return;
       }
 
-      // Format parameters as expected by the backend
-      // Inside handleSubmit function
-      // Format parameters as expected by the backend
+      
       const components = [];
 
-// Add header component if it exists
 if (
   selectedTemplate.components &&
   selectedTemplate.components.some((c) => c.type === "HEADER")
@@ -430,13 +423,13 @@ if (
     parameters: [],
   };
 
-  // Handle header media parameters with URLs instead of files
+  
   const mediaParams = extractedParams.filter(p => p.type !== "text");
   if (mediaParams.length > 0) {
-    // Use the URL directly from the input field
+    
     headerComponent.parameters.push({
       type: mediaParams[0].type,
-      // For URLs, we use the parameter value directly
+      
       [mediaParams[0].type]: {
         link: campaignData.templateParams[mediaParams[0].key]
       }
@@ -446,13 +439,13 @@ if (
   components.push(headerComponent);
 }
 
-// Add body component with text parameters - this remains the same
+
 const bodyComponent = {
   type: "body",
   parameters: [],
 };
 
-// Add text parameters to body component
+
 const textParams = extractedParams.filter(p => p.type === "text");
 textParams.forEach((param) => {
   bodyComponent.parameters.push({
@@ -463,7 +456,7 @@ textParams.forEach((param) => {
 
 components.push(bodyComponent);
 
-      // Create payload that matches backend expectations
+      
       const payload = {
         name: campaignData.campaignName,
         templateName: selectedTemplate.name,
@@ -480,7 +473,7 @@ components.push(bodyComponent);
       let response;
 
       if (editingCampaignId) {
-        // Update existing campaign
+        
         response = await axios.put(
           `${CAMPAIGN_ENDPOINTS.UPDATE}/${editingCampaignId}`,
           payload,
@@ -492,7 +485,7 @@ components.push(bodyComponent);
           }
         );
       } else {
-        // Create new campaign
+        
         response = await axios.post(CAMPAIGN_ENDPOINTS.CREATE, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -507,7 +500,7 @@ components.push(bodyComponent);
         fetchCampaigns();
         setActiveTab("list");
 
-        // Reset form and editing state
+        
         setCampaignData({
           campaignName: "",
           template: "",
@@ -520,29 +513,29 @@ components.push(bodyComponent);
         setEditingCampaignId(null);
       } else {
         console.error("Campaign operation failed:", response.data.message);
-        // Show error message to user
+        
       }
     } catch (error) {
       console.error(
         "Error with campaign operation:",
         error.response?.data || error.message
       );
-      // Show error message to user
+      
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Add these handler functions to your component
+  
   const handleEditCampaign = (campaignId) => {
-    // Get the campaign data
+    
     const campaignToEdit = campaigns.find((c) => c._id === campaignId);
 
     if (campaignToEdit) {
-      // Populate the form with the campaign data
+      
       setCampaignData({
         campaignName: campaignToEdit.name,
-        template: campaignToEdit.templateId || "", // You might need to adjust this based on your data structure
+        template: campaignToEdit.templateId || "", 
         sendType: campaignToEdit.scheduledFor ? "later" : "now",
         scheduledTime: campaignToEdit.scheduledFor
           ? new Date(campaignToEdit.scheduledFor).toISOString().slice(0, 16)
@@ -560,22 +553,22 @@ components.push(bodyComponent);
           }, {}) || {},
       });
 
-      // Switch to edit mode
+      
       setActiveTab("new");
-      // Store the campaign ID being edited
+      
       setEditingCampaignId(campaignId);
     }
   };
 
   const handleDeleteCampaign = (campaignId) => {
-    // Show confirmation dialog
+    
     if (window.confirm("Are you sure you want to delete this campaign?")) {
       deleteCampaign(campaignId);
     }
   };
 
   const handleCancelCampaign = (campaignId) => {
-    // Show confirmation dialog
+    
     if (window.confirm("Are you sure you want to cancel this campaign?")) {
       cancelCampaign(campaignId);
     }
@@ -583,39 +576,46 @@ components.push(bodyComponent);
 
   const deleteCampaign = async (campaignId) => {
     try {
-        const token = localStorage.getItem("token");
-        const companyId = localStorage.getItem("selectedCompanyId");
-
-        const response = await axios.delete(
-            CAMPAIGN_ENDPOINTS.DELETE, // Change to POST endpoint
-            { campaignId, companyId }, // Sending campaignId in the body
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                withCredentials: true,
-            }
-        );
-
-        console.log("Campaign deleted successfully:", response.data);
-    } catch (error) {
-        console.error("Error deleting campaign:", error.response?.data || error.message);
-        alert("Error deleting campaign. Please try again.");
-    }
-};
-
+      const token = localStorage.getItem("token");
+      const companyId = localStorage.getItem("selectedCompanyId");
   
-
+      const response = await axios.delete(
+        `${CAMPAIGN_ENDPOINTS.DELETE}/${campaignId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          data: { companyId }  
+        }
+      );
+  
+      if (response.data.success) {
+        
+        setCampaigns((prevCampaigns) =>
+          prevCampaigns.filter((c) => c._id !== campaignId)
+        );
+        alert("Campaign deleted successfully");
+      } else {
+        alert("Failed to delete campaign: " + response.data.message);
+      }
+    } catch (error) {
+      console.error(
+        "Error deleting campaign:",
+        error.response?.data || error.message
+      );
+      alert("Error deleting campaign. Please try again.");
+    }
+  };
+  
   const cancelCampaign = async (campaignId) => {
     try {
       const token = localStorage.getItem("token");
       const companyId = localStorage.getItem("selectedCompanyId");
   
-      // Updated to include companyId in request body
       const response = await axios.put(
-        CAMPAIGN_ENDPOINTS.CANCEL,
-        { campaignId, companyId },
+        `${CAMPAIGN_ENDPOINTS.CANCEL}/${campaignId}/cancel`,  
+        { companyId },  
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -623,9 +623,9 @@ components.push(bodyComponent);
           },
         }
       );
-
+  
       if (response.data.success) {
-        // Update campaign status in local state
+        
         setCampaigns((prevCampaigns) =>
           prevCampaigns.map((c) =>
             c._id === campaignId ? { ...c, status: "cancelled" } : c
@@ -636,23 +636,15 @@ components.push(bodyComponent);
         alert("Failed to cancel campaign: " + response.data.message);
       }
     } catch (error) {
-      console.error("Error cancelling campaign:", error.response?.data || error.message);
+      console.error(
+        "Error cancelling campaign:",
+        error.response?.data || error.message
+      );
       alert("Error cancelling campaign. Please try again.");
     }
   };
 
-//   const handleMediaParamChange = (e) => {
-//   const { name, files } = e.target;
-//   if (files && files[0]) {
-//     setCampaignData((prev) => ({
-//       ...prev,
-//       templateParams: {
-//         ...prev.templateParams,
-//         [name]: files[0],
-//       },
-//     }));
-//   }
-// };
+
 
   const getCompletionPercentage = () => {
     let filled = 0;
@@ -711,6 +703,25 @@ components.push(bodyComponent);
         return "secondary";
     }
   };
+
+  // Add this function to calculate pagination
+const indexOfLastCampaign = currentPage * campaignsPerPage;
+const indexOfFirstCampaign = indexOfLastCampaign - campaignsPerPage;
+const currentCampaigns = campaigns.slice(indexOfFirstCampaign, indexOfLastCampaign);
+const totalPages = Math.ceil(campaigns.length / campaignsPerPage);
+
+// Functions to handle pagination
+const nextPage = () => {
+  if (currentPage < totalPages) {
+    setCurrentPage(currentPage + 1);
+  }
+};
+
+const prevPage = () => {
+  if (currentPage > 1) {
+    setCurrentPage(currentPage - 1);
+  }
+};
 
   return (
     <div className="py-4">
@@ -1119,6 +1130,8 @@ components.push(bodyComponent);
                   </Row>
                 )}
 
+                
+
                 {/* Submit Button - Full Width */}
                 <Row>
                   <Col>
@@ -1176,141 +1189,171 @@ components.push(bodyComponent);
                       </tr>
                     </thead>
                     <tbody>
-                      {campaigns.map((campaign) => (
-                        <tr key={campaign._id}>
-                          <td>
-                            <span className="fw-bold">{campaign.name}</span>
-                          </td>
-                          <td>
-                            {campaign.templateName}
-                            <div>
-                              <Badge color="secondary" pill className="mt-1">
-                                {campaign.templateLanguage}
-                              </Badge>
-                            </div>
-                          </td>
-                          <td>
-                            {campaign.groups &&
-                              campaign.groups.map((group) => (
-                                <Badge
-                                  key={group._id}
-                                  color="primary"
-                                  pill
-                                  className="me-1"
-                                >
-                                  {group.name}
-                                </Badge>
-                              ))}
-                          </td>
-                          <td>
-                            <Badge
-                              color={getStatusBadgeColor(campaign.status)}
-                              pill
-                            >
-                              {campaign.status}
-                            </Badge>
-                          </td>
-                          <td>
-                            {campaign.scheduledFor
-                              ? formatDate(campaign.scheduledFor)
-                              : "Immediate"}
-                          </td>
-                          <td>{campaign.totalRecipients || 0}</td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <span className="text-success me-2">
-                                {campaign.successCount || 0}
-                              </span>
-                              <span>/</span>
-                              <span className="text-danger ms-2">
-                                {campaign.failCount || 0}
-                              </span>
-                            </div>
-                            {campaign.totalRecipients > 0 && (
-                              <Progress
-                                multi
-                                className="mt-1"
-                                style={{ height: "6px" }}
-                              >
-                                <Progress
-                                  bar
-                                  color="success"
-                                  value={
-                                    (campaign.successCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
-                                />
-                                <Progress
-                                  bar
-                                  color="danger"
-                                  value={
-                                    (campaign.failCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
-                                />
-                                <Progress
-                                  bar
-                                  color="warning"
-                                  value={
-                                    (campaign.pendingCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
-                                />
-                              </Progress>
-                            )}
-                          </td>
-                          <td>{formatDate(campaign.createdAt)}</td>
-                          {/* New Actions column */}
-                          <td>
-                            <div className="d-flex gap-2">
-                              <Button
-                                color="primary"
-                                size="sm"
-                                onClick={() => handleEditCampaign(campaign._id)}
-                                disabled={
-                                  campaign.status === "completed" ||
-                                  campaign.status === "sent"
-                                }
-                                className="p-1"
-                              >
-                                <Edit size={16} />
-                              </Button>
-                              <Button
-                                color="danger"
-                                size="sm"
-                                onClick={() =>
-                                  handleDeleteCampaign(campaign._id)
-                                }
-                                className="p-1"
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                              <Button
-                                color="warning"
-                                size="sm"
-                                onClick={() =>
-                                  handleCancelCampaign(campaign._id)
-                                }
-                                disabled={
-                                  campaign.status === "completed" ||
-                                  campaign.status === "sent" ||
-                                  campaign.status === "failed"
-                                }
-                                className="p-1"
-                              >
-                                <X size={16} />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
+  {currentCampaigns.map((campaign) => (
+    <tr key={campaign._id}>
+      <td>
+        <span className="fw-bold">{campaign.name}</span>
+      </td>
+      <td>
+        {campaign.templateName}
+        <div>
+          <Badge color="secondary" pill className="mt-1">
+            {campaign.templateLanguage}
+          </Badge>
+        </div>
+      </td>
+      <td>
+        {campaign.groups &&
+          campaign.groups.map((group) => (
+            <Badge
+              key={group._id}
+              color="primary"
+              pill
+              className="me-1"
+            >
+              {group.name}
+            </Badge>
+          ))}
+      </td>
+      <td>
+        <Badge
+          color={getStatusBadgeColor(campaign.status)}
+          pill
+        >
+          {campaign.status}
+        </Badge>
+      </td>
+      <td>
+        {campaign.scheduledFor
+          ? formatDate(campaign.scheduledFor)
+          : "Immediate"}
+      </td>
+      <td>{campaign.totalRecipients || 0}</td>
+      <td>
+        <div className="d-flex align-items-center">
+          <span className="text-success me-2">
+            {campaign.successCount || 0}
+          </span>
+          <span>/</span>
+          <span className="text-danger ms-2">
+            {campaign.failCount || 0}
+          </span>
+        </div>
+        {campaign.totalRecipients > 0 && (
+          <Progress
+            multi
+            className="mt-1"
+            style={{ height: "6px" }}
+          >
+            <Progress
+              bar
+              color="success"
+              value={
+                (campaign.successCount /
+                  campaign.totalRecipients) *
+                100
+              }
+            />
+            <Progress
+              bar
+              color="danger"
+              value={
+                (campaign.failCount /
+                  campaign.totalRecipients) *
+                100
+              }
+            />
+            <Progress
+              bar
+              color="warning"
+              value={
+                (campaign.pendingCount /
+                  campaign.totalRecipients) *
+                100
+              }
+            />
+          </Progress>
+        )}
+      </td>
+      <td>{formatDate(campaign.createdAt)}</td>
+      <td>
+        <div className="d-flex gap-2">
+          <Button
+            color="primary"
+            size="sm"
+            onClick={() => handleEditCampaign(campaign._id)}
+            disabled={
+              campaign.status === "completed" ||
+              campaign.status === "sent"
+            }
+            className="p-1"
+          >
+            <Edit size={16} />
+          </Button>
+          <Button
+            color="danger"
+            size="sm"
+            onClick={() =>
+              handleDeleteCampaign(campaign._id)
+            }
+            className="p-1"
+          >
+            <Trash2 size={16} />
+          </Button>
+          <Button
+            color="warning"
+            size="sm"
+            onClick={() =>
+              handleCancelCampaign(campaign._id)
+            }
+            disabled={
+              campaign.status === "completed" ||
+              campaign.status === "sent" ||
+              campaign.status === "failed"
+            }
+            className="p-1"
+          >
+            <X size={16} />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
                   </Table>
                 </div>
               )}
+
+<div className="d-flex justify-content-between align-items-center mt-4">
+  <div>
+    Showing {indexOfFirstCampaign + 1} to {Math.min(indexOfLastCampaign, campaigns.length)} of {campaigns.length} campaigns
+  </div>
+  <div>
+    <ButtonGroup>
+      <Button 
+        color="primary" 
+        onClick={prevPage} 
+        disabled={currentPage === 1}
+      >
+        Previous
+      </Button>
+      <Button 
+        outline 
+        color="primary"
+        disabled
+      >
+        {currentPage} of {totalPages}
+      </Button>
+      <Button 
+        color="primary" 
+        onClick={nextPage} 
+        disabled={currentPage === totalPages}
+      >
+        Next
+      </Button>
+    </ButtonGroup>
+  </div>
+</div>
 
               <Button
                 color="primary"

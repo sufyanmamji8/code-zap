@@ -49,6 +49,8 @@ const WhatsAppCampaigns = () => {
 
   const [templates, setTemplates] = useState([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+const [campaignsPerPage] = useState(10);
   const [groups, setGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [templateSearchTerm, setTemplateSearchTerm] = useState("");
@@ -702,6 +704,25 @@ components.push(bodyComponent);
     }
   };
 
+  // Add this function to calculate pagination
+const indexOfLastCampaign = currentPage * campaignsPerPage;
+const indexOfFirstCampaign = indexOfLastCampaign - campaignsPerPage;
+const currentCampaigns = campaigns.slice(indexOfFirstCampaign, indexOfLastCampaign);
+const totalPages = Math.ceil(campaigns.length / campaignsPerPage);
+
+// Functions to handle pagination
+const nextPage = () => {
+  if (currentPage < totalPages) {
+    setCurrentPage(currentPage + 1);
+  }
+};
+
+const prevPage = () => {
+  if (currentPage > 1) {
+    setCurrentPage(currentPage - 1);
+  }
+};
+
   return (
     <div className="py-4">
       <Container>
@@ -1109,6 +1130,8 @@ components.push(bodyComponent);
                   </Row>
                 )}
 
+                
+
                 {/* Submit Button - Full Width */}
                 <Row>
                   <Col>
@@ -1166,141 +1189,171 @@ components.push(bodyComponent);
                       </tr>
                     </thead>
                     <tbody>
-                      {campaigns.map((campaign) => (
-                        <tr key={campaign._id}>
-                          <td>
-                            <span className="fw-bold">{campaign.name}</span>
-                          </td>
-                          <td>
-                            {campaign.templateName}
-                            <div>
-                              <Badge color="secondary" pill className="mt-1">
-                                {campaign.templateLanguage}
-                              </Badge>
-                            </div>
-                          </td>
-                          <td>
-                            {campaign.groups &&
-                              campaign.groups.map((group) => (
-                                <Badge
-                                  key={group._id}
-                                  color="primary"
-                                  pill
-                                  className="me-1"
-                                >
-                                  {group.name}
-                                </Badge>
-                              ))}
-                          </td>
-                          <td>
-                            <Badge
-                              color={getStatusBadgeColor(campaign.status)}
-                              pill
-                            >
-                              {campaign.status}
-                            </Badge>
-                          </td>
-                          <td>
-                            {campaign.scheduledFor
-                              ? formatDate(campaign.scheduledFor)
-                              : "Immediate"}
-                          </td>
-                          <td>{campaign.totalRecipients || 0}</td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <span className="text-success me-2">
-                                {campaign.successCount || 0}
-                              </span>
-                              <span>/</span>
-                              <span className="text-danger ms-2">
-                                {campaign.failCount || 0}
-                              </span>
-                            </div>
-                            {campaign.totalRecipients > 0 && (
-                              <Progress
-                                multi
-                                className="mt-1"
-                                style={{ height: "6px" }}
-                              >
-                                <Progress
-                                  bar
-                                  color="success"
-                                  value={
-                                    (campaign.successCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
-                                />
-                                <Progress
-                                  bar
-                                  color="danger"
-                                  value={
-                                    (campaign.failCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
-                                />
-                                <Progress
-                                  bar
-                                  color="warning"
-                                  value={
-                                    (campaign.pendingCount /
-                                      campaign.totalRecipients) *
-                                    100
-                                  }
-                                />
-                              </Progress>
-                            )}
-                          </td>
-                          <td>{formatDate(campaign.createdAt)}</td>
-                          {/* New Actions column */}
-                          <td>
-                            <div className="d-flex gap-2">
-                              <Button
-                                color="primary"
-                                size="sm"
-                                onClick={() => handleEditCampaign(campaign._id)}
-                                disabled={
-                                  campaign.status === "completed" ||
-                                  campaign.status === "sent"
-                                }
-                                className="p-1"
-                              >
-                                <Edit size={16} />
-                              </Button>
-                              <Button
-                                color="danger"
-                                size="sm"
-                                onClick={() =>
-                                  handleDeleteCampaign(campaign._id)
-                                }
-                                className="p-1"
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                              <Button
-                                color="warning"
-                                size="sm"
-                                onClick={() =>
-                                  handleCancelCampaign(campaign._id)
-                                }
-                                disabled={
-                                  campaign.status === "completed" ||
-                                  campaign.status === "sent" ||
-                                  campaign.status === "failed"
-                                }
-                                className="p-1"
-                              >
-                                <X size={16} />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
+  {currentCampaigns.map((campaign) => (
+    <tr key={campaign._id}>
+      <td>
+        <span className="fw-bold">{campaign.name}</span>
+      </td>
+      <td>
+        {campaign.templateName}
+        <div>
+          <Badge color="secondary" pill className="mt-1">
+            {campaign.templateLanguage}
+          </Badge>
+        </div>
+      </td>
+      <td>
+        {campaign.groups &&
+          campaign.groups.map((group) => (
+            <Badge
+              key={group._id}
+              color="primary"
+              pill
+              className="me-1"
+            >
+              {group.name}
+            </Badge>
+          ))}
+      </td>
+      <td>
+        <Badge
+          color={getStatusBadgeColor(campaign.status)}
+          pill
+        >
+          {campaign.status}
+        </Badge>
+      </td>
+      <td>
+        {campaign.scheduledFor
+          ? formatDate(campaign.scheduledFor)
+          : "Immediate"}
+      </td>
+      <td>{campaign.totalRecipients || 0}</td>
+      <td>
+        <div className="d-flex align-items-center">
+          <span className="text-success me-2">
+            {campaign.successCount || 0}
+          </span>
+          <span>/</span>
+          <span className="text-danger ms-2">
+            {campaign.failCount || 0}
+          </span>
+        </div>
+        {campaign.totalRecipients > 0 && (
+          <Progress
+            multi
+            className="mt-1"
+            style={{ height: "6px" }}
+          >
+            <Progress
+              bar
+              color="success"
+              value={
+                (campaign.successCount /
+                  campaign.totalRecipients) *
+                100
+              }
+            />
+            <Progress
+              bar
+              color="danger"
+              value={
+                (campaign.failCount /
+                  campaign.totalRecipients) *
+                100
+              }
+            />
+            <Progress
+              bar
+              color="warning"
+              value={
+                (campaign.pendingCount /
+                  campaign.totalRecipients) *
+                100
+              }
+            />
+          </Progress>
+        )}
+      </td>
+      <td>{formatDate(campaign.createdAt)}</td>
+      <td>
+        <div className="d-flex gap-2">
+          <Button
+            color="primary"
+            size="sm"
+            onClick={() => handleEditCampaign(campaign._id)}
+            disabled={
+              campaign.status === "completed" ||
+              campaign.status === "sent"
+            }
+            className="p-1"
+          >
+            <Edit size={16} />
+          </Button>
+          <Button
+            color="danger"
+            size="sm"
+            onClick={() =>
+              handleDeleteCampaign(campaign._id)
+            }
+            className="p-1"
+          >
+            <Trash2 size={16} />
+          </Button>
+          <Button
+            color="warning"
+            size="sm"
+            onClick={() =>
+              handleCancelCampaign(campaign._id)
+            }
+            disabled={
+              campaign.status === "completed" ||
+              campaign.status === "sent" ||
+              campaign.status === "failed"
+            }
+            className="p-1"
+          >
+            <X size={16} />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
                   </Table>
                 </div>
               )}
+
+<div className="d-flex justify-content-between align-items-center mt-4">
+  <div>
+    Showing {indexOfFirstCampaign + 1} to {Math.min(indexOfLastCampaign, campaigns.length)} of {campaigns.length} campaigns
+  </div>
+  <div>
+    <ButtonGroup>
+      <Button 
+        color="primary" 
+        onClick={prevPage} 
+        disabled={currentPage === 1}
+      >
+        Previous
+      </Button>
+      <Button 
+        outline 
+        color="primary"
+        disabled
+      >
+        {currentPage} of {totalPages}
+      </Button>
+      <Button 
+        color="primary" 
+        onClick={nextPage} 
+        disabled={currentPage === totalPages}
+      >
+        Next
+      </Button>
+    </ButtonGroup>
+  </div>
+</div>
 
               <Button
                 color="primary"
