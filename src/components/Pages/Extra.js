@@ -78,41 +78,58 @@ const [campaignsPerPage] = useState(10);
 
   const extractParameters = (templateText, components) => {
     if (!templateText) return [];
-
+  
     const params = [];
     const usedIndexes = new Set();
-
-    
+  
+    // Extract parameters from text with their indices
     const paramRegex = /\{\{(\d+)\}\}/g;
     let match;
-
+  
     while ((match = paramRegex.exec(templateText)) !== null) {
       const paramIndex = match[1];
-
+  
       if (!usedIndexes.has(paramIndex)) {
         usedIndexes.add(paramIndex);
-
+        
+        // Create a default parameter
+        let paramName = `Parameter ${paramIndex}`;
+        let paramType = "text";
+        
+        // Check if we have component information with parameter details
+        if (components && Array.isArray(components)) {
+          // Find body component which might have parameter examples
+          const bodyComponent = components.find(c => c.type === "BODY" || c.type === "body");
+          
+          if (bodyComponent && bodyComponent.example) {
+            // If example exists, check if it has named parameters
+            const exampleParams = bodyComponent.example.body_text || [];
+            if (Array.isArray(exampleParams) && exampleParams[paramIndex-1]) {
+              paramName = exampleParams[paramIndex-1] || paramName;
+            }
+          }
+        }
+  
         params.push({
           index: paramIndex,
           key: `param${paramIndex}`,
-          name: `Parameter ${paramIndex}`,
-          type: "text",
+          name: paramName,
+          type: paramType,
         });
       }
     }
-
     
+    // Add media parameters logic (remains the same)
     if (components && Array.isArray(components)) {
       components.forEach((component) => {
         if (component.type === "HEADER" && component.format) {
           const mediaType = component.format.toLowerCase();
           if (["image", "video", "document"].includes(mediaType)) {
-            
             const nextIndex =
               params.length > 0
                 ? Math.max(...params.map((p) => parseInt(p.index))) + 1
                 : 1;
-
+  
             params.push({
               index: nextIndex.toString(),
               key: `media${nextIndex}`,
@@ -125,8 +142,8 @@ const [campaignsPerPage] = useState(10);
         }
       });
     }
-
     
+    // Sort parameters by index
     params.sort((a, b) => parseInt(a.index) - parseInt(b.index));
     return params;
   };
@@ -227,54 +244,54 @@ const [campaignsPerPage] = useState(10);
   const fetchTemplateDetails = async (templateId) => {
     try {
       const selectedTemplate = templates.find((t) => t.id === templateId);
-
+  
       if (selectedTemplate) {
         console.log("Selected template:", selectedTemplate); 
-
-        
+  
+        // Extract template text
         let templateText = "";
-
+  
         if (
           selectedTemplate.components &&
           selectedTemplate.components.length > 0
         ) {
-          
+          // Find body component
           const bodyComponent = selectedTemplate.components.find(
             (c) => c.type === "BODY" || c.type === "body"
           );
-
+  
           if (bodyComponent) {
             templateText = bodyComponent.text || "";
+            console.log("Body component:", bodyComponent); // Log the body component
           }
         } else if (selectedTemplate.text) {
           templateText = selectedTemplate.text;
         } else if (selectedTemplate.content) {
-          
           templateText = selectedTemplate.content;
         }
-
+  
         console.log("Template text for parameter extraction:", templateText); 
-
-        
+  
+        // Extract parameters with the updated function
         const params = extractParameters(
           templateText,
           selectedTemplate.components
         );
         console.log("Extracted parameters:", params); 
-
+  
         setExtractedParams(params);
-
-        
+  
+        // Initialize parameter values
         const initialParams = {};
         params.forEach((param) => {
           initialParams[param.key] = "";
         });
-
+  
         setCampaignData((prev) => ({
           ...prev,
           templateParams: initialParams,
         }));
-
+  
         setSelectedTemplateDetails({
           ...selectedTemplate,
           text: templateText,
@@ -1044,48 +1061,36 @@ const prevPage = () => {
                           {extractedParams.length > 0 ? (
                             <Row className="mt-2">
                               {extractedParams.map((param) => (
-                                <Col md={6} key={param.key} className="mb-3">
-                                  <FormGroup>
-                                    <Label className="fw-bold text-secondary">
-                                      {param.name} ({`{${param.index}}`})
-                                      {param.type !== "text" && (
-                                        <Badge color="info" className="ms-2">
-                                          {param.type === "image" && (
-                                            <Image size={12} className="me-1" />
-                                          )}
-                                          {param.type === "video" && (
-                                            <FileVideo
-                                              size={12}
-                                              className="me-1"
-                                            />
-                                          )}
-                                          {param.type === "document" && (
-                                            <File size={12} className="me-1" />
-                                          )}
-                                          {param.type}
-                                        </Badge>
-                                      )}
-                                    </Label>
-                                    {/* Replace file inputs with URL text inputs for all media types */}
-                                    <Input
-                                      type="text"
-                                      name={param.key}
-                                      value={
-                                        campaignData.templateParams[
-                                          param.key
-                                        ] || ""
-                                      }
-                                      onChange={handleParamChange}
-                                      placeholder={
-                                        param.type === "text"
-                                          ? `Enter ${param.name}`
-                                          : `Enter ${param.type} URL`
-                                      }
-                                      required
-                                    />
-                                  </FormGroup>
-                                </Col>
-                              ))}
+  <Col md={6} key={param.key} className="mb-3">
+    <FormGroup>
+      <Label className="fw-bold text-secondary">
+        {param.name} ({`{${param.index}}`})
+        {param.type !== "text" && (
+          <Badge color="info" className="ms-2">
+            {param.type === "image" && (
+              <Image size={12} className="me-1" />
+            )}
+            {param.type === "video" && (
+              <FileVideo size={12} className="me-1" />
+            )}
+            {param.type === "document" && (
+              <File size={12} className="me-1" />
+            )}
+            {param.type}
+          </Badge>
+        )}
+      </Label>
+      <Input
+        type="text"
+        name={param.key}
+        value={campaignData.templateParams[param.key] || ""}
+        onChange={handleParamChange}
+        placeholder={`Enter ${param.name}`}
+        required
+      />
+    </FormGroup>
+  </Col>
+))}
                             </Row>
                           ) : (
                             <p className="text-muted">
