@@ -499,18 +499,26 @@
 
 
 
+
+
+
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Container, Row, Col, Card, CardHeader, CardBody, CardFooter,
   Button, Form, FormGroup, Input, Label, InputGroup, InputGroupText,
   Modal, ModalHeader, ModalBody, ModalFooter,
-  Spinner, Alert, Badge, UncontrolledTooltip,
-  Collapse, Nav, NavItem, NavLink, TabContent, TabPane
+  Spinner, Alert, Badge,
+  Nav, NavItem, NavLink, TabContent, TabPane
 } from 'reactstrap';
 import { WHATSAPP_API_ENDPOINT } from 'Api/Constant';
 
 const WhatsappWeb = () => {
+  // State variables
   const [qrCode, setQrCode] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -520,25 +528,70 @@ const WhatsappWeb = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState({ text: '', color: 'info', visible: false });
   const [activeTab, setActiveTab] = useState('sessions');
+  const [messages, setMessages] = useState([]);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [contacts, setContacts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const token = localStorage.getItem('token');
-
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
   };
 
+  // Fetch active sessions on component mount
   useEffect(() => {
     fetchActiveSessions();
-    // Set up auto-refresh interval for sessions
+    // Refresh every minute
     const intervalId = setInterval(() => {
       fetchActiveSessions(true);
-    }, 60000); // Refresh every minute
+    }, 60000);
     
     return () => clearInterval(intervalId);
   }, []);
 
+  // Function to fetch message history
+  const fetchMessageHistory = async (sessionId, silent = false) => {
+    if (!sessionId) return;
+    
+    try {
+      if (!silent) setMessageLoading(true);
+      
+      const response = await axios.get(
+        `${WHATSAPP_API_ENDPOINT}/messages/${sessionId}`,
+        { headers }
+      );
+
+      if (response.data.success) {
+        setMessages(response.data.messages);
+        
+        // Extract unique contacts from message history
+        const uniqueContacts = [...new Set(
+          response.data.messages.map(msg => msg.sender)
+        )].filter(contact => contact !== 'system');
+        
+        setContacts(uniqueContacts.map(contact => ({
+          id: contact,
+          name: formatPhoneNumber(contact.split('@')[0]),
+          number: contact.split('@')[0]
+        })));
+      } else {
+        if (!silent) {
+          showAlert('No messages found for this session.', 'info');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching message history:', error);
+      if (!silent) {
+        showAlert('Error fetching messages. Please try again.', 'danger');
+      }
+    } finally {
+      if (!silent) setMessageLoading(false);
+    }
+  };
+
+  // Function to generate QR code
   const generateQRCode = async () => {
     try {
       setLoading(true);
@@ -552,12 +605,11 @@ const WhatsappWeb = () => {
         setQrCode(response.data.qrCode);
         showAlert('QR code generated successfully! Scan with WhatsApp on your phone.', 'success');
         
-        // Auto check for new sessions after QR scan
+        // Check for new sessions every 5 seconds
         const checkInterval = setInterval(() => {
           fetchActiveSessions(true);
         }, 5000);
         
-        // Clear interval and close modal after 30 seconds
         setTimeout(() => {
           clearInterval(checkInterval);
           setShowQRModal(false);
@@ -575,6 +627,7 @@ const WhatsappWeb = () => {
     }
   };
 
+  // Function to send message
   const sendMessage = async () => {
     if (!selectedSession) {
       showAlert('Please select a WhatsApp session first!', 'warning');
@@ -621,6 +674,7 @@ const WhatsappWeb = () => {
     }
   };
 
+  // Function to disconnect session
   const disconnectSession = async (sessionId) => {
     try {
       setLoading(true);
@@ -651,6 +705,7 @@ const WhatsappWeb = () => {
     }
   };
 
+  // Function to fetch active sessions
   const fetchActiveSessions = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
@@ -664,14 +719,13 @@ const WhatsappWeb = () => {
       if (response.data.success) {
         setActiveSessions(response.data.sessions);
         
-        // If we have sessions and none is selected, select the first one
+        // Auto-select first session if none selected
         if (response.data.sessions.length > 0 && !selectedSession) {
           setSelectedSession(response.data.sessions[0]);
-          // Auto switch to messaging tab when a session is auto-selected
           setActiveTab('messaging');
         }
         
-        // If the selected session no longer exists in the list, clear selection
+        // Clear selection if session no longer exists
         if (selectedSession) {
           const sessionStillExists = response.data.sessions.some(
             session => getSessionId(session) === getSessionId(selectedSession)
@@ -695,6 +749,7 @@ const WhatsappWeb = () => {
     }
   };
 
+  // Function to show alert
   const showAlert = (text, color) => {
     setAlertMessage({ text, color, visible: true });
     setTimeout(() => {
@@ -702,6 +757,7 @@ const WhatsappWeb = () => {
     }, 5000);
   };
 
+  // Function to toggle QR modal
   const toggleQRModal = () => {
     setShowQRModal(!showQRModal);
     if (!showQRModal) {
@@ -709,7 +765,7 @@ const WhatsappWeb = () => {
     }
   };
 
-  // Format phone number to ensure it has country code
+  // Function to format phone number
   const formatPhoneNumber = (number) => {
     let formatted = number.replace(/\D/g, '');
     if (!formatted.startsWith('92') && !formatted.startsWith('+92')) {
@@ -718,7 +774,7 @@ const WhatsappWeb = () => {
     return formatted;
   };
 
-  // Function to handle Enter key press in message input
+  // Function to handle Enter key press
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -729,9 +785,31 @@ const WhatsappWeb = () => {
   // Function to select a session
   const handleSessionSelect = (session) => {
     setSelectedSession(session);
-    setActiveTab('messaging'); // Switch to messaging tab when session is selected
+    setActiveTab('messaging');
+    
+    // Fetch message history
+    fetchMessageHistory(getSessionId(session));
+    
+    // Set up message refresh interval
+    const messageIntervalId = setInterval(() => {
+      fetchMessageHistory(getSessionId(session), true);
+    }, 10000);
+    
+    // Clear previous interval
+    if (window.messageRefreshInterval) {
+      clearInterval(window.messageRefreshInterval);
+    }
+    
+    window.messageRefreshInterval = messageIntervalId;
   };
 
+  // Function to handle contact selection
+  const handleContactSelect = (contact) => {
+    setSelectedContact(contact);
+    setPhoneNumber(contact.number);
+  };
+
+  // Function to get session ID
   const getSessionId = (session) => {
     if (!session) return '';
     
@@ -744,20 +822,20 @@ const WhatsappWeb = () => {
     return '';
   };
   
-  // Helper function to safely display a truncated ID
+  // Function to get display ID (truncated)
   const getDisplayId = (session) => {
     const id = getSessionId(session);
     return id.length > 6 ? `${id.substring(0, 6)}...` : id;
   };
 
-  // Helper function to get session name/identifier
+  // Function to get session name
   const getSessionName = (session) => {
     if (session.phoneNumber) return session.phoneNumber;
     if (session.name) return session.name;
     return `Session ${getDisplayId(session)}`;
   };
 
-  // Calculate time since connection
+  // Function to calculate time since connection
   const getTimeSince = (timestamp) => {
     const date = new Date(timestamp || Date.now());
     const now = new Date();
@@ -773,20 +851,18 @@ const WhatsappWeb = () => {
   };
 
   return (
-    <Container fluid className="py-4 px-md-4 " style={{ minHeight: '100vh' }}>
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-        <h2 className="mb-0 d-flex align-items-center">
-          <span className="bg-success p-2 rounded-circle me-3 d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
-            <i className="fab fa-whatsapp text-white fs-5"></i>
-          </span>
-          <span>WhatsApp Integration</span>
-        </h2>
+    <Container fluid className="py-4 px-md-4" style={{ minHeight: '100vh' }}>
+      {/* Top Header */}
+      <div className="mb-4 d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm">
+        <h3 className="mb-0">
+          <i className="fab fa-whatsapp text-success me-2"></i>
+          WhatsApp Integration
+        </h3>
         
-        <div className="d-flex gap-2">
+        <div>
           <Button 
-            color="primary" 
-            outline
-            className="d-flex align-items-center"
+            color="light" 
+            className="me-2"
             onClick={() => fetchActiveSessions()}
             disabled={loading || refreshing}
           >
@@ -795,421 +871,475 @@ const WhatsappWeb = () => {
           </Button>
           
           <Button 
-            color="success" 
-            className="d-flex align-items-center px-3 py-2"
+            color="success"
             onClick={toggleQRModal}
           >
             <i className="fas fa-plus me-2"></i>
-            <span className="d-none d-md-inline">Connect New</span>
-            <span className="d-inline d-md-none">New</span>
+            Connect New
           </Button>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <Nav tabs className="mb-4">
+      {/* Simple Navigation Tabs */}
+      <Nav tabs className="mb-3 bg-white rounded-top shadow-sm">
         <NavItem>
           <NavLink
-            className={`cursor-pointer ${activeTab === 'sessions' ? 'active' : ''}`}
+            className={`cursor-pointer ${activeTab === 'sessions' ? 'active bg-light' : ''}`}
             onClick={() => setActiveTab('sessions')}
           >
             <i className="fas fa-mobile-alt me-2"></i>
-            Sessions 
-            <Badge color="primary" pill className="ms-2">{activeSessions.length}</Badge>
+            My WhatsApp Accounts
           </NavLink>
         </NavItem>
         
         <NavItem>
           <NavLink
-            className={`cursor-pointer ${activeTab === 'messaging' ? 'active' : ''} ${!selectedSession ? 'disabled' : ''}`}
+            className={`cursor-pointer ${activeTab === 'messaging' ? 'active bg-light' : ''} ${!selectedSession ? 'disabled' : ''}`}
             onClick={() => selectedSession && setActiveTab('messaging')}
           >
-            <i className="fas fa-comment-alt me-2"></i>
-            Messaging
-            {selectedSession && (
-              <Badge color="success" pill className="ms-2">
-                <i className="fas fa-check"></i>
-              </Badge>
-            )}
+            <i className="fas fa-paper-plane me-2"></i>
+            Send Messages
+          </NavLink>
+        </NavItem>
+        
+        <NavItem>
+          <NavLink
+            className={`cursor-pointer ${activeTab === 'history' ? 'active bg-light' : ''} ${!selectedSession ? 'disabled' : ''}`}
+            onClick={() => selectedSession && setActiveTab('history')}
+          >
+            <i className="fas fa-history me-2"></i>
+            Message History
           </NavLink>
         </NavItem>
       </Nav>
 
-      <TabContent activeTab={activeTab}>
-        {/* Sessions Tab */}
+      {/* Tab Contents */}
+      <TabContent activeTab={activeTab} className="bg-white p-3 rounded-bottom shadow-sm mb-4">
+        {/* SESSIONS TAB */}
         <TabPane tabId="sessions">
-          <Row>
-            {activeSessions.length > 0 ? (
-              activeSessions.map((session, index) => (
-                <Col key={index} sm={12} md={6} lg={4} xl={3} className="mb-4">
-                  <Card 
-                    className={`shadow-sm border-0 h-100 position-relative ${
-                      selectedSession && getSessionId(selectedSession) === getSessionId(session)
-                        ? 'border-primary border-2' : ''
-                    }`}
-                    onClick={() => handleSessionSelect(session)}
-                    style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-3px)';
-                      e.currentTarget.style.boxShadow = '0 .5rem 1rem rgba(0,0,0,.15)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 .125rem .25rem rgba(0,0,0,.075)';
-                    }}
-                  >
-                    {selectedSession && getSessionId(selectedSession) === getSessionId(session) && (
-                      <div className="position-absolute" style={{ top: '-10px', right: '-10px' }}>
-                        <Badge color="primary" pill className="p-2">
-                          <i className="fas fa-check"></i>
-                        </Badge>
-                      </div>
-                    )}
-                  
-                    <CardHeader className="bg-gradient-success text-white d-flex align-items-center">
-                      <div className="d-flex justify-content-between align-items-center w-100">
-                        <h5 className="mb-0 d-flex align-items-center">
-                          <i className="fas fa-mobile-alt me-2"></i>
-                          <span className="text-truncate" style={{ maxWidth: '150px' }}>
-                            {getSessionName(session)}
-                          </span>
-                        </h5>
-                        <Badge color="light" className="text-success" pill>Active</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardBody>
-                      <div className="d-flex align-items-center mb-2">
-                        <div className="bg-light rounded-circle p-2 me-2">
-                          <i className="far fa-clock text-muted"></i>
-                        </div>
-                        <div>
-                          <small className="text-muted">Connected</small>
-                          <p className="mb-0">
-                            {getTimeSince(session.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {getSessionId(session) && (
-                        <div className="d-flex align-items-center">
-                          <div className="bg-light rounded-circle p-2 me-2">
-                            <i className="fas fa-fingerprint text-muted"></i>
-                          </div>
-                          <div>
-                            <small className="text-muted">Session ID</small>
-                            <p className="mb-0 text-truncate" style={{ maxWidth: '180px' }}>
-                              {getDisplayId(session)}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </CardBody>
-                    <CardFooter className="bg-light d-flex justify-content-between">
-                      <Button 
-                        color="primary" 
-                        outline
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSessionSelect(session);
-                        }}
-                      >
-                        <i className="fas fa-comment me-1"></i> Use
-                      </Button>
-                      <Button 
-                        color="danger" 
-                        outline
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          disconnectSession(getSessionId(session));
-                        }}
-                      >
-                        <i className="fas fa-unlink me-1"></i> Disconnect
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </Col>
-              ))
-            ) : (
-              <Col>
-                <Card className="shadow-sm border-0 text-center p-5 bg-white">
-                  <div className="py-5">
-                    <div className="bg-light d-inline-block rounded-circle p-4 mb-4">
-                      <i className="fas fa-mobile-alt text-muted" style={{ fontSize: '3rem' }}></i>
-                    </div>
-                    <h4 className="text-muted">No Active WhatsApp Sessions</h4>
-                    <p className="text-muted mb-4">Connect your WhatsApp to start sending messages</p>
-                    {/* <Button 
-                      color="success" 
-                      size="lg"
-                      className="px-4 py-2"
-                      onClick={toggleQRModal}
-                    >
-                      <i className="fas fa-plus me-2"></i> Connect New WhatsApp
-                    </Button> */}
-                  </div>
-                </Card>
-              </Col>
-            )}
-          </Row>
-        </TabPane>
-
-        {/* Messaging Tab */}
-        <TabPane tabId="messaging">
-          {selectedSession ? (
-            <Row>
-              <Col lg={4} className="mb-4 mb-lg-0">
-                <Card className="shadow-sm border-0 bg-white h-100">
-                  <CardHeader className="bg-gradient-success text-white">
-                    <h5 className="mb-0">
-                      <i className="fas fa-info-circle me-2"></i>
-                      Active Session
-                    </h5>
-                  </CardHeader>
-                  <CardBody>
-                    <div className="text-center mb-4">
-                      <div className="bg-light rounded-circle mx-auto p-4 d-inline-block mb-3">
-                        <i className="fas fa-mobile-alt" style={{ fontSize: '3rem' }}></i>
-                      </div>
-                      <h5>{getSessionName(selectedSession)}</h5>
-                      <Badge color="success" pill className="px-3 py-2">Connected</Badge>
-                    </div>
-                    
-                    <div className="mt-4">
-                      <div className="d-flex align-items-center mb-3">
-                        <div className="bg-light rounded-circle p-2 me-3">
-                          <i className="far fa-clock text-muted"></i>
-                        </div>
-                        <div>
-                          <small className="text-muted">Connected Since</small>
-                          <p className="mb-0">
-                            {new Date(selectedSession.createdAt || Date.now()).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="d-flex align-items-center">
-                        <div className="bg-light rounded-circle p-2 me-3">
-                          <i className="fas fa-fingerprint text-muted"></i>
-                        </div>
-                        <div>
-                          <small className="text-muted">Session ID</small>
-                          <p className="mb-0 text-truncate">
-                            {getSessionId(selectedSession)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardBody>
-                  <CardFooter className="bg-light">
-                    <Button 
-                      color="danger" 
-                      outline
-                      block
-                      onClick={() => disconnectSession(getSessionId(selectedSession))}
-                    >
-                      <i className="fas fa-unlink me-2"></i> Disconnect Session
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </Col>
-              
-              <Col lg={8}>
-                <Card className="shadow-sm border-0 bg-white">
-                  <CardHeader className="bg-gradient-success text-white">
-                    <h5 className="mb-0">
-                      <i className="fas fa-paper-plane me-2"></i>
-                      Send WhatsApp Message
-                    </h5>
-                  </CardHeader>
-                  
-                  <CardBody>
-                    <Form>
-                      <FormGroup>
-                        <Label for="phoneNumber" className="fw-bold">Phone Number</Label>
-                        <InputGroup size="lg">
-                          <InputGroupText className="bg-light">
-                            <i className="fas fa-phone"></i>
-                          </InputGroupText>
-                          <Input
-                            type="text"
-                            id="phoneNumber"
-                            placeholder="Enter phone number with country code (e.g., 923001234567)"
-                            value={phoneNumber}
-                            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                            disabled={loading}
-                          />
-                        </InputGroup>
-                        <small className="text-muted">
-                          Country code will be added automatically if missing
-                        </small>
-                      </FormGroup>
-                      
-                      <FormGroup>
-                        <Label for="message" className="fw-bold">Message</Label>
-                        <InputGroup size="lg">
-                          <InputGroupText className="bg-light">
-                            <i className="fas fa-comment-alt"></i>
-                          </InputGroupText>
-                          <Input
-                            type="textarea"
-                            id="message"
-                            rows="6"
-                            placeholder="Type your message here..."
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            disabled={loading}
-                          />
-                        </InputGroup>
-                        <div className="d-flex justify-content-between mt-2">
-                          <small className="text-muted">
-                            Press Shift+Enter for new line, Enter to send
-                          </small>
-                          <Badge color="light" className="text-muted">
-                            <i className="fas fa-keyboard me-1"></i> {message.length} characters
-                          </Badge>
-                        </div>
-                      </FormGroup>
-                    </Form>
-                  </CardBody>
-                  
-                  <CardFooter className="bg-light">
-                    <Button 
-                      color="success" 
-                      size="lg"
-                      block
-                      onClick={sendMessage}
-                      disabled={!phoneNumber || !message || loading}
-                      className="py-2"
-                    >
-                      {loading ? (
-                        <span><Spinner size="sm" className="me-2" /> Sending...</span>
-                      ) : (
-                        <span><i className="fas fa-paper-plane me-2"></i> Send Message</span>
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </Col>
-            </Row>
-          ) : (
-            <Card className="shadow-sm border-0 bg-white">
-              <CardBody className="text-center p-5">
-                <div className="py-5">
-                  <div className="bg-light d-inline-block rounded-circle p-4 mb-4">
-                    <i className="fas fa-comment-slash text-muted" style={{ fontSize: '3rem' }}></i>
-                  </div>
-                  <h4 className="text-muted">No WhatsApp Session Selected</h4>
-                  <p className="text-muted mb-4">Please select a WhatsApp session to start messaging</p>
-                  <Button 
-                    color="primary" 
-                    onClick={() => setActiveTab('sessions')}
-                    className="me-2"
-                  >
-                    <i className="fas fa-mobile-alt me-2"></i> Select Session
-                  </Button>
-                  <Button 
-                    color="success" 
-                    onClick={toggleQRModal}
-                  >
-                    <i className="fas fa-plus me-2"></i> Connect New
-                  </Button>
-                </div>
-              </CardBody>
-            </Card>
-          )}
-        </TabPane>
-      </TabContent>
-
-      {/* QR Code Modal */}
-      <Modal isOpen={showQRModal} toggle={toggleQRModal} size="md">
-        <ModalHeader toggle={toggleQRModal} className="bg-gradient-success text-white">
-          <i className="fas fa-qrcode me-2"></i>
-          Connect WhatsApp
-        </ModalHeader>
-        <ModalBody className="text-center p-4">
-          {qrCode ? (
-            <div>
-              <div className="border p-3 mb-3 bg-white d-inline-block rounded">
-                <img 
-                  src={qrCode} 
-                  alt="WhatsApp QR Code" 
-                  style={{ width: '250px', height: '250px' }} 
-                />
-              </div>
-              <div className="alert alert-info p-3 d-flex align-items-center">
-                <i className="fas fa-info-circle me-3 fs-4"></i>
-                <div className="text-start">
-                  <p className="mb-1 fw-bold">How to connect:</p>
-                  <ol className="mb-0 ps-3">
-                    <li>Open WhatsApp on your phone</li>
-                    <li>Go to Settings &gt; Linked Devices</li>
-                    <li>Tap on "Link a Device"</li>
-                    <li>Scan this QR code</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="py-4">
-              <div className="bg-light d-inline-block rounded-circle p-4 mb-4">
+          <h4 className="mb-4">Your Connected WhatsApp Accounts</h4>
+          
+          {loading && <div className="text-center p-4"><Spinner color="primary" /></div>}
+          
+          {!loading && activeSessions.length === 0 && (
+            <div className="text-center p-5">
+              <div className="mb-4">
                 <i className="fas fa-mobile-alt text-muted" style={{ fontSize: '3rem' }}></i>
               </div>
-              <h5 className="fw-bold mt-3">Connect your WhatsApp account</h5>
-              <p className="text-muted">
-                Click the button below to generate a QR code and connect WhatsApp from your mobile device
-              </p>
+              <h5>No WhatsApp Accounts Connected</h5>
+              <p className="text-muted mb-4">Connect your WhatsApp to start sending messages</p>
+              <Button 
+                color="success"
+                onClick={toggleQRModal}
+              >
+                <i className="fas fa-plus me-2"></i> Connect WhatsApp
+              </Button>
             </div>
           )}
-        </ModalBody>
-        <ModalFooter>
-          {!qrCode ? (
-            <Button 
-              color="success" 
-              block
-              className="px-4"
-              onClick={generateQRCode}
-              disabled={loading}
-            >
-              {loading ? (
-                <span><Spinner size="sm" className="me-2" /> Processing...</span>
-              ) : (
-                <span><i className="fas fa-qrcode me-2"></i> Generate QR Code</span>
-              )}
+          
+          {!loading && activeSessions.length > 0 && (
+            <Row>
+              {activeSessions.map((session, index) => (
+                <Col key={index} sm={12} md={6} lg={4} className="mb-4">
+                <Card 
+                  className={`shadow-sm h-100 ${
+                    selectedSession && getSessionId(selectedSession) === getSessionId(session)
+                      ? 'border-success' : ''
+                  }`}
+                  onClick={() => handleSessionSelect(session)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <CardHeader className="bg-success text-white">
+                    <h5 className="mb-0">
+                      <i className="fas fa-user me-2"></i>
+                      {getSessionName(session)}
+                    </h5>
+                  </CardHeader>
+                  
+                  <CardBody>
+                    <p>
+                      <strong>Status:</strong> 
+                      <Badge color="success" className="ms-2">Active</Badge>
+                    </p>
+                    <p>
+                      <strong>Connected:</strong> {getTimeSince(session.createdAt)}
+                    </p>
+                    <p className="mb-0">
+                      <strong>ID:</strong> {getDisplayId(session)}
+                    </p>
+                  </CardBody>
+                  
+                  <CardFooter className="d-flex justify-content-between">
+                    <Button 
+                      color="primary" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSessionSelect(session);
+                      }}
+                    >
+                      Use This
+                    </Button>
+                    
+                    <Button 
+                      color="danger" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        disconnectSession(getSessionId(session));
+                      }}
+                    >
+                      Disconnect
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
+      </TabPane>
+      
+      {/* MESSAGING TAB */}
+      <TabPane tabId="messaging">
+        <h4 className="mb-4">Send WhatsApp Messages</h4>
+        
+        {!selectedSession && (
+          <div className="text-center p-5">
+            <div className="mb-4">
+              <i className="fas fa-exclamation-circle text-warning" style={{ fontSize: '3rem' }}></i>
+            </div>
+            <h5>No WhatsApp Account Selected</h5>
+            <p className="text-muted mb-4">Please select a WhatsApp account first</p>
+            <Button color="primary" onClick={() => setActiveTab('sessions')}>
+              Select WhatsApp Account
             </Button>
-          ) : (
-            <Button 
-              color="secondary" 
-              className="px-4"
-              onClick={toggleQRModal}
-            >
-              <i className="fas fa-times me-2"></i> Close
-            </Button>
-          )}
-        </ModalFooter>
-      </Modal>
-
-      {/* Alert */}
-      <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1050, minWidth: '300px', maxWidth: '90vw' }}>
-        <Alert 
-          color={alertMessage.color} 
-          isOpen={alertMessage.visible} 
-          toggle={() => setAlertMessage(prev => ({ ...prev, visible: false }))}
-          className="shadow-lg d-flex align-items-center"
-        >
-          <div className="d-flex align-items-center">
-            {alertMessage.color === 'success' && <i className="fas fa-check-circle me-3 fs-4"></i>}
-            {alertMessage.color === 'danger' && <i className="fas fa-exclamation-circle me-3 fs-4"></i>}
-            {alertMessage.color === 'warning' && <i className="fas fa-exclamation-triangle me-3 fs-4"></i>}
-            {alertMessage.color === 'info' && <i className="fas fa-info-circle me-3 fs-4"></i>}
-            {alertMessage.text}
           </div>
-        </Alert>
-      </div>
-    </Container>
-  );
+        )}
+        
+        {selectedSession && (
+          <Row>
+            <Col md={4} className="mb-4 mb-md-0">
+              <Card className="shadow-sm">
+                <CardHeader className="bg-success text-white">
+                  <h5 className="mb-0">Active Account</h5>
+                </CardHeader>
+                
+                <CardBody>
+                  <div className="text-center mb-3">
+                    <i className="fas fa-user-circle text-success" style={{ fontSize: '3rem' }}></i>
+                    <h5 className="mt-2">{getSessionName(selectedSession)}</h5>
+                  </div>
+                  
+                  <p>
+                    <strong>Connected:</strong> {getTimeSince(selectedSession.createdAt)}
+                  </p>
+                  <p>
+                    <strong>ID:</strong> {getDisplayId(selectedSession)}
+                  </p>
+                </CardBody>
+                
+                <CardFooter>
+                  <Button 
+                    color="danger" 
+                    block
+                    onClick={() => disconnectSession(getSessionId(selectedSession))}
+                  >
+                    Disconnect
+                  </Button>
+                </CardFooter>
+              </Card>
+            </Col>
+            
+            <Col md={8}>
+              <Card className="shadow-sm">
+                <CardHeader className="bg-success text-white">
+                  <h5 className="mb-0">Send Message</h5>
+                </CardHeader>
+                
+                <CardBody>
+                  <FormGroup>
+                    <Label for="phoneNumber"><strong>Phone Number</strong></Label>
+                    <InputGroup>
+                      <InputGroupText>
+                        <i className="fas fa-phone"></i>
+                      </InputGroupText>
+                      <Input
+                        type="text"
+                        id="phoneNumber"
+                        placeholder="Enter phone number (e.g., 3001234567)"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                      />
+                    </InputGroup>
+                    <small className="text-muted">Country code (92) will be added automatically</small>
+                  </FormGroup>
+                  
+                  <FormGroup>
+                    <Label for="message"><strong>Message</strong></Label>
+                    <Input
+                      type="textarea"
+                      id="message"
+                      rows="5"
+                      placeholder="Type your message here..."
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                    />
+                    <small className="text-muted">Press Shift+Enter for new line, Enter to send</small>
+                  </FormGroup>
+                </CardBody>
+                
+                <CardFooter>
+                  <Button 
+                    color="success" 
+                    block
+                    onClick={sendMessage}
+                    disabled={!phoneNumber || !message || loading}
+                  >
+                    {loading ? (
+                      <span><Spinner size="sm" className="me-2" /> Sending...</span>
+                    ) : (
+                      <span><i className="fas fa-paper-plane me-2"></i> Send Message</span>
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </Col>
+          </Row>
+        )}
+      </TabPane>
+      
+      {/* HISTORY TAB */}
+      <TabPane tabId="history">
+        <h4 className="mb-4">Message History</h4>
+        
+        {!selectedSession && (
+          <div className="text-center p-5">
+            <div className="mb-4">
+              <i className="fas fa-exclamation-circle text-warning" style={{ fontSize: '3rem' }}></i>
+            </div>
+            <h5>No WhatsApp Account Selected</h5>
+            <p className="text-muted mb-4">Please select a WhatsApp account first</p>
+            <Button color="primary" onClick={() => setActiveTab('sessions')}>
+              Select WhatsApp Account
+            </Button>
+          </div>
+        )}
+        
+        {selectedSession && messageLoading && (
+          <div className="text-center p-4"><Spinner color="primary" /></div>
+        )}
+        
+        {selectedSession && !messageLoading && (
+          <Row>
+            <Col md={4} className="mb-4 mb-md-0">
+              <Card className="shadow-sm">
+                <CardHeader className="bg-primary text-white">
+                  <h5 className="mb-0">
+                    <i className="fas fa-users me-2"></i>
+                    Contacts
+                  </h5>
+                </CardHeader>
+                
+                <CardBody className="p-0" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                  {contacts.length === 0 && (
+                    <div className="text-center p-4">
+                      <i className="fas fa-address-book text-muted mb-3" style={{ fontSize: '2rem' }}></i>
+                      <p className="mb-0">No contacts found</p>
+                    </div>
+                  )}
+                  
+                  {contacts.length > 0 && (
+                    <div className="list-group list-group-flush">
+                      {contacts.map((contact, index) => (
+                        <div 
+                          key={index} 
+                          className={`list-group-item list-group-item-action ${
+                            selectedContact && selectedContact.id === contact.id ? 'active' : ''
+                          }`}
+                          onClick={() => handleContactSelect(contact)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="d-flex align-items-center">
+                            <div className="me-3">
+                              <i className="fas fa-user-circle" style={{ fontSize: '2rem' }}></i>
+                            </div>
+                            <div>
+                              <h6 className="mb-0">{contact.name}</h6>
+                              <small>{contact.number}</small>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            </Col>
+            
+            <Col md={8}>
+              <Card className="shadow-sm">
+                <CardHeader className="bg-primary text-white d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">
+                    <i className="fas fa-comments me-2"></i>
+                    Chat History
+                  </h5>
+                  
+                  <Button 
+                    color="light" 
+                    size="sm" 
+                    onClick={() => fetchMessageHistory(getSessionId(selectedSession))}
+                  >
+                    <i className="fas fa-sync-alt"></i>
+                  </Button>
+                </CardHeader>
+                
+                <CardBody>
+                  <div style={{ height: '400px', overflowY: 'auto' }}>
+                    {messages.length === 0 && (
+                      <div className="text-center p-5">
+                        <i className="fas fa-comment-slash text-muted mb-3" style={{ fontSize: '3rem' }}></i>
+                        <h5>No messages found</h5>
+                        <p className="text-muted">Select a contact or start a new conversation</p>
+                      </div>
+                    )}
+                    
+                    {messages.length > 0 && (
+                      <div>
+                        {messages.map((msg, index) => {
+                          const isIncoming = msg.sender !== "system" && 
+                                           msg.sender.includes("@s.whatsapp.net");
+                          const isOutgoing = msg.sender === "system";
+                          
+                          return (
+                            <div 
+                              key={index} 
+                              className={`d-flex mb-3 ${isIncoming ? 'justify-content-start' : 'justify-content-end'}`}
+                            >
+                              <div 
+                                className={`p-3 rounded ${
+                                  isIncoming ? 'bg-light' : 'bg-success text-white'
+                                }`}
+                                style={{ maxWidth: '80%' }}
+                              >
+                                {!isOutgoing && isIncoming && (
+                                  <div className="mb-1">
+                                    <small className="fw-bold">
+                                      {formatPhoneNumber(msg.sender.split('@')[0])}
+                                    </small>
+                                  </div>
+                                )}
+                                <div>{msg.message}</div>
+                                <div className="text-end mt-1">
+                                  <small className="text-muted">
+                                    {new Date(msg.timestamp).toLocaleTimeString()}
+                                  </small>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </CardBody>
+                
+                {selectedContact && (
+                  <CardFooter>
+                    <InputGroup>
+                      <Input
+                        type="text"
+                        placeholder="Type a message..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                      />
+                      <Button 
+                        color="success"
+                        onClick={sendMessage}
+                        disabled={!message || loading}
+                      >
+                        <i className="fas fa-paper-plane"></i>
+                      </Button>
+                    </InputGroup>
+                  </CardFooter>
+                )}
+              </Card>
+            </Col>
+          </Row>
+        )}
+      </TabPane>
+    </TabContent>
+    
+    {/* QR Code Modal */}
+    <Modal isOpen={showQRModal} toggle={toggleQRModal}>
+      <ModalHeader toggle={toggleQRModal} className="bg-success text-white">
+        Connect WhatsApp
+      </ModalHeader>
+      
+      <ModalBody className="text-center p-4">
+        {qrCode ? (
+          <div>
+            <div className="border p-3 mb-3 d-inline-block">
+              <img 
+                src={qrCode} 
+                alt="WhatsApp QR Code" 
+                style={{ width: '250px', height: '250px' }} 
+              />
+            </div>
+            <div className="alert alert-info mt-3">
+              <h6>How to connect:</h6>
+              <ol className="mb-0 text-start">
+                <li>Open WhatsApp on your phone</li>
+                <li>Go to Settings Linked Devices</li>
+                <li>Tap on "Link a Device"</li>
+                <li>Scan this QR code</li>
+              </ol>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <i className="fab fa-whatsapp text-success mb-3" style={{ fontSize: '4rem' }}></i>
+            <h5>Connect WhatsApp</h5>
+            <p className="text-muted">
+              Click the button below to generate a QR code and connect your WhatsApp
+            </p>
+          </div>
+        )}
+      </ModalBody>
+      
+      <ModalFooter>
+        {!qrCode ? (
+          <Button 
+            color="success" 
+            block
+            onClick={generateQRCode}
+            disabled={loading}
+          >
+            {loading ? (
+              <span><Spinner size="sm" className="me-2" /> Generating...</span>
+            ) : (
+              <span><i className="fas fa-qrcode me-2"></i> Generate QR Code</span>
+            )}
+          </Button>
+        ) : (
+          <Button color="secondary" onClick={toggleQRModal}>
+            Close
+          </Button>
+        )}
+      </ModalFooter>
+    </Modal>
+
+    {/* Alert Notification */}
+    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1050, minWidth: '300px' }}>
+      <Alert 
+        color={alertMessage.color} 
+        isOpen={alertMessage.visible} 
+        toggle={() => setAlertMessage(prev => ({ ...prev, visible: false }))}
+      >
+        {alertMessage.text}
+      </Alert>
+    </div>
+  </Container>
+);
 };
 
 export default WhatsappWeb;
