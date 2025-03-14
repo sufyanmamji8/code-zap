@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
@@ -345,259 +348,243 @@ const WhatsappWeb = () => {
   return (
     <Container fluid className="py-4 px-md-4" style={{ minHeight: '100vh' }}>
       {/* Top Header */}
-      <div className="mb-4 d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm">
-        <h3 className="mb-0">
-          <i className="fab fa-whatsapp text-success me-2"></i>
-          WhatsApp Integration
-        </h3>
-        
-        <div>
-          <Button 
-            color="light" 
-            className="me-2"
-            onClick={() => fetchActiveSessions()}
-            disabled={loading || refreshing}
-          >
-            <i className={`fas fa-sync-alt me-2 ${refreshing ? 'fa-spin' : ''}`}></i>
-            Refresh
-          </Button>
-          
-          <Button 
-            color="success"
-            onClick={toggleQRModal}
-          >
-            <i className="fas fa-plus me-2"></i>
-            Connect New
-          </Button>
-        </div>
-      </div>
+      <div className="header-container bg-white shadow-sm rounded mb-4">
+  <div className="d-flex justify-content-between align-items-center p-3">
+    <h3 className="mb-0">
+      <i className="fab fa-whatsapp text-success me-2"></i>
+      WhatsApp Dashboard
+    </h3>
+    
+    <div>
+      <Button color="light" className="me-2" onClick={() => fetchActiveSessions()}>
+        <i className={`fas fa-sync-alt me-2 ${refreshing ? 'fa-spin' : ''}`}></i>
+        Refresh
+      </Button>
+      
+      <Button color="success" onClick={toggleQRModal}>
+        <i className="fas fa-plus me-2"></i>
+        New Connection
+      </Button>
+    </div>
+  </div>
 
       {/* Simple Navigation Tabs */}
-      <Nav tabs className="mb-3 bg-white rounded-top shadow-sm">
-        <NavItem>
-          <NavLink
-            className={`cursor-pointer ${activeTab === 'sessions' ? 'active bg-light' : ''}`}
-            onClick={() => setActiveTab('sessions')}
-          >
-            <i className="fas fa-mobile-alt me-2"></i>
-            My WhatsApp Accounts
-          </NavLink>
-        </NavItem>
-        
-        <NavItem>
-          <NavLink
-            className={`cursor-pointer ${activeTab === 'messaging' ? 'active bg-light' : ''} ${!selectedSession ? 'disabled' : ''}`}
-            onClick={() => selectedSession && setActiveTab('messaging')}
-          >
-            <i className="fas fa-paper-plane me-2"></i>
-            Send Messages
-          </NavLink>
-        </NavItem>
-        
-        <NavItem>
-          <NavLink
-            className={`cursor-pointer ${activeTab === 'history' ? 'active bg-light' : ''} ${!selectedSession ? 'disabled' : ''}`}
-            onClick={() => selectedSession && setActiveTab('history')}
-          >
-            <i className="fas fa-history me-2"></i>
-            Message History
-          </NavLink>
-        </NavItem>
-      </Nav>
+      <Nav tabs className="px-3">
+    <NavItem>
+      <NavLink 
+        className={`cursor-pointer ${activeTab === 'sessions' ? 'active' : ''}`}
+        onClick={() => setActiveTab('sessions')}
+      >
+        <i className="fas fa-mobile-alt me-2"></i>
+        My Accounts
+      </NavLink>
+    </NavItem>
+    
+    <NavItem>
+      <NavLink
+        className={`cursor-pointer ${activeTab === 'messaging' ? 'active' : ''} ${!selectedSession ? 'text-muted' : ''}`}
+        onClick={() => selectedSession && setActiveTab('messaging')}
+      >
+        <i className="fas fa-paper-plane me-2"></i>
+        Send Messages
+      </NavLink>
+    </NavItem>
+    
+    <NavItem>
+      <NavLink
+        className={`cursor-pointer ${activeTab === 'history' ? 'active' : ''} ${!selectedSession ? 'text-muted' : ''}`}
+        onClick={() => selectedSession && setActiveTab('history')}
+      >
+        <i className="fas fa-history me-2"></i>
+        Chat History
+      </NavLink>
+    </NavItem>
+  </Nav>
+</div>
 
       {/* Tab Contents */}
-      <TabContent activeTab={activeTab} className="bg-white p-3 rounded-bottom shadow-sm mb-4">
-        {/* SESSIONS TAB */}
-        <TabPane tabId="sessions">
-          <h4 className="mb-4">Your Connected WhatsApp Accounts</h4>
-          
-          {loading && <div className="text-center p-4"><Spinner color="primary" /></div>}
-          
-          {!loading && activeSessions.length === 0 && (
-            <div className="text-center p-5">
-              <div className="mb-4">
-                <i className="fas fa-mobile-alt text-muted" style={{ fontSize: '3rem' }}></i>
-              </div>
-              <h5>No WhatsApp Accounts Connected</h5>
-              <p className="text-muted mb-4">Connect your WhatsApp to start sending messages</p>
-              <Button 
-                color="success"
-                onClick={toggleQRModal}
-              >
-                <i className="fas fa-plus me-2"></i> Connect WhatsApp
-              </Button>
-            </div>
-          )}
-          
-          {!loading && activeSessions.length > 0 && (
-            <Row>
-              {activeSessions.map((session, index) => (
-                <Col key={index} sm={12} md={6} lg={4} className="mb-4">
-                <Card 
-                  className={`shadow-sm h-100 ${
-                    selectedSession && getSessionId(selectedSession) === getSessionId(session)
-                      ? 'border-success' : ''
-                  }`}
-                  onClick={() => handleSessionSelect(session)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <CardHeader className="bg-success text-white">
-                    <h5 className="mb-0">
-                      <i className="fas fa-user me-2"></i>
-                      {getSessionName(session)}
-                    </h5>
-                  </CardHeader>
+      <TabPane tabId="sessions">
+  <div className="p-3">
+    <h4 className="mb-4">Connected WhatsApp Accounts</h4>
+    
+    {loading ? (
+      <div className="text-center py-5">
+        <Spinner color="success" size="lg" />
+        <p className="mt-3 text-muted">Loading your accounts...</p>
+      </div>
+    ) : activeSessions.length === 0 ? (
+      <div className="text-center py-5 bg-light rounded">
+        <i className="fas fa-mobile-alt text-muted mb-3" style={{ fontSize: '4rem' }}></i>
+        <h5>No WhatsApp Accounts Connected</h5>
+        <p className="text-muted mb-4">Connect your WhatsApp to start sending messages</p>
+        <Button color="success" size="lg" onClick={toggleQRModal}>
+          <i className="fas fa-plus me-2"></i> Connect WhatsApp
+        </Button>
+      </div>
+    ) : (
+      <Row className="account-cards">
+        {activeSessions.map((session, index) => (
+          <Col key={index} sm={12} md={6} lg={4} className="mb-4">
+            <Card 
+              className={`h-100 shadow-hover ${selectedSession && getSessionId(selectedSession) === getSessionId(session) ? 'border-success' : ''}`}
+              onClick={() => handleSessionSelect(session)}
+              style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              <CardHeader className="bg-success text-white">
+                <div className="d-flex align-items-center">
+                  <i className="fas fa-user-circle me-2" style={{ fontSize: '1.5rem' }}></i>
+                  <h5 className="mb-0">{getSessionName(session)}</h5>
+                </div>
+              </CardHeader>
+              
+              <CardBody>
+                <div className="d-flex align-items-center mb-2">
+                  <Badge color="success" pill>Active</Badge>
+                  <span className="ms-2 text-muted small">
+                    {getTimeSince(session.createdAt)}
+                  </span>
+                </div>
+                
+                <p className="mb-0 text-muted">
+                  Session ID: {getDisplayId(session)}
+                </p>
+              </CardBody>
+              
+              <CardFooter className="bg-light">
+                <div className="d-flex justify-content-between">
+                  <Button color="primary" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    handleSessionSelect(session);
+                  }}>
+                    Select
+                  </Button>
                   
-                  <CardBody>
-                    <p>
-                      <strong>Status:</strong> 
-                      <Badge color="success" className="ms-2">Active</Badge>
-                    </p>
-                    <p>
-                      <strong>Connected:</strong> {getTimeSince(session.createdAt)}
-                    </p>
-                    <p className="mb-0">
-                      <strong>ID:</strong> {getDisplayId(session)}
-                    </p>
-                  </CardBody>
-                  
-                  <CardFooter className="d-flex justify-content-between">
-                    <Button 
-                      color="primary" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSessionSelect(session);
-                      }}
-                    >
-                      Use This
-                    </Button>
-                    
-                    <Button 
-                      color="danger" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        disconnectSession(getSessionId(session));
-                      }}
-                    >
-                      Disconnect
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        )}
-      </TabPane>
+                  <Button color="danger" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    disconnectSession(getSessionId(session));
+                  }}>
+                    Disconnect
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    )}
+  </div>
+</TabPane>
       
       {/* MESSAGING TAB */}
       <TabPane tabId="messaging">
-        <h4 className="mb-4">Send WhatsApp Messages</h4>
+  <div className="p-3">
+    <h4 className="mb-4">Send WhatsApp Messages</h4>
+    
+    {!selectedSession ? (
+      <div className="text-center py-5 bg-light rounded">
+        <i className="fas fa-exclamation-circle text-warning mb-3" style={{ fontSize: '3rem' }}></i>
+        <h5>No WhatsApp Account Selected</h5>
+        <p className="text-muted mb-4">Please select a WhatsApp account to send messages</p>
+        <Button color="primary" onClick={() => setActiveTab('sessions')}>
+          Select Account
+        </Button>
+      </div>
+    ) : (
+      <Row>
+        <Col md={4} className="mb-4">
+          <Card className="shadow-sm bg-light">
+            <CardBody className="text-center p-4">
+              <div className="mb-3">
+                <i className="fas fa-user-circle text-success mb-3" style={{ fontSize: '4rem' }}></i>
+                <h5>{getSessionName(selectedSession)}</h5>
+                <Badge color="success" pill className="px-3 py-2">Active</Badge>
+              </div>
+              
+              <div className="text-start mt-4">
+                <p className="mb-1">
+                  <strong>Connected:</strong> {getTimeSince(selectedSession.createdAt)}
+                </p>
+                <p className="mb-1">
+                  <strong>ID:</strong> {getDisplayId(selectedSession)}
+                </p>
+              </div>
+              
+              <Button color="danger" className="mt-3" block onClick={() => disconnectSession(getSessionId(selectedSession))}>
+                <i className="fas fa-power-off me-2"></i>
+                Disconnect
+              </Button>
+            </CardBody>
+          </Card>
+        </Col>
         
-        {!selectedSession && (
-          <div className="text-center p-5">
-            <div className="mb-4">
-              <i className="fas fa-exclamation-circle text-warning" style={{ fontSize: '3rem' }}></i>
-            </div>
-            <h5>No WhatsApp Account Selected</h5>
-            <p className="text-muted mb-4">Please select a WhatsApp account first</p>
-            <Button color="primary" onClick={() => setActiveTab('sessions')}>
-              Select WhatsApp Account
-            </Button>
-          </div>
-        )}
-        
-        {selectedSession && (
-          <Row>
-            <Col md={4} className="mb-4 mb-md-0">
-              <Card className="shadow-sm">
-                <CardHeader className="bg-success text-white">
-                  <h5 className="mb-0">Active Account</h5>
-                </CardHeader>
-                
-                <CardBody>
-                  <div className="text-center mb-3">
-                    <i className="fas fa-user-circle text-success" style={{ fontSize: '3rem' }}></i>
-                    <h5 className="mt-2">{getSessionName(selectedSession)}</h5>
-                  </div>
-                  
-                  <p>
-                    <strong>Connected:</strong> {getTimeSince(selectedSession.createdAt)}
-                  </p>
-                  <p>
-                    <strong>ID:</strong> {getDisplayId(selectedSession)}
-                  </p>
-                </CardBody>
-                
-                <CardFooter>
-                  <Button 
-                    color="danger" 
-                    block
-                    onClick={() => disconnectSession(getSessionId(selectedSession))}
-                  >
-                    Disconnect
-                  </Button>
-                </CardFooter>
-              </Card>
-            </Col>
+        <Col md={8}>
+          <Card className="shadow-sm">
+            <CardHeader className="bg-light">
+              <h5 className="mb-0">
+                <i className="fas fa-paper-plane text-success me-2"></i>
+                Send New Message
+              </h5>
+            </CardHeader>
             
-            <Col md={8}>
-              <Card className="shadow-sm">
-                <CardHeader className="bg-success text-white">
-                  <h5 className="mb-0">Send Message</h5>
-                </CardHeader>
-                
-                <CardBody>
-                  <FormGroup>
-                    <Label for="phoneNumber"><strong>Phone Number</strong></Label>
-                    <InputGroup>
-                      <InputGroupText>
-                        <i className="fas fa-phone"></i>
-                      </InputGroupText>
-                      <Input
-                        type="text"
-                        id="phoneNumber"
-                        placeholder="Enter phone number (e.g., 3001234567)"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                      />
-                    </InputGroup>
-                    <small className="text-muted">Country code (92) will be added automatically</small>
-                  </FormGroup>
-                  
-                  <FormGroup>
-                    <Label for="message"><strong>Message</strong></Label>
-                    <Input
-                      type="textarea"
-                      id="message"
-                      rows="5"
-                      placeholder="Type your message here..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                    />
-                    <small className="text-muted">Press Shift+Enter for new line, Enter to send</small>
-                  </FormGroup>
-                </CardBody>
-                
-                <CardFooter>
-                  <Button 
-                    color="success" 
-                    block
-                    onClick={sendMessage}
-                    disabled={!phoneNumber || !message || loading}
-                  >
-                    {loading ? (
-                      <span><Spinner size="sm" className="me-2" /> Sending...</span>
-                    ) : (
-                      <span><i className="fas fa-paper-plane me-2"></i> Send Message</span>
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </Col>
-          </Row>
-        )}
-      </TabPane>
+            <CardBody>
+              <FormGroup>
+                <Label for="phoneNumber">
+                  <i className="fas fa-phone me-2"></i>
+                  <strong>Phone Number</strong>
+                </Label>
+                <InputGroup>
+                  <InputGroupText>+92</InputGroupText>
+                  <Input
+                    type="text"
+                    id="phoneNumber"
+                    placeholder="Enter phone number (e.g., 3001234567)"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                    autoComplete="off"
+                  />
+                </InputGroup>
+                <small className="text-muted">Country code (92) will be added automatically</small>
+              </FormGroup>
+              
+              <FormGroup>
+                <Label for="message">
+                  <i className="fas fa-comment me-2"></i>
+                  <strong>Message</strong>
+                </Label>
+                <Input
+                  type="textarea"
+                  id="message"
+                  rows="5"
+                  placeholder="Type your message here..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                />
+                <small className="text-muted">Press Shift+Enter for new line, Enter to send</small>
+              </FormGroup>
+            </CardBody>
+            
+            <CardFooter className="bg-light">
+              <Button 
+                color="success" 
+                block
+                size="lg"
+                onClick={sendMessage}
+                disabled={!phoneNumber || !message || loading}
+              >
+                {loading ? (
+                  <span><Spinner size="sm" className="me-2" /> Sending...</span>
+                ) : (
+                  <span><i className="fas fa-paper-plane me-2"></i> Send Message</span>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </Col>
+      </Row>
+    )}
+  </div>
+</TabPane>
       
       {/* HISTORY TAB */}
       <TabPane tabId="history">
@@ -759,77 +746,87 @@ const WhatsappWeb = () => {
           </Row>
         )}
       </TabPane>
-    </TabContent>
+    {/* </TabContent> */}
     
     {/* QR Code Modal */}
-    <Modal isOpen={showQRModal} toggle={toggleQRModal}>
-      <ModalHeader toggle={toggleQRModal} className="bg-success text-white">
-        Connect WhatsApp
-      </ModalHeader>
-      
-      <ModalBody className="text-center p-4">
-        {qrCode ? (
-          <div>
-            <div className="border p-3 mb-3 d-inline-block">
-              <img 
-                src={qrCode} 
-                alt="WhatsApp QR Code" 
-                style={{ width: '250px', height: '250px' }} 
-              />
-            </div>
-            <div className="alert alert-info mt-3">
-              <h6>How to connect:</h6>
-              <ol className="mb-0 text-start">
-                <li>Open WhatsApp on your phone</li>
-                <li>Go to Settings Linked Devices</li>
-                <li>Tap on "Link a Device"</li>
-                <li>Scan this QR code</li>
-              </ol>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <i className="fab fa-whatsapp text-success mb-3" style={{ fontSize: '4rem' }}></i>
-            <h5>Connect WhatsApp</h5>
-            <p className="text-muted">
-              Click the button below to generate a QR code and connect your WhatsApp
-            </p>
-          </div>
-        )}
-      </ModalBody>
-      
-      <ModalFooter>
-        {!qrCode ? (
-          <Button 
-            color="success" 
-            block
-            onClick={generateQRCode}
-            disabled={loading}
-          >
-            {loading ? (
-              <span><Spinner size="sm" className="me-2" /> Generating...</span>
-            ) : (
-              <span><i className="fas fa-qrcode me-2"></i> Generate QR Code</span>
-            )}
-          </Button>
-        ) : (
-          <Button color="secondary" onClick={toggleQRModal}>
-            Close
-          </Button>
-        )}
-      </ModalFooter>
-    </Modal>
+    <Modal isOpen={showQRModal} toggle={toggleQRModal} className="modal-dialog-centered">
+  <ModalHeader toggle={toggleQRModal} className="bg-success text-white">
+    <i className="fab fa-whatsapp me-2"></i>
+    Connect WhatsApp
+  </ModalHeader>
+  
+  <ModalBody className="text-center p-4">
+    {loading ? (
+      <div className="py-4">
+        <Spinner color="success" size="lg" />
+        <p className="mt-3">Generating QR Code...</p>
+      </div>
+    ) : qrCode ? (
+      <div>
+        <div className="border p-4 mb-4 d-inline-block">
+          <img 
+            src={qrCode} 
+            alt="WhatsApp QR Code" 
+            style={{ width: '250px', height: '250px' }} 
+          />
+        </div>
+        <div className="alert alert-info">
+          <h6 className="mb-2">How to connect:</h6>
+          <ol className="mb-0 text-start">
+            <li>Open WhatsApp on your phone</li>
+            <li>Go to Settings → Linked Devices</li>
+            <li>Tap on "Link a Device"</li>
+            <li>Scan this QR code</li>
+          </ol>
+        </div>
+      </div>
+    ) : (
+      <div className="py-4">
+        <i className="fab fa-whatsapp text-success mb-4" style={{ fontSize: '5rem' }}></i>
+        <h5>Connect WhatsApp</h5>
+        <p className="text-muted">
+          Connect your WhatsApp account to send messages directly from this dashboard.
+        </p>
+      </div>
+    )}
+  </ModalBody>
+  
+  <ModalFooter>
+    {!qrCode ? (
+      <Button 
+        color="success" 
+        block
+        size="lg"
+        onClick={generateQRCode}
+        disabled={loading}
+      >
+        <i className="fas fa-qrcode me-2"></i> Generate QR Code
+      </Button>
+    ) : (
+      <Button color="secondary" onClick={toggleQRModal}>
+        Close
+      </Button>
+    )}
+  </ModalFooter>
+</Modal>
 
     {/* Alert Notification */}
-    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1050, minWidth: '300px' }}>
-      <Alert 
-        color={alertMessage.color} 
-        isOpen={alertMessage.visible} 
-        toggle={() => setAlertMessage(prev => ({ ...prev, visible: false }))}
-      >
-        {alertMessage.text}
-      </Alert>
+    <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1050, maxWidth: '350px' }}>
+  <Alert 
+    color={alertMessage.color} 
+    isOpen={alertMessage.visible} 
+    toggle={() => setAlertMessage(prev => ({ ...prev, visible: false }))}
+    className="shadow-lg"
+  >
+    <div className="d-flex align-items-center">
+      {alertMessage.color === 'success' && <i className="fas fa-check-circle me-2"></i>}
+      {alertMessage.color === 'danger' && <i className="fas fa-exclamation-circle me-2"></i>}
+      {alertMessage.color === 'warning' && <i className="fas fa-exclamation-triangle me-2"></i>}
+      {alertMessage.color === 'info' && <i className="fas fa-info-circle me-2"></i>}
+      {alertMessage.text}
     </div>
+  </Alert>
+</div>
   </Container>
 );
 };
