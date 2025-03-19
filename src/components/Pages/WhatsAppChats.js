@@ -1464,7 +1464,7 @@ const WhatsAppChats = () => {
   placeholder="Type a message..."
   style={{
     border: "none",
-    padding: "4px",
+    padding: "12px 6px", // Zyada padding taake text behtar lage
     flex: 1,
     backgroundColor: "transparent",
     boxShadow: "none",
@@ -1473,14 +1473,18 @@ const WhatsAppChats = () => {
     wordWrap: "break-word",
     whiteSpace: "pre-wrap",
     height: "auto",
-    minHeight: "24px",
-    maxHeight: "100px",
+    minHeight: "36px", // Thoda height increase taake proper lage
+    maxHeight: "120px",
     overflowY: "auto",
     fontFamily: "inherit",
-    fontSize: "inherit",
-    marginTop: "16px", // Yeh text area ko neeche karega
+    fontSize: "16px", // Text thoda bara aur readable ho
+    lineHeight: "18px", // Proper alignment ke liye
+    display: "block", // Flex hatake normal block display rakhein
+    borderRadius: "20px", // WhatsApp jesa rounded look dene ke liye
+    backgroundColor: "#fff", // Light theme match karne ke liye
   }}
 />
+
 
               <Button
                 onClick={sendMessage}

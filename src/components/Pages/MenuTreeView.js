@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
@@ -510,37 +512,48 @@ const [scheduleMessage, setScheduleMessage] = useState({
       </div>
 
       {/* Simple Navigation Tabs */}
-      <Nav tabs className="mb-3 bg-white rounded-top shadow-sm">
-        <NavItem>
-          <NavLink
-            className={`cursor-pointer ${activeTab === 'sessions' ? 'active bg-light' : ''}`}
-            onClick={() => setActiveTab('sessions')}
-          >
-            <i className="fas fa-mobile-alt me-2"></i>
-            My WhatsApp Accounts
-          </NavLink>
-        </NavItem>
-        
-        <NavItem>
-          <NavLink
-            className={`cursor-pointer ${activeTab === 'messaging' ? 'active bg-light' : ''} ${!selectedSession ? 'disabled' : ''}`}
-            onClick={() => selectedSession && setActiveTab('messaging')}
-          >
-            <i className="fas fa-paper-plane me-2"></i>
-            Send Messages
-          </NavLink>
-        </NavItem>
-        
-        <NavItem>
-          <NavLink
-            className={`cursor-pointer ${activeTab === 'history' ? 'active bg-light' : ''} ${!selectedSession ? 'disabled' : ''}`}
-            onClick={() => selectedSession && setActiveTab('history')}
-          >
-            <i className="fas fa-history me-2"></i>
-            Message History
-          </NavLink>
-        </NavItem>
-      </Nav>
+      <Nav tabs className="mb-3 bg-white rounded-top shadow-sm nav-fill">
+  <NavItem>
+    <NavLink
+      className={`cursor-pointer ${activeTab === 'sessions' ? 'active bg-light text-primary fw-bold' : ''}`}
+      onClick={() => setActiveTab('sessions')}
+    >
+      <i className="fas fa-mobile-alt me-2"></i>
+      WhatsApp Accounts
+    </NavLink>
+  </NavItem>
+  
+  <NavItem>
+    <NavLink
+      className={`cursor-pointer ${activeTab === 'messaging' ? 'active bg-light text-primary fw-bold' : ''} ${!selectedSession ? 'disabled' : ''}`}
+      onClick={() => selectedSession && setActiveTab('messaging')}
+    >
+      <i className="fas fa-paper-plane me-2"></i>
+      Send Messages
+    </NavLink>
+  </NavItem>
+  
+  <NavItem>
+    <NavLink
+      className={`cursor-pointer ${activeTab === 'history' ? 'active bg-light text-primary fw-bold' : ''} ${!selectedSession ? 'disabled' : ''}`}
+      onClick={() => selectedSession && setActiveTab('history')}
+    >
+      <i className="fas fa-history me-2"></i>
+      Message History
+    </NavLink>
+
+  </NavItem>
+
+  <NavItem>
+    <NavLink
+      className={`cursor-pointer ${activeTab === 'schedule' ? 'active bg-light text-primary fw-bold' : ''} ${!selectedSession ? 'disabled' : ''}`}
+      onClick={() => selectedSession && setActiveTab('schedule')}
+    >
+      <i className="fas fa-calendar-alt me-2"></i>
+      Scheduled Messages
+    </NavLink>
+  </NavItem>
+</Nav>
 
       {/* Tab Contents */}
       <TabContent activeTab={activeTab} className="bg-white p-3 rounded-bottom shadow-sm mb-4">
@@ -569,59 +582,73 @@ const [scheduleMessage, setScheduleMessage] = useState({
           {!loading && activeSessions.length > 0 && (
             <Row>
               {activeSessions.map((session, index) => (
-                <Col key={index} sm={12} md={6} lg={4} className="mb-4">
-                <Card 
-                  className={`shadow-sm h-100 ${
-                    selectedSession && getSessionId(selectedSession) === getSessionId(session)
-                      ? 'border-success' : ''
-                  }`}
-                  onClick={() => handleSessionSelect(session)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <CardHeader className="bg-success text-white">
-                    <h5 className="mb-0">
-                      <i className="fas fa-user me-2"></i>
-                      {getSessionName(session)}
-                    </h5>
-                  </CardHeader>
-                  
-                  <CardBody>
-                    <p>
-                      <strong>Status:</strong> 
-                      <Badge color="success" className="ms-2">Active</Badge>
-                    </p>
-                    <p>
-                      <strong>Connected:</strong> {getTimeSince(session.createdAt)}
-                    </p>
-                    <p className="mb-0">
-                      <strong>ID:</strong> {getDisplayId(session)}
-                    </p>
-                  </CardBody>
-                  
-                  <CardFooter className="d-flex justify-content-between">
-                    <Button 
-                      color="primary" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSessionSelect(session);
-                      }}
-                    >
-                      Use This
-                    </Button>
-                    
-                    <Button 
-                      color="danger" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        disconnectSession(getSessionId(session));
-                      }}
-                    >
-                      Disconnect
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </Col>
-            ))}
+  <Col key={index} sm={12} md={6} lg={4} className="mb-4">
+    <Card 
+      className={`shadow-sm h-100 ${
+        selectedSession && getSessionId(selectedSession) === getSessionId(session)
+          ? 'border-primary border-2' : 'border-light'
+      }`}
+      onClick={() => handleSessionSelect(session)}
+      style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+    >
+      <CardHeader className="bg-gradient-success text-white d-flex justify-content-between align-items-center">
+        <h5 className="mb-0">
+          <i className="fab fa-whatsapp me-2"></i>
+          {getSessionName(session)}
+        </h5>
+        <Badge color="light" pill className="text-success">
+          Active
+        </Badge>
+      </CardHeader>
+      
+      <CardBody className="d-flex flex-column">
+        <div className="text-center mb-3">
+          <div className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" 
+               style={{ width: '70px', height: '70px' }}>
+            <i className="fas fa-user text-success" style={{ fontSize: '2.5rem' }}></i>
+          </div>
+        </div>
+        
+        <div className="mt-auto">
+          <div className="d-flex justify-content-between mb-2">
+            <span><i className="fas fa-clock text-muted me-2"></i>Connected:</span>
+            <span className="fw-bold">{getTimeSince(session.createdAt)}</span>
+          </div>
+          <div className="d-flex justify-content-between">
+            <span><i className="fas fa-fingerprint text-muted me-2"></i>ID:</span>
+            <span className="fw-bold">{getDisplayId(session)}</span>
+          </div>
+        </div>
+      </CardBody>
+      
+      <CardFooter className="bg-light d-flex justify-content-between">
+        <Button 
+          color="primary" 
+          size="sm"
+          className="w-100 me-2"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSessionSelect(session);
+          }}
+        >
+          <i className="fas fa-check me-1"></i> Use
+        </Button>
+        
+        <Button 
+          color="danger" 
+          size="sm"
+          className="w-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            disconnectSession(getSessionId(session));
+          }}
+        >
+          <i className="fas fa-times me-1"></i> Disconnect
+        </Button>
+      </CardFooter>
+    </Card>
+  </Col>
+))}
           </Row>
         )}
       </TabPane>
@@ -871,28 +898,6 @@ const [scheduleMessage, setScheduleMessage] = useState({
       <i className="fas fa-paper-plane text-success me-2"></i>
       Send WhatsApp Messages
     </h4>
-    
-    {/* {selectedSession && (
-      <div>
-        <Button 
-          color="outline-primary" 
-          className="me-2"
-          onClick={toggleScheduleModal}
-        >
-          <i className="fas fa-calendar-alt me-2"></i>
-          Schedule Message
-        </Button>
-        
-        <Button 
-          color="outline-success"
-          onClick={() => fetchMessageHistory(getSessionId(selectedSession))}
-          disabled={loading}
-        >
-          <i className={`fas fa-sync-alt me-2 ${loading ? 'fa-spin' : ''}`}></i>
-          Refresh
-        </Button>
-      </div>
-    )} */}
   </div>
   
   {!selectedSession && (
@@ -910,236 +915,149 @@ const [scheduleMessage, setScheduleMessage] = useState({
   )}
   
   {selectedSession && (
-    <Row>
-      <Col md={4} lg={3} className="mb-4">
-        <Card className="shadow-sm h-100 border-success">
-          <CardHeader className="bg-success text-white">
-            <h5 className="mb-0">
-              <i className="fas fa-check-circle me-2"></i>
-              Active Account
-            </h5>
-          </CardHeader>
-          
-          <CardBody>
-            <div className="text-center mb-4">
-              <div className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '80px', height: '80px' }}>
-                <i className="fas fa-user-circle text-success" style={{ fontSize: '3rem' }}></i>
-              </div>
-              <h5>{getSessionName(selectedSession)}</h5>
-              <Badge color="success" pill>Connected</Badge>
-            </div>
-            
-            <div className="border-top pt-3">
-              <p>
-                <i className="fas fa-clock text-muted me-2"></i>
-                <strong>Connected:</strong> <span className="float-end">{getTimeSince(selectedSession.createdAt)}</span>
-              </p>
-              <p className="mb-0">
-                <i className="fas fa-fingerprint text-muted me-2"></i>
-                <strong>ID:</strong> <span className="float-end">{getDisplayId(selectedSession)}</span>
-              </p>
-            </div>
-          </CardBody>
-          
-          <CardFooter className="bg-light">
-            <Button 
-              color="danger" 
-              block
-              onClick={() => disconnectSession(getSessionId(selectedSession))}
-            >
-              <i className="fas fa-power-off me-2"></i>
-              Disconnect
-            </Button>
-          </CardFooter>
-        </Card>
-        
-        {/* Recent Contacts */}
-        {/* <Card className="shadow-sm mt-4">
-          <CardHeader className="bg-light">
-            <h5 className="mb-0">
-              <i className="fas fa-address-book text-primary me-2"></i>
-              Recent Contacts
-            </h5>
-          </CardHeader>
-          
-          <CardBody className="p-0" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-            {contacts.length === 0 ? (
-              <div className="text-center p-3">
-                <p className="text-muted mb-0">No recent contacts</p>
-              </div>
-            ) : (
-              <div className="list-group list-group-flush">
-                {contacts.slice(0, 5).map((contact, idx) => (
-                  <div
-                    key={idx}
-                    className="list-group-item list-group-item-action"
-                    onClick={() => setPhoneNumber(contact.number)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <small>{contact.name}</small>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardBody>
-        </Card> */}
-      </Col>
-      
-      <Col md={8} lg={9}>
-        <Card className="shadow-sm">
-          <CardHeader className="bg-success text-white">
-            <h5 className="mb-0">
-              <i className="fas fa-comment-dots me-2"></i>
-              New Message
-            </h5>
-          </CardHeader>
-          
-          <CardBody>
-            <Row>
-              <Col md={6}>
-                <FormGroup>
-                  <Label for="phoneNumber" className="fw-bold">Recipient</Label>
-                  <InputGroup>
-                    <InputGroupText>
-                      <i className="fas fa-phone"></i>
-                    </InputGroupText>
-                    <Input
-                      type="text"
-                      id="phoneNumber"
-                      placeholder="Enter phone number (e.g., 3001234567)"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                      className="form-control-lg"
-                    />
-                  </InputGroup>
-                  <small className="text-muted">Country code (92) will be added automatically</small>
-                </FormGroup>
-              </Col>
-              
-              <Col md={6}>
-                <FormGroup className="h-100">
-                  <Label className="fw-bold">Options</Label>
-                  <div className="d-flex flex-wrap gap-2 pt-2">
-                    <Button
-                      color="outline-primary"
-                      size="sm"
-                      onClick={toggleScheduleModal}
-                    >
-                      <i className="fas fa-calendar-alt me-1"></i>
-                      Schedule
-                    </Button>
-                    
-                    {/* <Button
-                      color="outline-secondary"
-                      size="sm"
-                      onClick={() => setPhoneNumber('')}
-                    >
-                      <i className="fas fa-eraser me-1"></i>
-                      Clear
-                    </Button> */}
-                  </div>
-                </FormGroup>
-              </Col>
-            </Row>
-            
-            <FormGroup>
-              <Label for="message" className="fw-bold">Message</Label>
-              <Input
-                type="textarea"
-                id="message"
-                rows="6"
-                placeholder="Type your message here..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="form-control-lg"
-              />
-              <div className="d-flex justify-content-between mt-1">
-                <small className="text-muted">Press Shift+Enter for new line, Enter to send</small>
-                <small className="text-muted">{message.length} characters</small>
-              </div>
-            </FormGroup>
-          </CardBody>
-          
-          <CardFooter className="d-flex justify-content-between bg-light">
-            {/* <Button
-              color="light"
-              onClick={() => {
-                setMessage('');
-                setPhoneNumber('');
-              }}
-            >
-              <i className="fas fa-times me-2"></i>
-              Clear All
-            </Button> */}
-            
-            <Button 
-              color="success"
-              size="lg"
-              onClick={sendMessage}
-              disabled={!phoneNumber || !message || loading}
-            >
-              {loading ? (
-                <span><Spinner size="sm" className="me-2" /> Sending...</span>
-              ) : (
-                <span><i className="fas fa-paper-plane me-2"></i> Send Message</span>
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
-        
-        {/* Quick Templates */}
-        {/* <Card className="shadow-sm mt-4">
-          <CardHeader className="bg-light">
-            <h5 className="mb-0">
-              <i className="fas fa-bookmark text-primary me-2"></i>
-              Quick Templates
-            </h5>
-          </CardHeader>
-          
-          <CardBody>
-            <div className="d-flex flex-wrap gap-2">
-              <Button
-                color="outline-secondary"
-                size="sm"
-                onClick={() => setMessage("Hi there! Thanks for contacting us.")}
-              >
-                Greeting
-              </Button>
-              
-              <Button
-                color="outline-secondary"
-                size="sm"
-                onClick={() => setMessage("Your order has been confirmed. We'll update you with tracking details soon.")}
-              >
-                Order Confirmation
-              </Button>
-              
-              <Button
-                color="outline-secondary"
-                size="sm"
-                onClick={() => setMessage("Thank you for your purchase! We appreciate your business.")}
-              >
-                Thank You
-              </Button>
-              
-              <Button
-                color="outline-secondary"
-                size="sm"
-                onClick={() => setMessage("This is a reminder about your upcoming appointment.")}
-              >
-                Appointment Reminder
-              </Button>
-            </div>
-          </CardBody>
-        </Card> */}
-      </Col>
-    </Row>
+   <Row>
+   <Col md={4} lg={3} className="mb-4">
+     <Card className="shadow-sm h-100 border-primary">
+       <CardHeader className="bg-gradient-primary text-white">
+         <h5 className="mb-0 d-flex align-items-center">
+           <i className="fab fa-whatsapp me-2"></i>
+           Active Session
+         </h5>
+       </CardHeader>
+       
+       <CardBody className="text-center">
+         <div className="mb-3">
+           <div className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" 
+                style={{ width: '80px', height: '80px' }}>
+             <i className="fas fa-user-circle text-primary" style={{ fontSize: '3.5rem' }}></i>
+           </div>
+           <h5 className="mt-3 mb-1">{getSessionName(selectedSession)}</h5>
+           <Badge color="success" pill className="px-3 py-2">Connected</Badge>
+         </div>
+         
+         <div className="border-top pt-3 mt-3 text-start">
+           <p className="d-flex justify-content-between">
+             <span><i className="fas fa-clock text-muted me-2"></i>Connected:</span>
+             <Badge color="light" className="text-dark">{getTimeSince(selectedSession.createdAt)}</Badge>
+           </p>
+           <p className="d-flex justify-content-between mb-0">
+             <span><i className="fas fa-fingerprint text-muted me-2"></i>ID:</span>
+             <Badge color="light" className="text-dark">{getDisplayId(selectedSession)}</Badge>
+           </p>
+         </div>
+       </CardBody>
+       
+       <CardFooter className="bg-light">
+         <Button 
+           color="danger" 
+           block
+           onClick={() => disconnectSession(getSessionId(selectedSession))}
+         >
+           <i className="fas fa-power-off me-2"></i>
+           Disconnect
+         </Button>
+       </CardFooter>
+     </Card>
+   </Col>
+   
+   <Col md={8} lg={9}>
+     <Card className="shadow-sm">
+       <CardHeader className="bg-gradient-primary text-white">
+         <h5 className="mb-0">
+           <i className="fas fa-comment-dots me-2"></i>
+           New Message
+         </h5>
+       </CardHeader>
+       
+       <CardBody>
+         <Row className="mb-3">
+           <Col md={7}>
+             <FormGroup>
+               <Label for="phoneNumber" className="fw-bold text-primary">Recipient</Label>
+               <InputGroup className="input-group-lg">
+                 <InputGroupText className="bg-light">
+                   <i className="fas fa-phone text-primary"></i>
+                 </InputGroupText>
+                 <Input
+                   type="text"
+                   id="phoneNumber"
+                   placeholder="Phone number (e.g., 3001234567)"
+                   value={phoneNumber}
+                   onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                   className="border-start-0"
+                 />
+               </InputGroup>
+               <small className="text-muted">Country code (92) will be added automatically</small>
+             </FormGroup>
+           </Col>
+           
+           <Col md={5}>
+             <Label className="fw-bold text-primary">Options</Label>
+             <div className="d-flex gap-2 h-75 align-items-center">
+               <Button
+                 color="outline-primary"
+                 className="w-100 d-flex align-items-center justify-content-center"
+                 onClick={toggleScheduleModal}
+               >
+                 <i className="fas fa-calendar-alt me-2"></i>
+                 Schedule Message
+               </Button>
+             </div>
+           </Col>
+         </Row>
+         
+         <FormGroup>
+           <Label for="message" className="fw-bold text-primary">Message</Label>
+           <Input
+             type="textarea"
+             id="message"
+             rows="6"
+             placeholder="Type your message here..."
+             value={message}
+             onChange={(e) => setMessage(e.target.value)}
+             onKeyPress={handleKeyPress}
+             className="form-control-lg"
+             style={{ resize: "none" }}
+           />
+           <div className="d-flex justify-content-between mt-2">
+             <small className="text-muted">Press Shift+Enter for new line</small>
+             <small>
+               <Badge color={message.length > 0 ? "primary" : "light"} pill>
+                 {message.length} characters
+               </Badge>
+             </small>
+           </div>
+         </FormGroup>
+       </CardBody>
+       
+       <CardFooter className="d-flex justify-content-between bg-light">
+         <Button 
+           color="primary"
+           size="lg"
+           className="px-5"
+           onClick={sendMessage}
+           disabled={!phoneNumber || !message || loading}
+         >
+           {loading ? (
+             <span><Spinner size="sm" className="me-2" /> Sending...</span>
+           ) : (
+             <span><i className="fas fa-paper-plane me-2"></i> Send Message</span>
+           )}
+         </Button>
+         
+         <Button 
+           color="secondary"
+           size="lg"
+           onClick={() => {setMessage(''); setPhoneNumber('');}}
+         >
+           <i className="fas fa-eraser me-2"></i> Clear
+         </Button>
+       </CardFooter>
+     </Card>
+   </Col>
+ </Row>
   )}
 </TabPane>
-
-      
-      
       {/* HISTORY TAB */}
       <TabPane tabId="history">
         <h4 className="mb-4">Message History</h4>
@@ -1209,92 +1127,113 @@ const [scheduleMessage, setScheduleMessage] = useState({
             </Col>
             
             <Col md={8}>
-              <Card className="shadow-sm">
-                <CardHeader className="bg-primary text-white d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">
-                    <i className="fas fa-comments me-2"></i>
-                    Chat History
-                  </h5>
-                  
-                  <Button 
-                    color="light" 
-                    size="sm" 
-                    onClick={() => fetchMessageHistory(getSessionId(selectedSession))}
-                  >
-                    <i className="fas fa-sync-alt"></i>
-                  </Button>
-                </CardHeader>
-                
-                <CardBody>
-                  <div style={{ height: '400px', overflowY: 'auto' }}>
-                    {messages.length === 0 && (
-                      <div className="text-center p-5">
-                        <i className="fas fa-comment-slash text-muted mb-3" style={{ fontSize: '3rem' }}></i>
-                        <h5>No messages found</h5>
-                        <p className="text-muted">Select a contact or start a new conversation</p>
-                      </div>
-                    )}
-                    
-                    {messages.length > 0 && (
-                      <div>
-                        {messages.map((msg, index) => {
-                          const isIncoming = msg.sender && msg.sender !== "system" && msg.sender.includes("@s.whatsapp.net");
-                          const isOutgoing = msg.sender === "system";
-                          
-                          return (
-                            <div 
-                              key={index} 
-                              className={`d-flex mb-3 ${isIncoming ? 'justify-content-start' : 'justify-content-end'}`}
-                            >
-                              <div 
-                                className={`p-3 rounded ${
-                                  isIncoming ? 'bg-light' : 'bg-success text-white'
-                                }`}
-                                style={{ maxWidth: '80%' }}
-                              >
-                                {!isOutgoing && isIncoming && (
-                                  <div className="mb-1">
-                                    <small className="fw-bold">
-                                      {formatPhoneNumber(msg.sender.split('@')[0])}
-                                    </small>
-                                  </div>
-                                )}
-                                <div>{msg.message}</div>
-                                <div className="text-end mt-1">
-                                  <small className="text-muted">
-                                    {new Date(msg.timestamp).toLocaleTimeString()}
-                                  </small>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+            <Card className="shadow-sm h-100">
+  <CardHeader className="bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+    <h5 className="mb-0">
+      <i className="fas fa-comments me-2"></i>
+      Chat History
+    </h5>
+    
+    <Button 
+      color="light" 
+      size="sm" 
+      onClick={() => fetchMessageHistory(getSessionId(selectedSession))}
+    >
+      <i className="fas fa-sync-alt"></i>
+    </Button>
+  </CardHeader>
+  
+  <CardBody className="p-0">
+    <div style={{ height: '500px', overflowY: 'auto' }} className="p-3">
+      {messages.length === 0 && (
+        <div className="text-center p-5 h-100 d-flex flex-column justify-content-center">
+          <i className="fas fa-comment-slash text-muted mb-3" style={{ fontSize: '3.5rem' }}></i>
+          <h5>No messages yet</h5>
+          <p className="text-muted mb-4">Start a conversation to see history here</p>
+          <Button color="primary" outline onClick={() => setActiveTab('messaging')}>
+            <i className="fas fa-paper-plane me-2"></i>
+            Send a Message
+          </Button>
+        </div>
+      )}
+      
+      {messages.length > 0 && (
+        <div className="py-2">
+          {messages.map((msg, index) => {
+            const isIncoming = msg.sender !== "system" && 
+                            msg.sender.includes("@s.whatsapp.net");
+            const isOutgoing = msg.sender === "system";
+            
+            return (
+              <div 
+                key={index} 
+                className={`d-flex mb-3 ${isIncoming ? 'justify-content-start' : 'justify-content-end'}`}
+              >
+                {isIncoming && (
+                  <div className="me-2">
+                    <div className="rounded-circle bg-light d-flex align-items-center justify-content-center" 
+                        style={{ width: '35px', height: '35px' }}>
+                      <i className="fas fa-user text-primary"></i>
+                    </div>
+                  </div>
+                )}
+                <div 
+                  className={`p-3 rounded-3 ${
+                    isIncoming ? 'bg-light border' : 'bg-primary text-white'
+                  }`}
+                  style={{ maxWidth: '75%', position: 'relative' }}
+                >
+                  {!isOutgoing && isIncoming && (
+                    <div className="mb-1">
+                      <small className="fw-bold">
+                        {formatPhoneNumber(msg.sender.split('@')[0])}
+                      </small>
+                    </div>
+                  )}
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</div>
+                  <div className="text-end mt-1">
+                    <small className={isIncoming ? 'text-muted' : 'text-white-50'}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </small>
+                    {!isIncoming && (
+                      <i className="fas fa-check-double ms-1" style={{ fontSize: '0.7rem' }}></i>
                     )}
                   </div>
-                </CardBody>
-                
-                {selectedContact && (
-                  <CardFooter>
-                    <InputGroup>
-                      <Input
-                        type="text"
-                        placeholder="Type a message..."
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                      />
-                      <Button 
-                        color="success"
-                        onClick={sendMessage}
-                        disabled={!message || loading}
-                      >
-                        <i className="fas fa-paper-plane"></i>
-                      </Button>
-                    </InputGroup>
-                  </CardFooter>
-                )}
-              </Card>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </CardBody>
+  
+  {selectedContact && (
+    <CardFooter className="p-2">
+      <InputGroup size="lg">
+        <Input
+          type="text"
+          placeholder="Type a message..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="border-end-0"
+        />
+        <InputGroupText className="bg-white">
+          <Button 
+            color="primary"
+            className="rounded-circle"
+            style={{ width: '40px', height: '40px', padding: 0 }}
+            onClick={sendMessage}
+            disabled={!message || loading}
+          >
+            <i className="fas fa-paper-plane"></i>
+          </Button>
+        </InputGroupText>
+      </InputGroup>
+    </CardFooter>
+  )}
+</Card>
             </Col>
           </Row>
         )}
@@ -1303,62 +1242,69 @@ const [scheduleMessage, setScheduleMessage] = useState({
     
     {/* QR Code Modal */}
     <Modal isOpen={showQRModal} toggle={toggleQRModal}>
-      <ModalHeader toggle={toggleQRModal} className="bg-success text-white">
-        Connect WhatsApp
-      </ModalHeader>
-      
-      <ModalBody className="text-center p-4">
-        {qrCode ? (
-          <div>
-            <div className="border p-3 mb-3 d-inline-block">
-              <img 
-                src={qrCode} 
-                alt="WhatsApp QR Code" 
-                style={{ width: '250px', height: '250px' }} 
-              />
-            </div>
-            <div className="alert alert-info mt-3">
-              <h6>How to connect:</h6>
-              <ol className="mb-0 text-start">
-                <li>Open WhatsApp on your phone</li>
-                <li>Go to Settings Linked Devices</li>
-                <li>Tap on "Link a Device"</li>
-                <li>Scan this QR code</li>
-              </ol>
-            </div>
-          </div>
+  <ModalHeader toggle={toggleQRModal} className="bg-primary text-white">
+    <i className="fab fa-whatsapp me-2"></i>
+    Connect WhatsApp
+  </ModalHeader>
+  
+  <ModalBody className="text-center p-4">
+    {qrCode ? (
+      <div>
+        <div className="border p-3 mb-3 d-inline-block shadow-sm rounded">
+          <img 
+            src={qrCode} 
+            alt="WhatsApp QR Code" 
+            style={{ width: '250px', height: '250px' }} 
+          />
+        </div>
+        <div className="alert alert-primary mt-3">
+          <h6 className="d-flex align-items-center">
+            <i className="fas fa-info-circle me-2"></i>
+            How to connect:
+          </h6>
+          <ol className="mb-0 text-start">
+            <li>Open WhatsApp on your phone</li>
+            <li>Go to Settings → Linked Devices</li>
+            <li>Tap on "Link a Device"</li>
+            <li>Scan this QR code</li>
+          </ol>
+        </div>
+      </div>
+    ) : (
+      <div className="py-4">
+        <div className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-4" 
+             style={{ width: '100px', height: '100px' }}>
+          <i className="fab fa-whatsapp text-primary" style={{ fontSize: '4rem' }}></i>
+        </div>
+        <h5>Connect WhatsApp</h5>
+        <p className="text-muted">
+          Generate a QR code to link WhatsApp from your phone
+        </p>
+      </div>
+    )}
+  </ModalBody>
+  
+  <ModalFooter>
+    {!qrCode ? (
+      <Button 
+        color="primary" 
+        className="w-100"
+        onClick={generateQRCode}
+        disabled={loading}
+      >
+        {loading ? (
+          <span><Spinner size="sm" className="me-2" /> Generating...</span>
         ) : (
-          <div>
-            <i className="fab fa-whatsapp text-success mb-3" style={{ fontSize: '4rem' }}></i>
-            <h5>Connect WhatsApp</h5>
-            <p className="text-muted">
-              Click the button below to generate a QR code and connect your WhatsApp
-            </p>
-          </div>
+          <span><i className="fas fa-qrcode me-2"></i> Generate QR Code</span>
         )}
-      </ModalBody>
-      
-      <ModalFooter>
-        {!qrCode ? (
-          <Button 
-            color="success" 
-            block
-            onClick={generateQRCode}
-            disabled={loading}
-          >
-            {loading ? (
-              <span><Spinner size="sm" className="me-2" /> Generating...</span>
-            ) : (
-              <span><i className="fas fa-qrcode me-2"></i> Generate QR Code</span>
-            )}
-          </Button>
-        ) : (
-          <Button color="secondary" onClick={toggleQRModal}>
-            Close
-          </Button>
-        )}
-      </ModalFooter>
-    </Modal>
+      </Button>
+    ) : (
+      <Button color="secondary" onClick={toggleQRModal}>
+        Close
+      </Button>
+    )}
+  </ModalFooter>
+</Modal>
 
     {/* Alert Notification */}
     <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1050, minWidth: '300px' }}>

@@ -855,6 +855,10 @@
 
 
 
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
@@ -1726,28 +1730,6 @@ const [scheduleMessage, setScheduleMessage] = useState({
       <i className="fas fa-paper-plane text-success me-2"></i>
       Send WhatsApp Messages
     </h4>
-    
-    {/* {selectedSession && (
-      <div>
-        <Button 
-          color="outline-primary" 
-          className="me-2"
-          onClick={toggleScheduleModal}
-        >
-          <i className="fas fa-calendar-alt me-2"></i>
-          Schedule Message
-        </Button>
-        
-        <Button 
-          color="outline-success"
-          onClick={() => fetchMessageHistory(getSessionId(selectedSession))}
-          disabled={loading}
-        >
-          <i className={`fas fa-sync-alt me-2 ${loading ? 'fa-spin' : ''}`}></i>
-          Refresh
-        </Button>
-      </div>
-    )} */}
   </div>
   
   {!selectedSession && (
@@ -1807,37 +1789,6 @@ const [scheduleMessage, setScheduleMessage] = useState({
             </Button>
           </CardFooter>
         </Card>
-        
-        {/* Recent Contacts */}
-        {/* <Card className="shadow-sm mt-4">
-          <CardHeader className="bg-light">
-            <h5 className="mb-0">
-              <i className="fas fa-address-book text-primary me-2"></i>
-              Recent Contacts
-            </h5>
-          </CardHeader>
-          
-          <CardBody className="p-0" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-            {contacts.length === 0 ? (
-              <div className="text-center p-3">
-                <p className="text-muted mb-0">No recent contacts</p>
-              </div>
-            ) : (
-              <div className="list-group list-group-flush">
-                {contacts.slice(0, 5).map((contact, idx) => (
-                  <div
-                    key={idx}
-                    className="list-group-item list-group-item-action"
-                    onClick={() => setPhoneNumber(contact.number)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <small>{contact.name}</small>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardBody>
-        </Card> */}
       </Col>
       
       <Col md={8} lg={9}>
@@ -1883,15 +1834,6 @@ const [scheduleMessage, setScheduleMessage] = useState({
                       <i className="fas fa-calendar-alt me-1"></i>
                       Schedule
                     </Button>
-                    
-                    {/* <Button
-                      color="outline-secondary"
-                      size="sm"
-                      onClick={() => setPhoneNumber('')}
-                    >
-                      <i className="fas fa-eraser me-1"></i>
-                      Clear
-                    </Button> */}
                   </div>
                 </FormGroup>
               </Col>
@@ -1917,17 +1859,6 @@ const [scheduleMessage, setScheduleMessage] = useState({
           </CardBody>
           
           <CardFooter className="d-flex justify-content-between bg-light">
-            {/* <Button
-              color="light"
-              onClick={() => {
-                setMessage('');
-                setPhoneNumber('');
-              }}
-            >
-              <i className="fas fa-times me-2"></i>
-              Clear All
-            </Button> */}
-            
             <Button 
               color="success"
               size="lg"
@@ -1942,59 +1873,10 @@ const [scheduleMessage, setScheduleMessage] = useState({
             </Button>
           </CardFooter>
         </Card>
-        
-        {/* Quick Templates */}
-        {/* <Card className="shadow-sm mt-4">
-          <CardHeader className="bg-light">
-            <h5 className="mb-0">
-              <i className="fas fa-bookmark text-primary me-2"></i>
-              Quick Templates
-            </h5>
-          </CardHeader>
-          
-          <CardBody>
-            <div className="d-flex flex-wrap gap-2">
-              <Button
-                color="outline-secondary"
-                size="sm"
-                onClick={() => setMessage("Hi there! Thanks for contacting us.")}
-              >
-                Greeting
-              </Button>
-              
-              <Button
-                color="outline-secondary"
-                size="sm"
-                onClick={() => setMessage("Your order has been confirmed. We'll update you with tracking details soon.")}
-              >
-                Order Confirmation
-              </Button>
-              
-              <Button
-                color="outline-secondary"
-                size="sm"
-                onClick={() => setMessage("Thank you for your purchase! We appreciate your business.")}
-              >
-                Thank You
-              </Button>
-              
-              <Button
-                color="outline-secondary"
-                size="sm"
-                onClick={() => setMessage("This is a reminder about your upcoming appointment.")}
-              >
-                Appointment Reminder
-              </Button>
-            </div>
-          </CardBody>
-        </Card> */}
       </Col>
     </Row>
   )}
 </TabPane>
-
-      
-      
       {/* HISTORY TAB */}
       <TabPane tabId="history">
         <h4 className="mb-4">Message History</h4>
