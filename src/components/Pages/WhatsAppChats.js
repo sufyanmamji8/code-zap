@@ -966,22 +966,32 @@ const WhatsAppChats = () => {
         />
       </div>
 
-      {/* Contact List - Scrollable */}
+      {/* Contact List - Scrollable - Updated with fixes for mobile scrolling */}
       <div
         ref={contactListRef}
         onScroll={handleContactScroll}
+        className="contact-scrollable"
         style={{
           overflowY: "auto",
           flex: 1,
           marginTop: "5px",
           paddingRight: "5px",
-          msOverflowStyle: "none" /* IE and Edge */,
-          scrollbarWidth: "none" /* Firefox */,
-          "&::-webkit-scrollbar": {
-            display: "none" /* Chrome, Safari, Opera */,
-          },
+          msOverflowStyle: "none",
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch", // For better mobile touch scrolling
+          height: "calc(100% - 130px)", // Explicit height calculation
+          maxHeight: "100%",
+          position: "relative"
         }}
       >
+        <style>
+          {`
+            .contact-scrollable::-webkit-scrollbar {
+              display: none;
+            }
+          `}
+        </style>
+        
         {contacts.map((contact) => {
           const latestData =
             uniqueUsers.find((u) => u.phoneNumber === contact.phoneNumber) ||
@@ -1046,18 +1056,18 @@ const WhatsAppChats = () => {
                   }}
                 >
                   <div
-  style={{
-    fontSize: "12px",
-    color: "#666",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    maxWidth: "70%",
-    fontWeight: latestData.lastMessage?.includes('*') ? "bold" : "normal",
-  }}
->
-  {latestData.lastMessage?.replace(/\*/g, '')}
-</div>
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: "70%",
+                      fontWeight: latestData.lastMessage?.includes('*') ? "bold" : "normal",
+                    }}
+                  >
+                    {latestData.lastMessage?.replace(/\*/g, '')}
+                  </div>
                   <div style={{ fontSize: "11px", color: "#888" }}>
                     {latestData.timestamp
                       ? format12HourTime(latestData.timestamp)
