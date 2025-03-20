@@ -1046,17 +1046,18 @@ const WhatsAppChats = () => {
                   }}
                 >
                   <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      maxWidth: "70%",
-                    }}
-                  >
-                    {latestData.lastMessage}
-                  </div>
+  style={{
+    fontSize: "12px",
+    color: "#666",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: "70%",
+    fontWeight: latestData.lastMessage?.includes('*') ? "bold" : "normal",
+  }}
+>
+  {latestData.lastMessage?.replace(/\*/g, '')}
+</div>
                   <div style={{ fontSize: "11px", color: "#888" }}>
                     {latestData.timestamp
                       ? format12HourTime(latestData.timestamp)
