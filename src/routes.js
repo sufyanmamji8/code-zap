@@ -23,6 +23,7 @@ import WhatsAppCreateMenus from "components/Pages/WhatsAppCreateMenus";
 import WhatsAppMenusAccess from "components/Pages/WhatsAppMenusAccess";
 import WhatsappGroup from "components/Pages/WhatsappGroup";
 import WhatsappWeb from "components/Pages/WhatsappWeb";
+import ChatBot from "components/Pages/ChatBot";
 
 var routes = [
   {
@@ -154,6 +155,14 @@ var routes = [
     component: <ApiKey />,
     layout: "/admin",
     showInSidebar: false,
+},
+{
+  path: "/chat-bot",
+  name: "ChatBot",
+  icon: "ni ni-settings-gear-65",
+  component: <ChatBot />,
+  layout: "/admin",
+  showInSidebar: false,
 },
   {
     path: "settings",

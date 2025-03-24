@@ -120,6 +120,7 @@ const Sidebar = (props) => {
     ]},
     { name: "Templates", icon: "ni ni-single-copy-04", path: "/templates", layout: "/admin" },
     { name: "Campaign", icon: "ni ni-notification-70", path: "/campaign", layout: "/admin" },
+    { name: "ChatBot", icon: "ni ni-settings-gear-65", path: "/chat-bot", layout: "/admin" },
     { name: "Generate Api Key", icon: "ni ni-key-25 text-gray", path: "/Api-key", layout: "/admin" },
   ];
 
