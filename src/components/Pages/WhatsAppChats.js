@@ -28,11 +28,7 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import countryList from "./countryList";
 import io from "socket.io-client";
 
-
-
 const WhatsAppChats = () => {
-
-  
   const location = useLocation();
 
   useEffect(() => {
@@ -46,17 +42,17 @@ const WhatsAppChats = () => {
   }, [location.state]);
 
   const { config, companyId } = location.state || {
-    config: JSON.parse(localStorage.getItem("whatsappConfig")),
+    config: JSON.parse(localStorage.getItem("whatsappConfig") || "{}"),
     companyId: localStorage.getItem("whatsappCompanyId"),
   };
   const businessId = config?.whatsappBusinessAccountId;
 
   const calculateContactsPerPage = () => {
     const screenHeight = window.innerHeight;
-    const approximateContactHeight = 70; // Height of each contact item in pixels
-    const headerHeight = 200; // Approximate height of header elements
+    const approximateContactHeight = 70;
+    const headerHeight = 200;
     const availableHeight = screenHeight - headerHeight;
-    return Math.floor(availableHeight / approximateContactHeight);
+    return Math.max(5, Math.floor(availableHeight / approximateContactHeight));
   };
 
   const [messages, setMessages] = useState([]);
@@ -68,12 +64,11 @@ const WhatsAppChats = () => {
   const [isNewChatModal, setIsNewChatModal] = useState(false);
   const [senderNames, setSenderNames] = useState({});
   const [initialLoading, setInitialLoading] = useState(true);
-  const [selectedCountry, setSelectedCountry] = useState(countryList[0]);
+  const [selectedCountry, setSelectedCountry] = useState(countryList[0] || {});
   const [phoneNumber, setPhoneNumber] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [isScrolledUp, setIsScrolledUp] = useState(false);
   const chatContainerRef = useRef(null);
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -88,6 +83,29 @@ const WhatsAppChats = () => {
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
 
+  // Safe data access helper functions
+  const safeGet = (obj, path, defaultValue = '') => {
+    if (!obj) return defaultValue;
+    return path.split('.').reduce((acc, key) => {
+      if (acc && typeof acc === 'object' && key in acc) {
+        return acc[key];
+      }
+      return defaultValue;
+    }, obj);
+  };
+
+  const safeArray = (arr) => Array.isArray(arr) ? arr : [];
+
+  const safeString = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str);
+  };
+
+  const safeNumber = (num, defaultValue = 0) => {
+    const parsed = parseInt(num);
+    return isNaN(parsed) ? defaultValue : parsed;
+  };
+
   useEffect(() => {
     const handleResize = () => {
       setContactsPerPage(calculateContactsPerPage());
@@ -99,61 +117,57 @@ const WhatsAppChats = () => {
 
   useEffect(() => {
     if (businessId) {
-      socketRef.current = io("https://codozap-e04e12b02929.herokuapp.com");
+      try {
+        socketRef.current = io("https://codozap-e04e12b02929.herokuapp.com");
 
-      socketRef.current.on(`onmessagerecv-${businessId}`, async () => {
-        console.log("Socket: New message received");
+        socketRef.current.on(`onmessagerecv-${businessId}`, async () => {
+          console.log("Socket: New message received");
 
-        if (selectedUser) {
-          await fetchMessages(selectedUser.phoneNumber);
-        }
-
-        const response = await axios.post(
-          `${MESSAGE_API_ENDPOINT}/getContact`,
-          {
-            companyId,
-          },
-          {
-            params: {
-              page: 1,
-              limit: contactsPerPage, // Use dynamic contactsPerPage
-            },
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+          if (selectedUser) {
+            await fetchMessages(selectedUser.phoneNumber);
           }
-        );
 
-        if (response.data.success) {
-          const newContacts = response.data.contacts.map((contact) => ({
-            ...contact,
-            phoneNumber: contact._id,
-            name: contact.senderName || contact.name || contact._id,
-            lastMessage: contact.recentMessage || "",
-            timestamp: contact.latestChat
-              ? new Date(contact.latestChat).getTime() / 1000
-              : "",
-          }));
+          const response = await axios.post(
+            `${MESSAGE_API_ENDPOINT}/getContact`,
+            { companyId },
+            {
+              params: { page: 1, limit: contactsPerPage },
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
 
-          setContacts((prevContacts) => {
-            const existingContactsNotInFirstPage = prevContacts.filter(
-              (existingContact) =>
-                !newContacts.some(
-                  (newContact) =>
-                    newContact.phoneNumber === existingContact.phoneNumber
-                )
-            );
+          if (response.data?.success) {
+            const newContacts = safeArray(response.data.contacts).map((contact) => ({
+              ...contact,
+              phoneNumber: contact._id || '',
+              name: contact.senderName || contact.name || contact._id || '',
+              lastMessage: contact.recentMessage || "",
+              timestamp: contact.latestChat
+                ? new Date(contact.latestChat).getTime() / 1000
+                : "",
+            }));
 
-            return [...newContacts, ...existingContactsNotInFirstPage];
-          });
-        }
-      });
+            setContacts((prevContacts) => {
+              const existingContactsNotInFirstPage = prevContacts.filter(
+                (existingContact) =>
+                  !newContacts.some(
+                    (newContact) =>
+                      newContact.phoneNumber === existingContact.phoneNumber
+                  )
+              );
+              return [...newContacts, ...existingContactsNotInFirstPage];
+            });
+          }
+        });
 
-      return () => {
-        if (socketRef.current) {
-          socketRef.current.disconnect();
-        }
-      };
+        return () => {
+          if (socketRef.current) {
+            socketRef.current.disconnect();
+          }
+        };
+      } catch (error) {
+        console.error("Socket connection error:", error);
+      }
     }
   }, [businessId, selectedUser, companyId, token, contactsPerPage]);
 
@@ -164,11 +178,7 @@ const WhatsAppChats = () => {
       setLoadingTemplates(true);
       const response = await axios.post(
         `${MESSAGE_API_ENDPOINT}/getTemplates`,
-        {
-          businessId,
-          companyId,
-          contactNumber: contactPhoneNumber,
-        },
+        { businessId, companyId, contactNumber: contactPhoneNumber },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -177,8 +187,8 @@ const WhatsAppChats = () => {
         }
       );
 
-      if (response.data.success) {
-        setTemplates(response.data.data);
+      if (response.data?.success) {
+        setTemplates(safeArray(response.data.data));
       }
     } catch (error) {
       console.error("Error fetching user templates:", error);
@@ -187,34 +197,25 @@ const WhatsAppChats = () => {
     }
   };
 
-  // Fetch contacts with pagination
   const fetchContacts = async (pageNum = 1, isInitial = false) => {
     if (!businessId || (!isInitial && !hasMore) || loadingMore) return;
 
     try {
       setLoadingMore(true);
-
       const response = await axios.post(
         `${MESSAGE_API_ENDPOINT}/getContact`,
+        { companyId },
         {
-          companyId,
-        },
-        {
-          params: {
-            page: pageNum,
-            limit: contactsPerPage, // Use dynamic contactsPerPage instead of fixed 5
-          },
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          params: { page: pageNum, limit: contactsPerPage },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      if (response.data.success) {
-        const newContacts = response.data.contacts.map((contact) => ({
+      if (response.data?.success) {
+        const newContacts = safeArray(response.data.contacts).map((contact) => ({
           ...contact,
-          phoneNumber: contact._id,
-          name: contact.senderName || contact.name || contact._id,
+          phoneNumber: contact._id || '',
+          name: contact.senderName || contact.name || contact._id || '',
           lastMessage: contact.recentMessage || "",
           timestamp: contact.latestChat
             ? new Date(contact.latestChat).getTime() / 1000
@@ -233,7 +234,7 @@ const WhatsAppChats = () => {
           }
         });
 
-        setHasMore(pageNum < response.data.pagination.totalPages);
+        setHasMore(pageNum < safeGet(response.data, 'pagination.totalPages', 0));
         setPage(pageNum);
       }
     } catch (error) {
@@ -244,13 +245,17 @@ const WhatsAppChats = () => {
     }
   };
 
+  // Auto-scroll to bottom when messages load
   useEffect(() => {
-    if (selectedUser && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0 && chatEndRef.current) {
+      setTimeout(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
     }
-  }, [messages, selectedUser]);
+  }, [messages]);
 
-  // Fetch messages for selected contact
   const fetchMessages = async (contactPhoneNumber) => {
     if (!businessId || !contactPhoneNumber) return;
 
@@ -258,20 +263,14 @@ const WhatsAppChats = () => {
       setLoading(true);
       const response = await axios.post(
         `${MESSAGE_API_ENDPOINT}/getMessages`,
-        {
-          businessId,
-          contactNumber: contactPhoneNumber,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { businessId, contactNumber: contactPhoneNumber },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (response.data.success) {
-        setMessages(response.data.data);
+      if (response.data?.success) {
+        setMessages(safeArray(response.data.data));
 
-        // Extract sender name from messages and update senderNames state
-        const messages = response.data.data;
+        const messages = safeArray(response.data.data);
         if (messages.length > 0) {
           const latestMessage = messages.find(
             (msg) => msg.senderName && msg.from === contactPhoneNumber
@@ -291,28 +290,22 @@ const WhatsAppChats = () => {
     }
   };
 
-  // Initial load
   useEffect(() => {
     if (businessId) {
       fetchContacts(1, true);
     }
   }, [businessId]);
 
-  // Handle contact selection
   useEffect(() => {
     if (selectedUser?.phoneNumber) {
-      // First fetch contacts
       fetchContacts(1, true).then(() => {
-        // Then fetch messages
         fetchMessages(selectedUser.phoneNumber).then(() => {
-          // Finally fetch user-specific templates
           fetchUserTemplates(selectedUser.phoneNumber);
         });
       });
     }
   }, [selectedUser]);
 
-  // Infinite scroll for contacts
   const handleContactScroll = () => {
     if (contactListRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = contactListRef.current;
@@ -326,22 +319,13 @@ const WhatsAppChats = () => {
     }
   };
 
-  const handleChatScroll = () => {
-    if (chatContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } =
-        chatContainerRef.current;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-      setIsScrolledUp(!isAtBottom);
-    }
-  };
-
   const CustomTooltip = ({ children, content, isOpen, setIsOpen }) => {
     useEffect(() => {
       let timer;
       if (isOpen) {
         timer = setTimeout(() => {
           setIsOpen(false);
-        }, 2000); // Close after 2 seconds
+        }, 2000);
       }
       return () => {
         if (timer) clearTimeout(timer);
@@ -372,7 +356,7 @@ const WhatsAppChats = () => {
             wordBreak: "break-word",
           }}
         >
-          {content}
+          {safeString(content)}
           <div
             style={{
               position: "absolute",
@@ -399,7 +383,8 @@ const WhatsAppChats = () => {
     });
 
     const renderIcon = () => {
-      switch (status?.toLowerCase()) {
+      const safeStatus = safeString(status).toLowerCase();
+      switch (safeStatus) {
         case "sent":
           return (
             <FaCheck size={12} color="#667781" style={getIconStyle(status)} />
@@ -454,7 +439,7 @@ const WhatsAppChats = () => {
   };
 
   const startNewChat = () => {
-    const fullNumber = selectedCountry.code + phoneNumber;
+    const fullNumber = (selectedCountry.code || '') + phoneNumber;
     const existingContact = contacts.find((c) => c.phoneNumber === fullNumber);
 
     if (!existingContact) {
@@ -462,7 +447,7 @@ const WhatsAppChats = () => {
         phoneNumber: fullNumber,
         lastMessage: "",
         timestamp: (Date.now() / 1000).toString(),
-        flag: selectedCountry.flag,
+        flag: selectedCountry.flag || "🌐",
       };
       setContacts((prev) => [...prev, newUser]);
       setSelectedUser(newUser);
@@ -477,16 +462,13 @@ const WhatsAppChats = () => {
   const scrollToBottom = () => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-      setTimeout(() => {
-        setIsScrolledUp(false);
-      }, 500);
     }
   };
 
   const uniqueUsers = React.useMemo(() => {
     const users = new Map();
 
-    contacts.forEach((contact) => {
+    safeArray(contacts).forEach((contact) => {
       if (contact && contact.phoneNumber) {
         const country = countryList.find(
           (c) => c && c.code && contact.phoneNumber.startsWith(c.code)
@@ -507,8 +489,8 @@ const WhatsAppChats = () => {
     return Array.from(users.values())
       .filter((user) => user && user.phoneNumber)
       .sort((a, b) => {
-        const timestampA = parseInt(a.timestamp) || 0;
-        const timestampB = parseInt(b.timestamp) || 0;
+        const timestampA = safeNumber(a.timestamp);
+        const timestampB = safeNumber(b.timestamp);
         return timestampB - timestampA;
       });
   }, [contacts]);
@@ -544,7 +526,6 @@ const WhatsAppChats = () => {
     try {
       setMessages((prev) => [...prev, tempMessage]);
 
-      // Update contacts immediately with new message
       setContacts((prev) => {
         const updatedContacts = prev.map((contact) => {
           if (contact.phoneNumber === selectedUser.phoneNumber) {
@@ -554,7 +535,7 @@ const WhatsAppChats = () => {
               recentMessage: newMessage,
               timestamp: currentTimestamp,
               latestChat: new Date(
-                parseInt(currentTimestamp) * 1000
+                safeNumber(currentTimestamp) * 1000
               ).toISOString(),
             };
           }
@@ -562,8 +543,8 @@ const WhatsAppChats = () => {
         });
 
         return updatedContacts.sort((a, b) => {
-          const timestampA = parseInt(a.timestamp) || 0;
-          const timestampB = parseInt(b.timestamp) || 0;
+          const timestampA = safeNumber(a.timestamp);
+          const timestampB = safeNumber(b.timestamp);
           return timestampB - timestampA;
         });
       });
@@ -580,8 +561,8 @@ const WhatsAppChats = () => {
         }
       );
 
-      if (response.data.success && response.data.data.messages) {
-        const actualMessageId = response.data.data.messages[0].id;
+      if (response.data?.success && response.data.data?.messages) {
+        const actualMessageId = safeGet(response.data.data.messages[0], 'id', tempId);
 
         setMessages((prev) =>
           prev.map((msg) =>
@@ -608,7 +589,7 @@ const WhatsAppChats = () => {
                 currentStatusTimestamp: Date.now() / 1000,
                 sentTimestamp: msg.originalTimestamp,
                 failureReason:
-                  error.response?.data?.message || "Failed to send message",
+                  safeGet(error, 'response.data.message') || "Failed to send message",
               }
             : msg
         )
@@ -623,7 +604,7 @@ const WhatsAppChats = () => {
     if (!timestamp) return "Date unavailable";
 
     try {
-      const date = new Date(parseInt(timestamp) * 1000);
+      const date = new Date(safeNumber(timestamp) * 1000);
       if (isNaN(date.getTime())) return "Invalid date";
 
       const today = new Date();
@@ -650,8 +631,7 @@ const WhatsAppChats = () => {
   const groupMessagesByDate = (messages) => {
     const groups = {};
 
-    messages.forEach((message) => {
-      // For template messages, use originalTimestamp if available
+    safeArray(messages).forEach((message) => {
       const timestamp =
         message.type === "template"
           ? message.originalTimestamp ||
@@ -661,10 +641,10 @@ const WhatsAppChats = () => {
 
       if (!timestamp) {
         console.warn("Message missing timestamp:", message);
-        return; // Skip messages without any timestamp
+        return;
       }
 
-      const date = new Date(parseInt(timestamp) * 1000).toDateString();
+      const date = new Date(safeNumber(timestamp) * 1000).toDateString();
       if (!groups[date]) {
         groups[date] = [];
       }
@@ -674,10 +654,10 @@ const WhatsAppChats = () => {
     return Object.entries(groups)
       .map(([date, messages]) => ({
         date,
-        timestamp: parseInt(
-          messages[0].sentTimestamp || messages[0].currentStatusTimestamp
+        timestamp: safeNumber(
+          messages[0]?.sentTimestamp || messages[0]?.currentStatusTimestamp
         ),
-        messages,
+        messages: safeArray(messages),
       }))
       .sort((a, b) => a.timestamp - b.timestamp);
   };
@@ -695,9 +675,9 @@ const WhatsAppChats = () => {
         }}
       >
         <h5>Available Templates</h5>
-        {templates.map((template) => (
+        {safeArray(templates).map((template) => (
           <div
-            key={template._id}
+            key={template._id || Math.random()}
             style={{
               backgroundColor: "white",
               margin: "5px 0",
@@ -706,14 +686,13 @@ const WhatsAppChats = () => {
               cursor: "pointer",
             }}
             onClick={() => {
-              // Logic to use template message
               const templateBody =
-                template.components.find((c) => c.type === "BODY")?.text || "";
+                safeArray(template.components).find((c) => c.type === "BODY")?.text || "";
               setNewMessage(templateBody);
             }}
           >
-            <strong>{template.templateName}</strong>
-            <p>{template.components.find((c) => c.type === "BODY")?.text}</p>
+            <strong>{template.templateName || "Unnamed Template"}</strong>
+            <p>{safeArray(template.components).find((c) => c.type === "BODY")?.text}</p>
           </div>
         ))}
       </div>
@@ -743,19 +722,24 @@ const WhatsAppChats = () => {
   );
 
   const format12HourTime = (timestamp) => {
-    return new Date(parseInt(timestamp) * 1000).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+    try {
+      return new Date(safeNumber(timestamp) * 1000).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch (error) {
+      console.error("Error formatting time:", error);
+      return "Invalid time";
+    }
   };
 
   const renderNewChatModal = () => {
     const filterCountries = (searchTerm) => {
-      return countryList.filter(
+      return safeArray(countryList).filter(
         (country) =>
-          country.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          country.code.includes(searchTerm)
+          country?.country?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          country?.code?.includes(searchTerm)
       );
     };
 
@@ -769,17 +753,12 @@ const WhatsAppChats = () => {
       <Modal
         isOpen={isNewChatModal}
         toggle={() => setIsNewChatModal(false)}
-        size="sm" // Making modal smaller
+        size="sm"
       >
-        <ModalHeader
-          toggle={() => setIsNewChatModal(false)}
-          className="py-2" // Reducing header padding
-        >
+        <ModalHeader toggle={() => setIsNewChatModal(false)} className="py-2">
           New Chat
         </ModalHeader>
         <ModalBody className="p-2">
-          {" "}
-          {/* Reducing body padding */}
           <div className="d-flex flex-column gap-2">
             <Input
               type="text"
@@ -787,51 +766,53 @@ const WhatsAppChats = () => {
               onChange={handleCountrySearch}
               placeholder="Search country..."
               className="mb-1"
-              size="sm" // Smaller input
+              size="sm"
             />
 
             <div
               style={{
-                maxHeight: "150px", // Reduced height
+                maxHeight: "150px",
                 overflowY: "auto",
                 border: "1px solid #ddd",
                 borderRadius: "4px",
               }}
             >
-              {filteredCountries.map((country) => (
+              {safeArray(filteredCountries).map((country) => (
                 <div
-                  key={country.code}
+                  key={country?.code || Math.random()}
                   onClick={() => {
-                    setSelectedCountry(country);
-                    setCountrySearchTerm("");
+                    if (country) {
+                      setSelectedCountry(country);
+                      setCountrySearchTerm("");
+                    }
                   }}
                   style={{
-                    padding: "6px 8px", // Reduced padding
+                    padding: "6px 8px",
                     cursor: "pointer",
                     backgroundColor:
-                      selectedCountry.code === country.code
+                      selectedCountry.code === country?.code
                         ? "#e8f5ff"
                         : "white",
                     display: "flex",
                     alignItems: "center",
                     gap: "6px",
                     borderBottom: "1px solid #eee",
-                    fontSize: "0.9rem", // Smaller font
+                    fontSize: "0.9rem",
                   }}
                   onMouseEnter={(e) =>
                     (e.target.style.backgroundColor = "#f5f5f5")
                   }
                   onMouseLeave={(e) =>
                     (e.target.style.backgroundColor =
-                      selectedCountry.code === country.code
+                      selectedCountry.code === country?.code
                         ? "#e8f5ff"
                         : "white")
                   }
                 >
-                  <span>{country.flag}</span>
-                  <span style={{ flex: 1 }}>{country.country}</span>
+                  <span>{country?.flag || "🌐"}</span>
+                  <span style={{ flex: 1 }}>{country?.country || "Unknown"}</span>
                   <span style={{ color: "#666", fontSize: "0.8rem" }}>
-                    +{country.code}
+                    +{country?.code || ""}
                   </span>
                 </div>
               ))}
@@ -839,7 +820,7 @@ const WhatsAppChats = () => {
 
             <div className="mt-2 d-flex gap-2">
               <span className="d-flex align-items-center px-2 bg-light rounded">
-                +{selectedCountry.code}
+                +{selectedCountry?.code || ""}
               </span>
               <Input
                 type="text"
@@ -848,18 +829,16 @@ const WhatsAppChats = () => {
                   setPhoneNumber(e.target.value.replace(/\D/g, ""))
                 }
                 placeholder="Phone number"
-                size="sm" // Smaller input
+                size="sm"
                 style={{ flex: 1 }}
               />
             </div>
           </div>
         </ModalBody>
         <ModalFooter className="py-2 px-2">
-          {" "}
-          {/* Reducing footer padding */}
           <Button
             color="secondary"
-            size="sm" // Smaller button
+            size="sm"
             onClick={() => {
               setIsNewChatModal(false);
               setCountrySearchTerm("");
@@ -869,7 +848,7 @@ const WhatsAppChats = () => {
           </Button>
           <Button
             color="primary"
-            size="sm" // Smaller button
+            size="sm"
             onClick={startNewChat}
             disabled={!phoneNumber.length}
             style={{ backgroundColor: "#00a884", border: "none" }}
@@ -896,7 +875,6 @@ const WhatsAppChats = () => {
     >
       {initialLoading && <LoaderOverlay />}
 
-      {/* Company Info Card - Fixed Height */}
       <Card className="mb-2" style={{ flexShrink: 0 }}>
         <CardBody className="p-3">
           <div className="d-flex align-items-center">
@@ -911,20 +889,19 @@ const WhatsAppChats = () => {
                 className="font-weight-bold"
                 style={{ marginLeft: "10px" }}
               >
-                {config?.companyName}
+                {safeGet(config, 'companyName', 'Unknown Company')}
               </small>
               <h5
                 className="mb-1 font-weight-bold"
                 style={{ marginLeft: "10px" }}
               >
-                {config?.phoneNumber}
+                {safeGet(config, 'phoneNumber', 'No Number')}
               </h5>
             </div>
           </div>
         </CardBody>
       </Card>
 
-      {/* Search Bar Section - Fixed Height */}
       <div
         style={{
           padding: "5px 0",
@@ -966,7 +943,6 @@ const WhatsAppChats = () => {
         />
       </div>
 
-      {/* Contact List - Scrollable - Updated with fixes for mobile scrolling */}
       <div
         ref={contactListRef}
         onScroll={handleContactScroll}
@@ -978,8 +954,8 @@ const WhatsAppChats = () => {
           paddingRight: "5px",
           msOverflowStyle: "none",
           scrollbarWidth: "none",
-          WebkitOverflowScrolling: "touch", // For better mobile touch scrolling
-          height: "calc(100% - 130px)", // Explicit height calculation
+          WebkitOverflowScrolling: "touch",
+          height: "calc(100% - 130px)",
           maxHeight: "100%",
           position: "relative"
         }}
@@ -992,11 +968,11 @@ const WhatsAppChats = () => {
           `}
         </style>
         
-        {contacts.map((contact) => {
+        {safeArray(contacts).map((contact) => {
           const latestData =
             uniqueUsers.find((u) => u.phoneNumber === contact.phoneNumber) ||
             contact;
-          const country = countryList.find((c) =>
+          const country = safeArray(countryList).find((c) =>
             contact.phoneNumber.startsWith(c.code)
           );
           const displayName =
@@ -1007,7 +983,7 @@ const WhatsAppChats = () => {
 
           return (
             <div
-              key={contact.phoneNumber}
+              key={contact.phoneNumber || Math.random()}
               onClick={() =>
                 setSelectedUser({
                   ...contact,
@@ -1046,7 +1022,7 @@ const WhatsAppChats = () => {
               </div>
               <div style={{ flex: 1, overflow: "hidden" }}>
                 <h6 style={{ margin: 0, fontWeight: "bold", fontSize: "14px" }}>
-                  {displayName}
+                  {safeString(displayName)}
                 </h6>
                 <div
                   style={{
@@ -1066,7 +1042,7 @@ const WhatsAppChats = () => {
                       fontWeight: latestData.lastMessage?.includes('*') ? "bold" : "normal",
                     }}
                   >
-                    {latestData.lastMessage?.replace(/\*/g, '')}
+                    {safeString(latestData.lastMessage).replace(/\*/g, '')}
                   </div>
                   <div style={{ fontSize: "11px", color: "#888" }}>
                     {latestData.timestamp
@@ -1092,15 +1068,12 @@ const WhatsAppChats = () => {
       </div>
     </Col>
   );
-  const formatTemplateText = (text) => {
-    // Split the text by star patterns
-    const parts = text.split(/(\*[^*]+\*)/g);
 
-    // Map through parts and wrap starred content in bold tags
-    return parts
+  const formatTemplateText = (text) => {
+    if (!text) return '';
+    return safeString(text).split(/(\*[^*]+\*)/g)
       .map((part, index) => {
         if (part.startsWith("*") && part.endsWith("*")) {
-          // Remove stars and wrap content in strong tag
           const boldContent = part.slice(1, -1);
           return `<strong>${boldContent}</strong>`;
         }
@@ -1109,16 +1082,14 @@ const WhatsAppChats = () => {
       .join("");
   };
 
-  // Function to safely render HTML content
   const createMarkup = (htmlContent) => {
-    return { __html: htmlContent };
+    return { __html: safeString(htmlContent) };
   };
 
   const renderTemplateMessage = (message) => {
     const { components } = message;
-    const isReceived = message.from === selectedUser.phoneNumber;
+    const isReceived = message.from === selectedUser?.phoneNumber;
 
-    // Use the first available timestamp
     const messageTimestamp =
       message.sentTimestamp ||
       message.originalTimestamp ||
@@ -1126,6 +1097,7 @@ const WhatsAppChats = () => {
 
     return (
       <div
+        key={message.messageId || message.id || Math.random()}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -1141,15 +1113,18 @@ const WhatsAppChats = () => {
             borderRadius: "6px",
           }}
         >
-          {components.map((component, index) => {
+          {safeArray(components).map((component, index) => {
             switch (component.type) {
               case "HEADER":
                 return (
                   <img
                     key={index}
-                    src={component.media.link}
+                    src={component.media?.link}
                     alt="Template Header"
                     style={{ maxWidth: "100%", borderRadius: "6px 6px 0 0" }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
                   />
                 );
               case "BODY":
@@ -1175,7 +1150,7 @@ const WhatsAppChats = () => {
                       color: "#4f4d4d",
                     }}
                   >
-                    {component.text}
+                    {safeString(component.text)}
                   </div>
                 );
               default:
@@ -1211,352 +1186,301 @@ const WhatsAppChats = () => {
   };
 
   const renderChatWindow = () => {
-  const chatMessages = selectedUser
-    ? messages.filter(
-        (msg) =>
-          msg.from === selectedUser.phoneNumber ||
-          msg.to === selectedUser.phoneNumber
-      )
-    : [];
+    const chatMessages = selectedUser
+      ? safeArray(messages).filter(
+          (msg) =>
+            msg.from === selectedUser.phoneNumber ||
+            msg.to === selectedUser.phoneNumber
+        )
+      : [];
 
-  const groupedMessages = groupMessagesByDate(chatMessages);
+    const groupedMessages = groupMessagesByDate(chatMessages);
 
-  // Add function to format text with asterisks as bold
-  const formatMessageText = (text) => {
-    // Replace text between asterisks with bold text
-    return text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-  };
+    const formatMessageText = (text) => {
+      if (!text) return '';
+      return safeString(text).replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+    };
 
-  return (
-    <Col
-      xs="12"
-      md="8"
-      style={{
-        height: "calc(100vh - 100px)",
-        padding: 0,
-        display: "flex",
-        flexDirection: "column",
-        backgroundColor: "#f4f8fb",
-        position: "relative",
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-        backgroundColor: "#efeae2",
-      }}
-    >
-      {/* Chat Header */}
-      {selectedUser && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "10px 20px",
-            backgroundColor: "rgb(0, 168, 132)",
-            borderBottom: "1px solid rgb(224, 224, 224)",
-          }}
-          className="user_select"
-        >
-          {isMobileView && (
-            <Button
-              onClick={() => setSelectedUser(null)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "white",
-                marginRight: "10px",
-                padding: 0,
-              }}
-            >
-              <FaArrowLeft size={20} />
-            </Button>
-          )}
-
+    return (
+      <Col
+        xs="12"
+        md="8"
+        style={{
+          height: "calc(100vh - 100px)",
+          padding: 0,
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: "#f4f8fb",
+          position: "relative",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+          backgroundColor: "#efeae2",
+        }}
+      >
+        {selectedUser && (
           <div
             style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              backgroundColor: "#e0e0e0",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              marginRight: "15px",
-              fontSize: "20px",
+              padding: "10px 20px",
+              backgroundColor: "rgb(0, 168, 132)",
+              borderBottom: "1px solid rgb(224, 224, 224)",
             }}
+            className="user_select"
           >
-            {selectedUser.flag || "👤"}
-          </div>
+            {isMobileView && (
+              <Button
+                onClick={() => setSelectedUser(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "white",
+                  marginRight: "10px",
+                  padding: 0,
+                }}
+              >
+                <FaArrowLeft size={20} />
+              </Button>
+            )}
 
-          <div>
-            <h6
+            <div
               style={{
-                margin: 0,
-                fontWeight: "bold",
-                color: "white",
-                fontSize: "13px",
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "#e0e0e0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: "15px",
+                fontSize: "20px",
               }}
             >
-              {selectedUser.senderName || selectedUser.phoneNumber}
-            </h6>
-          </div>
-        </div>
-      )}
+              {selectedUser.flag || "👤"}
+            </div>
 
-      {initialLoading && <LoaderOverlay />}
-      {selectedUser ? (
-        <>
-          <div
-            ref={chatContainerRef}
-            onScroll={handleChatScroll}
-            style={{
-              flex: 1,
-              padding: "20px",
-              overflowY: "auto",
-              marginBottom: isMobileView ? "60px" : 0,
-              msOverflowStyle: "none",
-              scrollbarWidth: "none",
-              position: "relative",
-              "&::-webkit-scrollbar": {
-                display: "none",
-              },
-            }}
-          >
-            {groupedMessages.map((group) => (
-              <div key={group.date}>
-                {renderDateSeparator(group.timestamp)}
-                {group.messages.map((message) => {
-                  const isReceived =
-                    message.from === selectedUser.phoneNumber;
-                  if (message.type === "template") {
-                    return renderTemplateMessage(message);
-                  } else {
-                    return (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: isReceived ? "flex-start" : "flex-end",
-                          marginBottom: "12px",
-                        }}
-                      >
+            <div>
+              <h6
+                style={{
+                  margin: 0,
+                  fontWeight: "bold",
+                  color: "white",
+                  fontSize: "13px",
+                }}
+              >
+                {selectedUser.senderName || selectedUser.phoneNumber}
+              </h6>
+            </div>
+          </div>
+        )}
+
+        {initialLoading && <LoaderOverlay />}
+        {selectedUser ? (
+          <>
+            <div
+              ref={chatContainerRef}
+              style={{
+                flex: 1,
+                padding: "20px",
+                overflowY: "auto",
+                marginBottom: isMobileView ? "60px" : 0,
+                msOverflowStyle: "none",
+                scrollbarWidth: "none",
+                position: "relative",
+              }}
+            >
+              {safeArray(groupedMessages).map((group) => (
+                <div key={group.date || Math.random()}>
+                  {renderDateSeparator(group.timestamp)}
+                  {safeArray(group.messages).map((message) => {
+                    const isReceived =
+                      message.from === selectedUser.phoneNumber;
+                    if (message.type === "template") {
+                      return renderTemplateMessage(message);
+                    } else {
+                      return (
                         <div
+                          key={message.messageId || message.id || Math.random()}
                           style={{
-                            maxWidth: "70%",
-                            padding: "8px 12px",
-                            backgroundColor: isReceived ? "#fff" : "#dcf8c6",
-                            borderRadius: "8px",
-                            position: "relative",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: isReceived ? "flex-start" : "flex-end",
+                            marginBottom: "12px",
                           }}
                         >
                           <div
                             style={{
-                              fontSize: "14px",
-                              marginBottom: "4px",
-                              wordWrap: "break-word",
-                              whiteSpace: "pre-wrap",
-                            }}
-                            dangerouslySetInnerHTML={{
-                              __html: formatMessageText(message.messageBody)
-                            }}
-                          />
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              color: "#667781",
-                              textAlign: "right",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "flex-end",
-                              gap: "4px",
+                              maxWidth: "70%",
+                              padding: "8px 12px",
+                              backgroundColor: isReceived ? "#fff" : "#dcf8c6",
+                              borderRadius: "8px",
+                              position: "relative",
                             }}
                           >
-                            <span>
-                              {format12HourTime(
-                                message.sentTimestamp ||
-                                  message.currentStatusTimestamp
+                            <div
+                              style={{
+                                fontSize: "14px",
+                                marginBottom: "4px",
+                                wordWrap: "break-word",
+                                whiteSpace: "pre-wrap",
+                              }}
+                              dangerouslySetInnerHTML={{
+                                __html: formatMessageText(message.messageBody)
+                              }}
+                            />
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                color: "#667781",
+                                textAlign: "right",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "flex-end",
+                                gap: "4px",
+                              }}
+                            >
+                              <span>
+                                {format12HourTime(
+                                  message.sentTimestamp ||
+                                    message.currentStatusTimestamp
+                                )}
+                              </span>
+                              {!isReceived && (
+                                <MessageStatusIcon
+                                  status={message.status}
+                                  failureReason={message.failureReason}
+                                />
                               )}
-                            </span>
-                            {!isReceived && (
-                              <MessageStatusIcon
-                                status={message.status}
-                                failureReason={message.failureReason}
-                              />
-                            )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  }
-                })}
-              </div>
-            ))}
-            <div ref={chatEndRef} style={{ height: "1px" }} />
-          </div>
+                      );
+                    }
+                  })}
+                </div>
+              ))}
+              <div ref={chatEndRef} style={{ height: "1px" }} />
+            </div>
 
-          {/* Scroll To Bottom Button */}
-          {isScrolledUp && (
             <div
-              onClick={scrollToBottom}
               style={{
-                position: "fixed",
-                bottom: isMobileView ? "77px" : "77px",
-                right: "35px",
-                zIndex: 10,
-                backgroundColor: "#FFFFFF",
-                width: "40px",
-                height: "40px",
+                padding: "5px 4px",
+                position: isMobileView ? "fixed" : "relative",
+                bottom: 0,
+                left: isMobileView ? 0 : "auto",
+                right: isMobileView ? 0 : "auto",
+                width: isMobileView ? "100%" : "auto",
+                zIndex: 2,
+                backgroundColor: "transparent",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  backgroundColor: "#fff",
+                  padding: "0px 9px",
+                  borderRadius: "24px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                }}
+              >
+                <Button
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: "8px",
+                    color: "#54656f",
+                  }}
+                >
+                  <FaPaperclip size={20} />
+                </Button>
+                <textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                  placeholder="Type a message..."
+                  style={{
+                    border: "none",
+                    padding: "12px 6px",
+                    flex: 1,
+                    backgroundColor: "transparent",
+                    boxShadow: "none",
+                    outline: "none",
+                    resize: "none",
+                    wordWrap: "break-word",
+                    whiteSpace: "pre-wrap",
+                    height: "auto",
+                    minHeight: "36px",
+                    maxHeight: "120px",
+                    overflowY: "auto",
+                    fontFamily: "inherit",
+                    fontSize: "16px",
+                    lineHeight: "18px",
+                    display: "block",
+                    borderRadius: "20px",
+                    backgroundColor: "#fff",
+                  }}
+                />
+
+                <Button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim()}
+                  style={{
+                    backgroundColor: newMessage.trim() ? "#00a884" : "#e9edef",
+                    border: "none",
+                    padding: "8px",
+                    borderRadius: "50%",
+                    color: newMessage.trim() ? "#fff" : "#8696a0",
+                  }}
+                >
+                  <FaPaperPlane size={18} />
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+              color: "#667781",
+              gap: "16px",
+            }}
+          >
+            <div
+              style={{
+                width: "64px",
+                height: "64px",
                 borderRadius: "50%",
+                backgroundColor: "#f0f2f5",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-                cursor: "pointer",
-                transition: "transform 0.2s ease",
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = "scale(1.05)";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
               }}
             >
-              <svg
-                width="24"
-                height="24"
-                fill="#00a884"
-                viewBox="0 0 24 24"
-                style={{
-                  backgroundColor: "#e0f2f1",
-                  borderRadius: "50%",
-                  padding: "4px",
-                }}
-              >
-                <path d="M12 11l-4-4 1.4-1.4L12 8.2l2.6-2.6L16 7l-4 4zm0 6l-4-4 1.4-1.4L12 14.2l2.6-2.6L16 13l-4 4z" />
-              </svg>
+              <FaPaperPlane size={24} style={{ color: "#8696a0" }} />
             </div>
-          )}
-
-          {/* Message Input Section */}
-          <div
-            style={{
-              padding: "5px 4px",
-              position: isMobileView ? "fixed" : "relative",
-              bottom: 0,
-              left: isMobileView ? 0 : "auto",
-              right: isMobileView ? 0 : "auto",
-              width: isMobileView ? "100%" : "auto",
-              zIndex: 2,
-              backgroundColor: "transparent",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                // gap: "px",
-                backgroundColor: "#fff",
-                padding: "0px 9px",
-                borderRadius: "24px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-              }}
-            >
-              <Button
+            <div style={{ textAlign: "center" }}>
+              <p
                 style={{
-                  background: "transparent",
-                  border: "none",
-                  padding: "8px",
-                  color: "#54656f",
+                  fontSize: "18px",
+                  fontWeight: "500",
+                  margin: "0 0 8px 0",
                 }}
               >
-                <FaPaperclip size={20} />
-              </Button>
-              <textarea
-  value={newMessage}
-  onChange={(e) => setNewMessage(e.target.value)}
-  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-  placeholder="Type a message..."
-  style={{
-    border: "none",
-    padding: "12px 6px", // Zyada padding taake text behtar lage
-    flex: 1,
-    backgroundColor: "transparent",
-    boxShadow: "none",
-    outline: "none",
-    resize: "none",
-    wordWrap: "break-word",
-    whiteSpace: "pre-wrap",
-    height: "auto",
-    minHeight: "36px", // Thoda height increase taake proper lage
-    maxHeight: "120px",
-    overflowY: "auto",
-    fontFamily: "inherit",
-    fontSize: "16px", // Text thoda bara aur readable ho
-    lineHeight: "18px", // Proper alignment ke liye
-    display: "block", // Flex hatake normal block display rakhein
-    borderRadius: "20px", // WhatsApp jesa rounded look dene ke liye
-    backgroundColor: "#fff", // Light theme match karne ke liye
-  }}
-/>
-
-
-              <Button
-                onClick={sendMessage}
-                disabled={!newMessage.trim()}
-                style={{
-                  backgroundColor: newMessage.trim() ? "#00a884" : "#e9edef",
-                  border: "none",
-                  padding: "8px",
-                  borderRadius: "50%",
-                  color: newMessage.trim() ? "#fff" : "#8696a0",
-                }}
-              >
-                <FaPaperPlane size={18} />
-              </Button>
+                Select a chat to start messaging
+              </p>
+              <p style={{ fontSize: "14px", color: "#8696a0", margin: 0 }}>
+                Send and receive messages in real-time
+              </p>
             </div>
           </div>
-        </>
-      ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100%",
-            color: "#667781",
-            gap: "16px",
-          }}
-        >
-          <div
-            style={{
-              width: "64px",
-              height: "64px",
-              borderRadius: "50%",
-              backgroundColor: "#f0f2f5",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <FaPaperPlane size={24} style={{ color: "#8696a0" }} />
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <p
-              style={{
-                fontSize: "18px",
-                fontWeight: "500",
-                margin: "0 0 8px 0",
-              }}
-            >
-              Select a chat to start messaging
-            </p>
-            <p style={{ fontSize: "14px", color: "#8696a0", margin: 0 }}>
-              Send and receive messages in real-time
-            </p>
-          </div>
-        </div>
-      )}
-    </Col>
-  );
-};
+        )}
+      </Col>
+    );
+  };
 
   const LoaderOverlay = () => (
     <div
@@ -1592,6 +1516,7 @@ const WhatsAppChats = () => {
       </p>
     </div>
   );
+
   return (
     <div
       style={{
@@ -1604,15 +1529,12 @@ const WhatsAppChats = () => {
     >
       <style>
         {`
-          /* Hide scrollbar for Chrome, Safari and Opera */
           *::-webkit-scrollbar {
             display: none;
           }
-
-          /* Hide scrollbar for IE, Edge and Firefox */
           * {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
           }
         `}
       </style>
@@ -1634,4 +1556,5 @@ const WhatsAppChats = () => {
     </div>
   );
 };
+
 export default WhatsAppChats;
