@@ -727,7 +727,7 @@ const prevPage = () => {
     <div className="py-4">
       <Container>
         {/* Tabs for Create and List */}
-        <div className="mb-4">
+        <div className="mb-4" style={{ marginTop: '8rem' }}>
           <ButtonGroup className="w-100">
             <Button
               color={activeTab === "new" ? "primary" : "light"}
@@ -755,7 +755,7 @@ const prevPage = () => {
                 </Alert>
               )}
 
-              <div className="mb-4">
+              <div className="mb-4 ">
                 <h4>Campaign Progress</h4>
                 <Progress value={getCompletionPercentage()} className="mt-2" />
               </div>

@@ -1081,7 +1081,7 @@ const WhatsAppMenusAccess = () => {
       )}
 
       <div className="whatsapp-menu-access p-4">
-        <h2 className="mb-4">
+        <h2 className="mb-4 " style={{ marginTop: '8rem' }}>
           <i className="mr-2"></i>
           WhatsApp Menu Management
         </h2>

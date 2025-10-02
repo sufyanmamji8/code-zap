@@ -244,14 +244,11 @@
 
 
 
-
 import React, { useState, useEffect } from "react";
 import {
   Button,
   Card,
   CardBody,
-  CardTitle,
-  CardText,
   Row,
   Col,
   Modal,
@@ -360,78 +357,193 @@ const WhatsAppAccountList = () => {
     fetchWhatsappAccounts();
   }, []);
 
+  // Inline CSS styles for clean UI
+  const styles = `
+    .whatsapp-accounts-page {
+      background: #f8fafc;
+      min-height: 100vh;
+      padding-top: 8rem;
+    }
+
+    .page-header {
+      margin-bottom: 3rem;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      transition: transform 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: scale(1.02);
+    }
+
+    .account-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      transition: transform 0.2s ease;
+      margin-bottom: 1.5rem;
+    }
+
+    .account-card:hover {
+      transform: scale(1.02);
+    }
+
+    .whatsapp-icon {
+      background: #25D366;
+      border-radius: 10px;
+      padding: 12px;
+      display: inline-flex;
+    }
+
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    .status-active {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-inactive {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .btn-edit {
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+
+    .btn-edit:hover {
+      background: #e2e8f0;
+      color: #374151;
+    }
+
+    .btn-delete {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+
+    .btn-delete:hover {
+      background: #dc2626;
+      color: white;
+    }
+
+    .empty-state {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      flex-direction: column;
+    }
+  `;
+
   return (
     <>
+      <style>{styles}</style>
+      
       {/* Loading Animation */}
       {loading && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: "rgba(255, 255, 255, 0.8)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 9999,
-          }}
-        >
+        <div className="loading-overlay">
           <DotLottieReact
             src="https://lottie.host/5060de43-85ac-474a-a85b-892f9730e17a/b3jJ1vGkWh.lottie"
             loop
             autoplay
             style={{ width: "150px", height: "150px" }}
           />
+          <div className="mt-3" style={{ color: '#075E54', fontWeight: '600' }}>
+            Loading WhatsApp Accounts...
+          </div>
         </div>
       )}
 
-      <div style={{ background: '#f8fafc', minHeight: '100vh' }}>
-        {/* Header */}
-        <div style={{ padding: '2.5rem 0', marginBottom: '2rem' }}>
-          <Container>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <h1 className="display-4 mb-2" style={{ fontWeight: '600' }}>
-                  WhatsApp Accounts
-                </h1>
-                <p className="opacity-75 mb-0">
-                  Manage all your business accounts in one place
-                </p>
-              </div>
-            </div>
-          </Container>
-        </div>
-
+      <div className="whatsapp-accounts-page">
         <Container>
+          {/* Header */}
+          <div className="page-header">
+            <div className="mb-3">
+              <h1 className="h2 fw-bold mb-2" style={{ color: '#1a202c' }}>
+                WhatsApp Accounts
+              </h1>
+              <p className="text-muted mb-0">
+                Manage all your business accounts in one place
+              </p>
+            </div>
+          </div>
+
           {/* Status Cards */}
           <Row className="mb-4">
             {[
-              { title: 'Total Accounts', icon: 'users', value: whatsappAccounts.length, color: '#4C51BF' },
-              { title: 'Active', icon: 'check-circle', value: whatsappAccounts.filter(acc => acc.status === 'active').length, color: '#25D366' },
-              { title: 'Inactive', icon: 'ban', value: whatsappAccounts.filter(acc => acc.status !== 'active').length, color: '#DC3545' }
+              { 
+                title: ' TOTAL ACCOUNTS ', 
+                icon: 'users', 
+                value: whatsappAccounts.length, 
+                color: '#075E54'
+              },
+              { 
+                title: ' ACTIVE ', 
+                icon: 'check-circle', 
+                value: whatsappAccounts.filter(acc => acc.status === 'active').length, 
+                color: '#25D366'
+              },
+              { 
+                title: ' INACTIVE ', 
+                icon: 'ban', 
+                value: whatsappAccounts.filter(acc => acc.status !== 'active').length, 
+                color: '#DC3545'
+              }
             ].map((stat, idx) => (
-              <Col md="4" key={idx}>
-                <Card className="border-0 shadow-sm" style={{ borderRadius: '16px' }}>
-                  <CardBody className="d-flex align-items-center p-4">
-                    <div 
-                      className="me-5"
-                      style={{
-                        background: `${stat.color}15`,
-                        borderRadius: '12px',
-                        padding: '1.25rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginRight: '2rem'
-                      }}
-                    >
-                      <i className={`fas fa-${stat.icon}`} style={{ color: stat.color, fontSize: '1.75rem' }}></i>
-                    </div>
-                    <div>
-                      <h6 className="text-muted mb-2">{stat.title}</h6>
-                      <h3 className="mb-0" style={{ fontWeight: '600' }}>{stat.value}</h3>
+              <Col lg="4" md="4" className="mb-3" key={idx}>
+                <Card className="stat-card">
+                  <CardBody className="p-3">
+                    <div className="d-flex align-items-center">
+                      <div 
+                        className="me-4"
+                        style={{
+                          background: stat.color,
+                          borderRadius: '10px',
+                          padding: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                         
+                        }}
+                      >
+                        <i className={`fas fa-${stat.icon}`} style={{ color: 'white', fontSize: '1.25rem' }}></i>
+                      </div>
+                      <div>
+                        <h6 className="text-muted mb-1 small fw-semibold ml-3">{stat.title}</h6>
+                        <h4 className="mb-0 fw-bold ml-3" style={{ color: stat.color }}>{stat.value}</h4>
+                      </div>
                     </div>
                   </CardBody>
                 </Card>
@@ -441,7 +553,7 @@ const WhatsAppAccountList = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="alert alert-danger" style={{ borderRadius: '12px' }}>
+            <div className="alert alert-danger mb-4" style={{ borderRadius: '8px' }}>
               <i className="fas fa-exclamation-circle me-2"></i>
               {error}
             </div>
@@ -451,74 +563,48 @@ const WhatsAppAccountList = () => {
           <Row>
             {whatsappAccounts.length > 0 ? (
               whatsappAccounts.map((account) => (
-                <Col lg="4" md="6" className="mb-4" key={account._id}>
-                  <Card 
-                    className="border-0 shadow-sm hover-card"
-                    style={{ 
-                      borderRadius: '16px',
-                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                      backgroundColor: '#ffffff'
-                    }}
-                  >
-                    <CardBody className="p-3">
+                <Col xl="6" lg="6" className="mb-3" key={account._id}>
+                  <Card className="account-card">
+                    <CardBody className="p-4">
                       <div className="d-flex justify-content-between align-items-start mb-3">
-                        <div 
-                          style={{
-                            background: '#25D36610',
-                            borderRadius: '12px',
-                            padding: '1rem',
-                            display: 'inline-flex'
-                          }}
-                        >
-                          <i className="fab fa-whatsapp" style={{ color: '#25D366', fontSize: '1.5rem' }}></i>
+                        <div className="whatsapp-icon">
+                          <i className="fab fa-whatsapp" style={{ color: 'white', fontSize: '1.25rem' }}></i>
                         </div>
                         <span 
-                          className="badge"
-                          style={{
-                            background: account.status === 'active' ? '#25D36615' : '#DC354515',
-                            color: account.status === 'active' ? '#25D366' : '#DC3545',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '8px',
-                            fontWeight: '500',
-                            fontSize: '0.85rem'
-                          }}
+                          className={`status-badge ${account.status === 'active' ? 'status-active' : 'status-inactive'}`}
                         >
-                          {account.status}
+                          {account.status?.toUpperCase() || 'INACTIVE'}
                         </span>
                       </div>
 
-                      <h5 className="mb-2" style={{ fontWeight: '600', fontSize: '1.1rem' }}>{account.name}</h5>
+                      <h5 className="mb-2 fw-bold" style={{ color: '#1a202c' }}>
+                        {account.name}
+                      </h5>
                       
-                      <p className="text-muted mb-3" style={{ fontSize: '0.9rem', minHeight: '2.7rem', lineHeight: '1.4' }}>
+                      <p className="text-muted mb-3 small">
                         {account.description || "No description available"}
                       </p>
 
-                      <div className="d-flex align-items-center mb-3">
-                        <i className="far fa-calendar text-muted me-2"></i>
-                        <small className="text-muted">
-                          Created: {new Date(account.createdAt).toLocaleDateString()}
-                        </small>
+                      <div className="d-flex align-items-center text-muted mb-3">
+                        <i className="far fa-calendar me-2 small mr-2"></i>
+                        <small>Created: {new Date(account.createdAt).toLocaleDateString()}</small>
                       </div>
 
-                      <div className="d-flex gap-2 mt-2 pt-2 border-top">
+                      <div className="d-flex gap-2 pt-3 border-top">
                         <Button
-                          color="primary"
-                          outline
-                          className="w-100"
+                          className="btn-edit flex-fill"
                           onClick={() => handleEdit(account._id)}
-                          style={{ borderRadius: '8px', padding: '0.5rem' }}
+                          size="sm"
                         >
-                          <i className="fas fa-edit me-2"></i>
+                          <i className="fas fa-edit me-2 mr-2"></i>
                           Edit
                         </Button>
                         <Button
-                          color="danger"
-                          outline
-                          className="w-100"
+                          className="btn-delete flex-fill"
                           onClick={() => openDeleteModal(account)}
-                          style={{ borderRadius: '8px', padding: '0.5rem' }}
+                          size="sm"
                         >
-                          <i className="fas fa-trash me-2"></i>
+                          <i className="fas fa-trash me-2 mr-2"></i>
                           Delete
                         </Button>
                       </div>
@@ -528,63 +614,43 @@ const WhatsAppAccountList = () => {
               ))
             ) : (
               <Col xs="12">
-                <Card 
-                  className="border-0 shadow-sm text-center" 
-                  style={{ 
-                    borderRadius: '16px',
-                    padding: '2rem',
-                    backgroundColor: '#ffffff'
-                  }}
-                >
+                <div className="empty-state">
                   <div className="mb-3">
-                    <div 
-                      style={{
-                        background: '#25D36610',
-                        borderRadius: '12px',
-                        padding: '1.5rem',
-                        display: 'inline-flex',
-                        marginBottom: '1.5rem'
-                      }}
-                    >
-                      <i className="fab fa-whatsapp" style={{ color: '#25D366', fontSize: '2rem' }}></i>
-                    </div>
-                    <h4 style={{ fontWeight: '600', marginBottom: '0.75rem' }}>No WhatsApp Accounts</h4>
-                    <p className="text-muted" style={{ fontSize: '1rem' }}>Get started by adding your first business account</p>
+                    <i className="fab fa-whatsapp" style={{ color: '#cbd5e1', fontSize: '3rem' }}></i>
                   </div>
-                </Card>
+                  <h5 className="fw-bold mb-2">No WhatsApp Accounts</h5>
+                  <p className="text-muted mb-3">
+                    Get started by adding your first business account
+                  </p>
+                </div>
               </Col>
             )}
           </Row>
 
           {/* Delete Modal */}
-          <Modal isOpen={deleteModal} toggle={closeDeleteModal} style={{ maxWidth: '400px' }}>
-            <ModalHeader toggle={closeDeleteModal} className="border-0">
-              <i className="fas fa-exclamation-triangle text-danger me-2"></i>
+          <Modal 
+            isOpen={deleteModal} 
+            toggle={closeDeleteModal}
+            style={{ maxWidth: '400px' }}
+          >
+            <ModalHeader toggle={closeDeleteModal}>
               Delete Account
             </ModalHeader>
             <ModalBody className="text-center py-4">
-              <div 
-                className="mb-4"
-                style={{
-                  background: '#DC354510',
-                  borderRadius: '12px',
-                  padding: '1.5rem',
-                  display: 'inline-flex'
-                }}
-              >
-                <i className="fas fa-trash" style={{ color: '#DC3545', fontSize: '2rem' }}></i>
+              <div className="mb-3">
+                <i className="fas fa-exclamation-triangle text-danger" style={{ fontSize: '2rem' }}></i>
               </div>
-              <h5 style={{ fontWeight: '600' }}>Are you sure?</h5>
-              <p className="text-muted mb-0">
-                This will permanently delete {companyToDelete?.name}'s account.
+              <h6 className="fw-bold mb-2">Are you sure?</h6>
+              <p className="text-muted mb-0 small">
+                This will delete "{companyToDelete?.name}" permanently.
               </p>
             </ModalBody>
-            <ModalFooter className="border-0">
-              <Button color="secondary" outline onClick={closeDeleteModal} style={{ borderRadius: '8px' }}>
+            <ModalFooter>
+              <Button color="secondary" onClick={closeDeleteModal} size="sm">
                 Cancel
               </Button>
-              <Button color="danger" onClick={handleDelete} style={{ borderRadius: '8px' }}>
-                Delete Account
+              <Button color="danger" onClick={handleDelete} size="sm">
+                Delete
               </Button>
             </ModalFooter>
           </Modal>

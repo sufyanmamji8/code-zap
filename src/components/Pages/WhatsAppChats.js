@@ -1539,15 +1539,16 @@ const WhatsAppChats = () => {
         `}
       </style>
       {renderNewChatModal()}
-      <Container
-        fluid
-        style={{
-          flex: 1,
-          padding: "18px 15px 0 15px",
-          minHeight: 0,
-          zIndex: 1,
-        }}
-      >
+     <Container
+  fluid
+  style={{
+    marginTop: "5rem",
+    flex: 1,
+    padding: "18px 15px 0 15px",
+    minHeight: 0,
+    zIndex: 1,
+  }}
+>
         <Row style={{ height: "100%" }}>
           {(!selectedUser || !isMobileView) && renderUserList()}
           {(selectedUser || !isMobileView) && renderChatWindow()}

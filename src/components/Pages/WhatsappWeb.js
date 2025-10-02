@@ -1273,6 +1273,8 @@ const WhatsappWeb = () => {
   const [hours, setHours] = useState(7);
   const [minutes, setMinutes] = useState(23);
   const [seconds, setSeconds] = useState(45);
+  const [email, setEmail] = useState('');
+  const [isSubscribed, setIsSubscribed] = useState(false);
   
   // Simulate progress increasing
   useEffect(() => {
@@ -1315,152 +1317,571 @@ const WhatsappWeb = () => {
     return () => clearInterval(timer);
   }, [days, hours, minutes, seconds]);
 
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+    if (email) {
+      setIsSubscribed(true);
+      setEmail('');
+      setTimeout(() => setIsSubscribed(false), 3000);
+    }
+  };
+
   // Function to format number with leading zero
   const formatNumber = (num) => {
     return num < 10 ? `0${num}` : num;
   };
 
+  // Inline CSS styles
+  const styles = `
+    .whatsapp-coming-soon {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* Background shapes animation */
+    .bg-shapes {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .shape {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .shape-1 {
+      width: 200px;
+      height: 200px;
+      top: 10%;
+      left: 10%;
+      animation-delay: 0s;
+    }
+
+    .shape-2 {
+      width: 150px;
+      height: 150px;
+      top: 60%;
+      right: 10%;
+      animation-delay: 2s;
+    }
+
+    .shape-3 {
+      width: 100px;
+      height: 100px;
+      bottom: 20%;
+      left: 20%;
+      animation-delay: 4s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(180deg); }
+    }
+
+    /* Card styles */
+    .whatsapp-card {
+      margin-top: 2rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      z-index: 2;
+    }
+
+    .whatsapp-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Left panel styles */
+    .whatsapp-left-panel {
+      position: relative;
+    }
+
+    .bg-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+      z-index: 1;
+    }
+
+    .whatsapp-left-panel .content-wrapper {
+      position: relative;
+      z-index: 2;
+    }
+
+    .logo-wrapper {
+      position: relative;
+    }
+
+    .whatsapp-logo {
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .brand-title {
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, #fff, #e3f2fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Progress bar styles */
+    .custom-progress {
+      height: 10px !important;
+      border-radius: 10px !important;
+      background: rgba(255, 255, 255, 0.2) !important;
+      overflow: hidden;
+    }
+
+    .custom-progress .progress-bar {
+      background: linear-gradient(90deg, #4FC3F7, #29B6F6) !important;
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+
+    .progress-percentage {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #4FC3F7;
+    }
+
+    /* Tech badges */
+    .tech-badges {
+      display: flex;
+      gap: 5px;
+    }
+
+    .tech-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* Right panel styles */
+    .whatsapp-right-panel {
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+
+    .coming-soon-badge {
+ background: linear-gradient(135deg, #667eea, #73de27ff);      color: white;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+    }
+
+    .main-heading {
+      color: #2c3e50;
+      font-size: 2.2rem;
+      line-height: 1.2;
+    }
+
+    /* Countdown styles */
+    .countdown-section {
+      text-align: center;
+    }
+
+    .countdown-label {
+      color: #6c757d;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.9rem;
+    }
+
+    .countdown-timer {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .countdown-item {
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .countdown-value {
+      background: linear-gradient(135deg, #667eea, #73de27ff);
+      color: white;
+      padding: 15px 10px;
+      border-radius: 15px;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      transition: transform 0.3s ease;
+    }
+
+    .countdown-item:hover .countdown-value {
+      transform: scale(1.05);
+    }
+
+    .countdown-label-small {
+      color: #6c757d;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    /* Notification form styles */
+    .notification-form .input-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .email-input {
+      flex: 1;
+      min-width: 250px;
+      border-radius: 25px !important;
+      padding: 12px 20px;
+      border: 2px solid #e9ecef;
+      transition: all 0.3s ease;
+    }
+
+    .email-input:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .notify-btn {
+ background: linear-gradient(135deg, #667eea, #73de27ff);      border: none !important;
+      border-radius: 25px !important;
+      padding: 12px 30px !important;
+      font-weight: 600;
+      transition: all 0.3s ease !important;
+      white-space: nowrap;
+    }
+
+    .notify-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4) !important;
+    }
+
+    /* Features section */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+    }
+
+    .feature-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
+      padding: 20px;
+      background: white;
+      border-radius: 15px;
+      border: 1px solid #e9ecef;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      border-color: #667eea;
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .feature-content {
+      flex: 1;
+    }
+
+    .feature-title {
+      color: #2c3e50;
+      font-weight: 600;
+      margin-bottom: 5px;
+      font-size: 0.95rem;
+    }
+
+    .feature-desc {
+      color: #6c757d;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    /* Alert styles */
+    .alert {
+      border-radius: 15px !important;
+      border: none !important;
+      box-shadow: 0 5px 20px rgba(40, 167, 69, 0.2) !important;
+    }
+
+    /* Responsive design */
+    @media (max-width: 991px) {
+      .whatsapp-left-panel {
+        border-radius: 25px 25px 0 0 !important;
+        padding: 40px 30px !important;
+      }
+      
+      .whatsapp-right-panel {
+        padding: 40px 30px !important;
+      }
+      
+      .countdown-timer {
+        gap: 10px;
+      }
+      
+      .countdown-item {
+        min-width: 70px;
+      }
+      
+      .countdown-value {
+        font-size: 1.5rem;
+        padding: 12px 8px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .whatsapp-card {
+        margin-top: 1rem;
+      }
+      
+      .main-heading {
+        font-size: 1.8rem;
+      }
+      
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .notification-form .input-group {
+        flex-direction: column;
+      }
+      
+      .email-input {
+        min-width: 100%;
+        margin-bottom: 10px;
+      }
+      
+      .notify-btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .countdown-timer {
+        gap: 8px;
+      }
+      
+      .countdown-item {
+        min-width: 60px;
+      }
+      
+      .countdown-value {
+        font-size: 1.3rem;
+        padding: 10px 6px;
+      }
+      
+      .brand-title {
+        font-size: 1.5rem;
+      }
+    }
+  `;
+
   return (
-    <Container fluid className="p-0">
-      <Row className="g-0" style={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
-        overflow: 'hidden'
-      }}>
-        <Col xs="12" className="d-flex align-items-center justify-content-center py-4">
-          <Card className="shadow-lg border-0" style={{ 
-            maxWidth: '95%',
-            width: '1000px',
-            borderRadius: '20px',
-            background: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(10px)',
-            overflow: 'hidden'
-          }}>
-            <CardBody className="p-0">
-              <Row className="g-0">
-                {/* Left column */}
-                <Col lg="5" className="d-flex flex-column justify-content-between" style={{
-                  background: 'linear-gradient(135deg, #075E54 0%, #128C7E 100%)',
-                  borderRadius: '20px 20px 0 0',
-                  color: 'white',
-                  padding: '5%'
-                }}>
-                  <div>
-                    <div className="d-flex align-items-center mb-3">
-                      <div className="bg-white rounded-circle p-2 me-2" style={{ minWidth: '40px', maxWidth: '40px' }}>
-                        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="#075E54">
-                          <path d="M12.043 6.925a4.982 4.982 0 0 0-4.975 4.975c-.001.94.263 1.858.761 2.645l.118.188-.502 1.833 1.882-.494.181.108a4.97 4.97 0 0 0 2.535.694h.003a4.982 4.982 0 0 0 4.975-4.975 4.946 4.946 0 0 0-1.456-3.519 4.946 4.946 0 0 0-3.522-1.455zm2.957 7.142c-.131.371-.482.628-.877.708-.235.047-.541.085-.879-.09a14.929 14.929 0 0 1-1.473-.669 10.036 10.036 0 0 1-3.015-2.755 3.433 3.433 0 0 1-.709-1.822c.008-.468.246-.903.642-1.172a.655.655 0 0 1 .469-.149c.112 0 .223.005.318.009.102.005.234.008.366.236.15.262.443.917.482.984.041.069.069.15.021.243-.049.095-.075.151-.15.232l-.223.335c-.074.111-.155.232-.066.36.088.129.39.549.839.889.577.435 1.039.57 1.211.639.116.046.255.035.336-.061.103-.122.232-.319.363-.514.092-.138.209-.155.332-.105.129.047.813.383.951.452.139.07.232.104.266.165.035.059.035.344-.082.675z"/>
-                        </svg>
-                      </div>
-                      <h3 className="mb-0 fw-bold">WhatsApp Web</h3>
-                    </div>
-                    <h5 className="mb-3">We're building something amazing</h5>
-                    <p className="mb-3 small">Our team is working hard to bring you the next generation of WhatsApp Web with exciting new features.</p>
+    <div className="whatsapp-coming-soon">
+      <style>{styles}</style>
+      <Container fluid className="p-0">
+        <Row className="g-0" style={{ 
+          minHeight: '100vh', 
+          background: 'white',
+          overflow: 'hidden',
+          position: 'relative'
+        }}>
+          {/* Animated background elements */}
+          <div className="bg-shapes">
+            <div className="shape shape-1"></div>
+            <div className="shape shape-2"></div>
+            <div className="shape shape-3"></div>
+          </div>
+          
+          <Col xs="12" className="d-flex align-items-center justify-content-center py-5">
+            <Card className="shadow-lg border-0 whatsapp-card" style={{ 
+              maxWidth: '95%',
+              width: '1100px',
+              borderRadius: '25px',
+              marginTop: '70px',
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              overflow: 'hidden',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              <CardBody className="p-0">
+                <Row className="g-0">
+                  {/* Left column */}
+                  <Col lg="5" className="d-flex flex-column justify-content-between whatsapp-left-panel" style={{
+ background: 'linear-gradient(135deg, #667eea, #73de27ff)',                    
+                    color: 'white',
+                    padding: '50px 40px',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Background pattern */}
+                    <div className="bg-pattern"></div>
                     
-                    <div className="mb-4">
-                      <h6 className="mb-2">Development Progress</h6>
-                      <Progress 
-                        value={progress} 
-                        className="mb-1" 
-                        style={{ 
-                          height: '8px', 
-                          backgroundColor: 'rgba(255,255,255,0.2)',
-                          borderRadius: '5px'
-                        }} 
-                      />
-                      <div className="d-flex justify-content-between">
-                        <small className="small">Working on it</small>
-                        <small className="small">{Math.round(progress)}% Complete</small>
+                    <div className="content-wrapper">
+                      <div className="d-flex align-items-center mb-4">
+                        <div className="logo-wrapper me-3">
+                      
+                        </div>
+                        <div>
+                          <h3 className="mb-0 fw-bold brand-title">WhatsApp Web</h3>
+                          <small className="opacity-80">Next Generation</small>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <h4 className="mb-3 fw-semibold">We're building something amazing</h4>
+                        <p className="mb-0 opacity-90" style={{ lineHeight: '1.6' }}>
+                          Our team is working hard to bring you the next generation of WhatsApp Web 
+                          with exciting new features and enhanced user experience.
+                        </p>
+                      </div>
+                      
+                      <div className="progress-section">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <h6 className="mb-0 fw-semibold">Development Progress</h6>
+                          <span className="progress-percentage">{Math.round(progress)}%</span>
+                        </div>
+                        <Progress 
+                          value={progress} 
+                          className="custom-progress" 
+                        />
+                        <div className="d-flex justify-content-between mt-1">
+                          <small className="opacity-80">Working on it</small>
+                          <small className="opacity-80">Almost there!</small>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    
+                   
+                  </Col>
                   
-                  {/* <div className="d-flex gap-2 mt-3 justify-content-center justify-content-lg-start">
-                    <p className="mb-2 small opacity-75 me-2 d-none d-sm-block">Follow us:</p>
-                    {['facebook', 'twitter', 'instagram'].map(platform => (
-                      <div key={platform} className="bg-white rounded-circle p-1" style={{ width: 30, height: 30 }}>
-                        <div className="bg-primary rounded-circle w-100 h-100"></div>
+                  {/* Right column */}
+                  <Col lg="7" className="whatsapp-right-panel" style={{ padding: '50px 40px' }}>
+                    {isSubscribed && (
+                      <div className="alert alert-success alert-dismissible fade show" role="alert">
+                        <strong>Success!</strong> You'll be notified when we launch.
+                        <button type="button" className="btn-close" onClick={() => setIsSubscribed(false)}></button>
                       </div>
-                    ))}
-                  </div> */}
-                </Col>
-                
-                {/* Right column */}
-                <Col lg="7" style={{ padding: '5%' }}>
-                  <div className="text-end mb-3">
-                    <span className="badge bg-warning p-2 px-3 rounded-pill">Coming Soon</span>
-                  </div>
-                  
-                  <h4 className="mb-3 fw-bold">Get ready for a new experience</h4>
-                  
-                  <div className="mb-4">
-                    <h6 className="text-primary mb-2">Launching in:</h6>
-                    <div className="d-flex flex-wrap justify-content-between">
-                      {[
-                        { value: days, label: 'Days' },
-                        { value: hours, label: 'Hours' },
-                        { value: minutes, label: 'Min' },
-                        { value: seconds, label: 'Sec' }
-                      ].map((item, index) => (
-                        <div key={index} className="text-center mb-2" style={{ width: '23%', minWidth: '60px' }}>
-                          <div className="bg-light rounded-3 p-2 mb-1 d-flex align-items-center justify-content-center" style={{ height: '50px' }}>
-                            <h4 className="mb-0 fw-bold text-primary">{formatNumber(item.value)}</h4>
-                          </div>
-                          <small className="text-muted small">{item.label}</small>
+                    )}
+                    
+                    <div className="text-end mb-4">
+                      <span className="coming-soon-badge">Coming Soon</span>
+                    </div>
+                    
+                    <div className="mb-5">
+                      <h2 className="fw-bold mb-3 main-heading">Get ready for a new experience</h2>
+                      <p className="text-muted mb-4">
+                        The future of messaging is here. Faster, smarter, and more connected than ever before.
+                      </p>
+                      
+                      <div className="countdown-section">
+                        <h6 className="countdown-label mb-3">Launching in:</h6>
+                        <div className="countdown-timer">
+                          {[
+                            { value: days, label: 'Days' },
+                            { value: hours, label: 'Hours' },
+                            { value: minutes, label: 'Minutes' },
+                            { value: seconds, label: 'Seconds' }
+                          ].map((item, index) => (
+                            <div key={index} className="countdown-item">
+                              <div className="countdown-value">
+                                {formatNumber(item.value)}
+                              </div>
+                              <div className="countdown-label-small">
+                                {item.label}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <h6 className="mb-2">Get notified when we launch</h6>
-                    <div className="d-flex flex-column flex-sm-row">
-                      <Input 
-                        type="email" 
-                        placeholder="Your email" 
-                        className="rounded-pill mb-2 mb-sm-0"
-                        style={{ 
-                          fontSize: '0.9rem',
-                          borderTopRightRadius: '50px !important',
-                          borderBottomRightRadius: '50px !important'
-                        }}
-                      />
-                      <Button 
-                        color="primary" 
-                        className="rounded-pill px-3 ms-sm-2"
-                        style={{ fontSize: '0.9rem' }}
-                      >
-                        Notify Me
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="border-top pt-3 mt-3">
-                    <div className="row g-2">
-                      {[
-                        { icon: '📱', title: 'Multi-Device Support' },
-                        { icon: '🔒', title: 'End-to-End Encryption' },
-                        { icon: '📞', title: 'HD Video Calls' },
-                        { icon: '🌙', title: 'Dark Mode' },
-                        { icon: '📎', title: 'File Sharing' },
-                        { icon: '🔍', title: 'Search Features' }
-                      ].map((feature, idx) => (
-                        <div key={idx} className="col-6 col-md-4">
-                          <div className="bg-light p-2 rounded-3 text-center h-100">
-                            <div className="mb-1" style={{ fontSize: '1.5rem' }}>{feature.icon}</div>
-                            <small className="mb-0 fw-bold">{feature.title}</small>
-                          </div>
+                    
+                    <div className="notification-section mb-5">
+                      <h6 className="mb-3 fw-semibold">Get notified when we launch</h6>
+                      <form onSubmit={handleSubscribe} className="notification-form">
+                        <div className="input-group">
+                          <Input 
+                            type="email" 
+                            placeholder="Enter your email address" 
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="email-input"
+                          />
+                          <Button 
+                            type="submit"
+                            className="notify-btn"
+                          >
+                            Notify Me
+                          </Button>
                         </div>
-                      ))}
+                        <small className="text-muted mt-2 d-block">
+                          We'll send you one email when we're ready. No spam, unsubscribe anytime.
+                        </small>
+                      </form>
                     </div>
-                  </div>
-                </Col>
-              </Row>
-            </CardBody>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+                    
+                    <div className="features-section">
+                      <h6 className="mb-3 fw-semibold">Exciting New Features</h6>
+                      <div className="features-grid">
+                        {[
+                          { icon: '📱', title: 'Multi-Device Support', desc: 'Use WhatsApp on multiple devices simultaneously' },
+                          { icon: '🔒', title: 'End-to-End Encryption', desc: 'Your messages are always secure and private' },
+                          { icon: '📞', title: 'HD Video Calls', desc: 'Crystal clear video calls with anyone, anywhere' },
+                          { icon: '🌙', title: 'Dark Mode', desc: 'Easy on the eyes, day and night' },
+                          { icon: '📎', title: 'File Sharing', desc: 'Share files up to 2GB instantly' },
+                          { icon: '🔍', title: 'Smart Search', desc: 'Find messages and media in seconds' }
+                        ].map((feature, idx) => (
+                          <div key={idx} className="feature-card">
+                            <div className="feature-icon">{feature.icon}</div>
+                            <div className="feature-content">
+                              <h6 className="feature-title">{feature.title}</h6>
+                              <p className="feature-desc">{feature.desc}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+              </CardBody>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+    </div>
   );
 };
 

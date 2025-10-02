@@ -324,7 +324,7 @@ const defaultRoutes = [
 
   return (
     <Navbar
-      className="navbar-vertical fixed-left navbar-light bg-white"
+      className="navbar-vertical fixed-left navbar-light bg-white border"
       expand="md"
       id="sidenav-main"
     >
@@ -343,12 +343,12 @@ const defaultRoutes = [
               <div className="d-flex align-items-center side-responsive">
               <img
                 alt={logo.imgAlt}
-                className="navbar-brand-img"
+                className="navbar-brand-img mt-4"
                 src={require("../../assets/img/brand/free-waba-logo.png")}
                 style={{ height: "100%", width: "auto" }}
               />
               </div>
-              <h2>CodoZap</h2>
+              <h2 className="mt-4">CodoZap</h2>
 
             </div>
 

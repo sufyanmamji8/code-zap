@@ -24,6 +24,7 @@ import WhatsAppMenusAccess from "components/Pages/WhatsAppMenusAccess";
 import WhatsappGroup from "components/Pages/WhatsappGroup";
 import WhatsappWeb from "components/Pages/WhatsappWeb";
 import ChatBot from "components/Pages/ChatBot";
+import './global.css'; 
 
 var routes = [
   {

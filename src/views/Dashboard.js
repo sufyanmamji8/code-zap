@@ -231,8 +231,8 @@ const Dashboard = () => {
 
         <div className="meta-info mb-3">
           <small className="text-muted d-flex align-items-center">
-            <span className="me-2" role="img" aria-label="calendar">📅</span>
-            Created: {formatDate(account.createdAt)}
+            <span className="me-2" role="img" aria-label="calendar"> 📅 </span>
+             Created: {formatDate(account.createdAt)}
           </small>
         </div>
 
@@ -317,7 +317,7 @@ const Dashboard = () => {
             max-width: 1400px;
             margin: 0 auto;
             min-height: 100vh;
-            padding-top: 2rem;
+            padding-top: 8rem;
           }
 
           .fun-gradient {

@@ -205,7 +205,6 @@
 
 
 
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -332,133 +331,211 @@ const EditCompany = () => {
     }
   };
 
+  // Inline CSS styles
+  const styles = `
+    .edit-company-page {
+      background: #f8fafc;
+      min-height: 100vh;
+      padding-top: 2rem;
+    }
+
+    .company-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+    }
+
+    .card-header-custom {
+      
+            background: #25D366;
+
+      color: white;
+      border-radius: 12px 12px 0 0;
+      border: none;
+    }
+
+    .btn-primary-custom {
+      background: #25D366;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+
+    .btn-primary-custom:hover {
+      background: #128C7E;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline-custom {
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+
+    .btn-outline-custom:hover {
+      background: #e2e8f0;
+      color: #374151;
+    }
+
+    .form-control-custom {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+    }
+
+    .form-control-custom:focus {
+      border-color: #25D366;
+      box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.25);
+    }
+
+    .required-badge {
+      background: #dc2626;
+      font-size: 0.7rem;
+      padding: 4px 8px;
+    }
+  `;
+
   if (loading) {
     return (
-      <Container fluid className="px-3 px-md-4 py-4">
-        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
-          <div className="text-center">
-            <Spinner color="primary" style={{ width: '3rem', height: '3rem' }} />
-            <p className="mt-3 text-primary">Loading company details...</p>
+      <div className="edit-company-page">
+        <style>{styles}</style>
+        <Container fluid className="px-3 px-md-4 py-4">
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '60vh' }}>
+            <div className="text-center">
+              <Spinner style={{ width: '3rem', height: '3rem', color: '#25D366' }} />
+              <p className="mt-3" style={{ color: '#075E54', fontWeight: '500' }}>Loading company details...</p>
+            </div>
           </div>
-        </div>
-      </Container>
+        </Container>
+      </div>
     );
   }
 
   return (
-    <Container fluid className="bg-light min-vh-100 px-3 px-md-4 py-4">
-      {/* Back Button - Visible on mobile */}
-      <Row className="d-md-none mb-3">
-        <Col>
-          <Button
-            color="light"
-            className="d-flex align-items-center shadow-sm"
-            onClick={() => navigate("/admin/dashboard")}
-          >
-            <ArrowLeft size={18} className="me-2" />
-            Back to Dashboard
-          </Button>
-        </Col>
-      </Row>
+    <div className="edit-company-page">
+      <style>{styles}</style>
+      <Container style={{ marginTop: '5rem' }}>
+        {/* Back Button - Visible on mobile */}
+        <Row className="d-md-none mb-3">
+          <Col>
+            <Button
+              className="btn-outline-custom w-100 d-flex align-items-center justify-content-center"
+              onClick={() => navigate("/admin/dashboard")}
+            >
+              <ArrowLeft size={18} className="me-2" />
+              Back to Dashboard
+            </Button>
+          </Col>
+        </Row>
 
-      <Row className="justify-content-center">
-        <Col xs={12} sm={12} md={10} lg={8} xl={6}>
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="bg-gradient-primary text-white p-3 p-md-4">
-              <div className="d-flex align-items-center justify-content-center">
-                <Building2 size={24} className="me-2" />
-                <h3 className="mb-0 fs-4 fs-md-3">Edit WhatsApp Account</h3>
-              </div>
-            </CardHeader>
-            <CardBody className="p-3 p-md-4">
-              {error ? (
-                <Alert color="danger" className="d-flex align-items-center mb-4">
-                  <AlertCircle size={20} className="me-2" />
-                  {error}
-                </Alert>
-              ) : (
-                <Form onSubmit={handleUpdate}>
-                  <FormGroup className="mb-4">
-                    <Label className="fw-bold d-flex align-items-center">
-                      Name <Badge color="danger" className="ms-2">Required</Badge>
-                    </Label>
-                    <Input
-                      type="text"
-                      name="name"
-                      value={company.name}
-                      onChange={handleInputChange}
-                      placeholder="Enter company name"
-                      required
-                      className="form-control-lg shadow-sm"
-                    />
-                  </FormGroup>
-                  <FormGroup className="mb-4">
-                    <Label className="fw-bold">Description</Label>
-                    <Input
-                      type="textarea"
-                      name="description"
-                      value={company.description}
-                      onChange={handleInputChange}
-                      placeholder="Enter company description"
-                      rows="4"
-                      className="shadow-sm"
-                      style={{ resize: 'none' }}
-                    />
-                  </FormGroup>
-                  <FormGroup className="mb-4">
-                    <Label className="fw-bold d-flex align-items-center">
-                      Status <Badge color="danger" className="ms-2">Required</Badge>
-                    </Label>
-                    <Input
-                      type="select"
-                      name="status"
-                      value={company.status}
-                      onChange={handleInputChange}
-                      required
-                      className="form-control-lg shadow-sm"
-                    >
-                      <option value="">Select status</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </Input>
-                  </FormGroup>
-                  
-                  {/* Responsive button layout */}
-                  <div className="d-flex flex-column flex-md-row justify-content-between gap-3 mt-4">
+        <Row className="justify-content-center">
+          <Col xs={12} sm={12} md={10} lg={8} xl={6}>
+            <Card className="company-card shadow-sm">
+              <CardHeader className="card-header-custom p-4">
+                <div className="d-flex align-items-center justify-content-center">
+                  <Building2 size={24} className="me-3" />
+                  <h3 className="mb-0 fs-4 fw-bold ml-3"> Edit WhatsApp Account</h3>
+                </div>
+              </CardHeader>
+              <CardBody className="p-4">
+                {error ? (
+                  <Alert color="danger" className="d-flex align-items-center mb-4" style={{ borderRadius: '8px', border: 'none' }}>
+                    <AlertCircle size={20} className="me-2" />
+                    {error}
+                  </Alert>
+                ) : (
+                  <Form onSubmit={handleUpdate}>
+                    <FormGroup className="mb-4">
+                      <Label className="fw-bold d-flex align-items-center mb-2">
+                        Name <Badge className="required-badge ms-2">Required</Badge>
+                      </Label>
+                      <Input
+                        type="text"
+                        name="name"
+                        value={company.name}
+                        onChange={handleInputChange}
+                        placeholder="Enter company name"
+                        required
+                        className="form-control-custom p-3"
+                      />
+                    </FormGroup>
+                    
+                    <FormGroup className="mb-4">
+                      <Label className="fw-bold mb-2">Description</Label>
+                      <Input
+                        type="textarea"
+                        name="description"
+                        value={company.description}
+                        onChange={handleInputChange}
+                        placeholder="Enter company description"
+                        rows="4"
+                        className="form-control-custom"
+                        style={{ resize: 'none' }}
+                      />
+                    </FormGroup>
+                    
+                    <FormGroup className="mb-4">
+                      <Label className="fw-bold d-flex align-items-center mb-2">
+                        Status <Badge className="required-badge ms-2">Required</Badge>
+                      </Label>
+                      <Input
+                        type="select"
+                        name="status"
+                        style={{ height: '55px' }}
+                        value={company.status}
+                        onChange={handleInputChange}
+                        required
+                        className="form-control-custom p-3"
+                      >
+                        <option value="">Select status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </Input>
+                    </FormGroup>
+                    
+                    {/* Responsive button layout */}
+                    <div className="d-flex flex-column flex-md-row justify-content-between gap-3 mt-5 pt-3 border-top">
+                      <Button
+                        className="btn-outline-custom order-2 order-md-1 w-100 w-md-auto px-4 py-2 d-none d-md-flex align-items-center justify-content-center"
+                        onClick={() => navigate("/admin/whatsapplist")}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className="btn-primary-custom order-1 order-md-2 w-100 w-md-auto px-4 py-2 d-flex align-items-center justify-content-center"
+                        type="submit"
+                        disabled={submitLoading}
+                      >
+                        {submitLoading ? (
+                          <div className="d-flex align-items-center justify-content-center">
+                            <Spinner size="sm" className="me-2" />
+                            <span>Updating...</span>
+                          </div>
+                        ) : (
+                          <div className="d-flex align-items-center justify-content-center">
+                            <Edit size={18} className="me-2" />
+                            <span>Update Account</span>
+                          </div>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Mobile cancel button */}
                     <Button
-                      color="light"
-                      outline
+                      className="btn-outline-custom w-100 mt-3 d-md-none d-flex align-items-center justify-content-center"
                       onClick={() => navigate("/admin/dashboard")}
-                      className="order-2 order-md-1 w-100 w-md-auto px-4 py-2 d-none d-md-block"
                     >
                       Cancel
                     </Button>
-                    <Button
-                      color="primary"
-                      type="submit"
-                      className="order-1 order-md-2 w-100 w-md-auto px-4 py-2"
-                      disabled={submitLoading}
-                    >
-                      {submitLoading ? (
-                        <div className="d-flex align-items-center justify-content-center">
-                          <Spinner size="sm" className="me-2" />
-                          <span>Updating...</span>
-                        </div>
-                      ) : (
-                        <div className="d-flex align-items-center justify-content-center">
-                          <Edit size={18} className="me-2" />
-                          <span>Update</span>
-                        </div>
-                      )}
-                    </Button>
-                  </div>
-                </Form>
-              )}
-            </CardBody>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+                  </Form>
+                )}
+              </CardBody>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+    </div>
   );
 };
 
