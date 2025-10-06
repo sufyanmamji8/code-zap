@@ -661,12 +661,12 @@ const ApiKey = () => {
   return (
     <div className="api-key-page">
       <style>{styles}</style>
-      <Container style={{ marginTop: '0rem' }}>
-        <Card className="api-key-card shadow-sm " >
-          <CardHeader className="card-header-custom p-4" style={{ marginTop: '8rem' }}>
+      <Container style={{ marginTop: '8rem', paddingLeft: '2rem', paddingRight: '2rem' }}>
+        <Card className="api-key-card shadow-sm">
+          <CardHeader className="card-header-custom p-4">
             <Row className="align-items-center">
               <Col>
-                <div className="d-flex align-items-center mb-2 ">
+                <div className="d-flex align-items-center mb-2">
                   <Key size={24} className="me-3" color="white" />
                   <h3 className="mb-0 fw-bold">API Key Management</h3>
                 </div>

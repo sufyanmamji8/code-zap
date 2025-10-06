@@ -549,9 +549,13 @@ const Settings = () => {
 
   return (
     <div>
-      <div className="settings-header">
-        <h2>WhatsApp Configuration</h2>
-        <h4>Configure your WhatsApp Business Account</h4>
+      <div style={{ marginTop: "7rem" , 
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  color : "#ffffff",
+
+       }} className="settings-header " >
+        <h2 className='text-white'>WhatsApp Configuration</h2>
+        <h4 className='text-white'>Configure your WhatsApp Business Account</h4>
       </div>
 
       {/* Accordion Section */}

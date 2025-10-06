@@ -270,13 +270,12 @@ const Dashboard = () => {
   );
 
   return (
-    <Container fluid className="dashboard-container px-4">
+    <Container fluid className="dashboard-container" style={{ paddingLeft: 0, paddingRight: 0 }}>
       <div className="fun-header text-center py-4 mb-4">
         <h1 className="display-4 fw-bold fun-gradient mb-3">
           Welcome Back, {userName || "Friend"}
         </h1>
         <h2 className="h3 text-muted fw-light">
-          Your WhatsApp Business Hub
           <span role="img" aria-label="rocket" className="ms-2">🚀</span>
         </h2>
       </div>

@@ -1093,7 +1093,12 @@ const WhatsAppMenusAccess = () => {
             className="mr-2 px-4"
             onClick={() => setActiveTab('assign')}
           >
-            <FaLink className="mr-2" /> Assign Menus
+            <FaLink         style={{
+                 padding : "20px",
+              
+background: "linear-gradient(135deg, #3487daff, #8b5cf6)",
+                  color: "#ffffff",
+                }}  className="mr-2" /> Assign Menus
           </Button>
           <Button 
             color={activeTab === 'overview' ? 'primary' : 'light'} 
@@ -1123,8 +1128,14 @@ const WhatsAppMenusAccess = () => {
             {/* Assign Menu Section - Full Width */}
             <Col md="12">
               <Card className="shadow-sm border-0 mb-4">
-                <CardHeader className="bg-gradient-primary text-white">
-                  <h4 className="mb-0">Assign Menu to Group</h4>
+                <CardHeader className=" text-white">
+                  <h4
+                     style={{
+                 padding : "20px",
+              
+background: "linear-gradient(135deg, #3487daff, #8b5cf6)",
+                  color: "#ffffff",
+                }} className="mb-0">Assign Menu to Group</h4>
                 </CardHeader>
                 <CardBody>
                   <Form onSubmit={handleAssignMenu}>
@@ -1180,9 +1191,14 @@ const WhatsAppMenusAccess = () => {
                           color="primary" 
                           type="submit" 
                           disabled={loading || !selectedGroup || !selectedMenu}
-                          className="btn-lg btn-block mb-3"
+                          className="btn-lg btn-block "
                         >
-                          <FaLink className="mr-2" /> Assign Menu
+                          <FaLink         style={{
+                 padding : "20px",
+              
+background: "linear-gradient(135deg, #3487daff, #8b5cf6)",
+                  color: "#ffffff",
+                }}   className="mr-2 mt-2" /> Assign Menu
                         </Button>
                       </Col>
                     </Row>

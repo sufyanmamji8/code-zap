@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink as NavLinkRRD, Link, useLocation, useNavigate, } from "react-router-dom";
+import { NavLink as NavLinkRRD, Link, useLocation, useNavigate } from "react-router-dom";
 import { PropTypes } from "prop-types";
 import {
   UncontrolledDropdown,
@@ -9,178 +9,123 @@ import {
   Nav,
   NavItem,
   NavLink,
-  NavbarBrand,
   Navbar,
+  NavbarBrand,
   Container,
-  Row,
-  Col,
-  Collapse,
-  Media,
 } from "reactstrap";
 import { toast } from "sonner";
 
-
-const styles = {
-  sidebarWrapper: {
-    position: 'relative',
-    zIndex: 999,
-  },
-  mobileOverlay: {
-    position: 'fixed',
-    top: '60px',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 998,
-    display: 'none',
-  },
-  mobileSidebarOpen: {
-    display: 'block',
-  },
-  navbar: {
-    '@media (max-width: 768px)': {
-      position: 'fixed',
-      top: '60px',
-      left: '-280px',
-      bottom: 0,
-      width: '280px',
-      transition: 'left 0.3s ease',
-      overflow: 'auto',
-    }
-  },
-  navbarOpen: {
-    '@media (max-width: 768px)': {
-      left: 0,
-    }
-  },
-  brand: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: '1rem',
-  },
-  brandImage: {
-    height: '40px',
-    width: 'auto',
-    marginRight: '1rem',
-  },
-  brandTitle: {
-    margin: 0,
-    fontSize: '1.5rem',
-    color: '#32325d',
-  },
-  '@media (max-width: 768px)': {
-    '.navbar-collapse': {
-      position: 'fixed',
-      top: '60px',
-      left: 0,
-      width: '250px',
-      height: 'calc(100vh - 60px)',
-      backgroundColor: 'white',
-      paddingLeft: '15px',
-      paddingRight: '15px',
-      overflowY: 'auto',
-      transition: 'transform 0.3s ease',
-      transform: 'translateX(-100%)'
-    },
-    '.navbar-collapse.show': {
-      transform: 'translateX(0)'
-    }
-  }
-  
-};
-
 const Sidebar = (props) => {
-  const [collapseOpen, setCollapseOpen] = useState(false);
+  const { routes, logo, isSidebarOpen, toggleSidebar } = props;
   const [isWhatsAppView, setIsWhatsAppView] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const location = useLocation();
   const navigate = useNavigate();
-  
-  
-  
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // WhatsApp specific routes
   const whatsAppRoutes = [
     { name: "Back to Owner", icon: "ni ni-bold-left", path: "/dashboard", layout: "/admin" },
-    { name: "Menus", icon: "ni ni-app", path: "/menus", layout: "/admin", dropdown: true, subRoutes: [
-      { name: "Menu Assign", path: "/Menus-assign", icon: "ni ni-key-25" },
-      { name: "Create Menus", path: "/Create-menus", icon: "ni ni-fat-add" }
-    ]},
+    {
+      name: "Menus",
+      icon: "ni ni-app",
+      path: "/menus",
+      layout: "/admin",
+      dropdown: true,
+      subRoutes: [
+        { name: "Menu Assign", path: "/Menus-assign", icon: "ni ni-key-25" },
+        { name: "Create Menus", path: "/Create-menus", icon: "ni ni-fat-add" },
+      ],
+    },
     { name: "Chats", icon: "ni ni-chat-round", path: "/chats", layout: "/admin" },
-    { name: "Agents", icon: "ni ni-circle-08", path: "/agents", layout: "/admin", dropdown: true, subRoutes: [
-      { name: "List", path: "/agentslist" },
-      { name: "Create Agent", path: "/createagents" , icon: "ni ni-circle-08 text-gray" }
-    ]},
-    { name: "Contacts", icon: "ni ni-single-02", path: "/contacts", layout: "/admin", dropdown: true, subRoutes: [
-      // { name: "List", path: "/contactslist" },
-      { name: "Group", path: "/contactsGroup" },
-      // { name: "Fields", path: "/contactsFields" },
-      // { name: "Import Fields", path: "/contactsImport" }
-    ]},
+    {
+      name: "Agents",
+      icon: "ni ni-circle-08",
+      path: "/agents",
+      layout: "/admin",
+      dropdown: true,
+      subRoutes: [
+        { name: "List", path: "/agentslist", icon: "fa fa-list" },
+        { name: "Create Agent", path: "/createagents", icon: "ni ni-circle-08 text-gray" },
+      ],
+    },
+    {
+      name: "Contacts",
+      icon: "ni ni-single-02",
+      path: "/contacts",
+      layout: "/admin",
+      dropdown: true,
+      subRoutes: [{ name: "Group", path: "/contactsGroup", icon: "fa fa-list" }],
+    },
     { name: "Templates", icon: "ni ni-single-copy-04", path: "/templates", layout: "/admin" },
     { name: "Campaign", icon: "ni ni-notification-70", path: "/campaign", layout: "/admin" },
     { name: "ChatBot", icon: "ni ni-settings-gear-65", path: "/chat-bot", layout: "/admin" },
     { name: "Generate Api Key", icon: "ni ni-key-25 text-gray", path: "/Api-key", layout: "/admin" },
   ];
 
-
   // Default routes
-  // Default routes
-const defaultRoutes = [
-  { name: "Dashboard", icon: "ni ni-tv-2", path: "/dashboard", layout: "/admin" },
-  { name: "Whatsapp", icon: "ni ni-chat-round", path: "/whatsapp", layout: "/admin", dropdown: true, subRoutes: [
-    { name: "List", path: "/whatsapplist" },
-    { name: "Add WhatsApp", path: "/addwhatsapp" }
-  ]},
-  { name: "WhatsApp Web", icon: "ni ni-world-2", path: "/whatsappweb", layout: "/admin" },
-  { name: "Profile", icon: "ni ni-single-02", path: "/profile", layout: "/admin" },
-  { name: "Login", icon: "ni ni-key-25", path: "/login", layout: "/auth" },
-  { name: "Register", icon: "ni ni-circle-08", path: "/register", layout: "/auth" },
-];
+  const defaultRoutes = [
+    { name: "Dashboard", icon: "ni ni-tv-2", path: "/dashboard", layout: "/admin" },
+    {
+      name: "Whatsapp",
+      icon: "ni ni-chat-round",
+      path: "/whatsapp",
+      layout: "/admin",
+      dropdown: true,
+      subRoutes: [
+        { name: "List", path: "/whatsapplist", icon: "fa fa-list" },
+        { name: "Add WhatsApp", path: "/addwhatsapp", icon: "fa fa-plus-circle" },
+      ],
+    },
+    { name: "WhatsApp Web", icon: "ni ni-world-2", path: "/whatsappweb", layout: "/admin" },
+    { name: "Profile", icon: "ni ni-single-02", path: "/profile", layout: "/admin" },
+    { name: "Login", icon: "ni ni-key-25", path: "/login", layout: "/auth" },
+    { name: "Register", icon: "ni ni-circle-08", path: "/register", layout: "/auth" },
+  ];
 
-  // Handle the log out process and show the success toast
+  // Handle logout
   const handleLogOut = () => {
-    localStorage.removeItem("token");
-    sessionStorage.removeItem("phoneId");
-    sessionStorage.removeItem("accountId");
-    sessionStorage.removeItem("accessToken");
-    sessionStorage.removeItem("callbackUrl");
+    const itemsToClear = ["token", "phoneId", "accountId", "accessToken", "callbackUrl"];
+    itemsToClear.forEach((item) => {
+      localStorage.removeItem(item);
+      sessionStorage.removeItem(item);
+    });
 
-    // Remove WhatsApp view state
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       localStorage.removeItem(`${token}_isWhatsAppView`);
     }
 
-    // Delay navigation for a short period to ensure session data is cleared first
     setTimeout(() => {
-        navigate("/auth/login");
-        toast.success("Logout Successfully");
-    }, 200);  // 200ms delay should be enough
-};
+      navigate("/auth/login");
+      toast.success("Logout Successfully");
+    }, 200);
+  };
 
-
-  // Check login status and WhatsApp view on mount or based on app logic
+  // Check login status and WhatsApp view
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
-  
-    // Check WhatsApp view state using token-specific key
+
     if (token) {
-      // Check both localStorage and route state
-      const whatsAppView = localStorage.getItem(`${token}_isWhatsAppView`) === 'true' || 
-                          location.state?.whatsAppView === true;
-      
+      const whatsAppView =
+        localStorage.getItem(`${token}_isWhatsAppView`) === "true" ||
+        location.state?.whatsAppView === true;
       if (whatsAppView) {
         setIsWhatsAppView(true);
-        // Ensure the state is saved in localStorage
-        localStorage.setItem(`${token}_isWhatsAppView`, 'true');
+        localStorage.setItem(`${token}_isWhatsAppView`, "true");
       }
     }
-  
-    // Reset WhatsApp view if on dashboard
-    if (location.pathname === '/admin/dashboard') {
+
+    if (location.pathname === "/admin/dashboard") {
       setIsWhatsAppView(false);
       if (token) {
         localStorage.removeItem(`${token}_isWhatsAppView`);
@@ -188,51 +133,26 @@ const defaultRoutes = [
     }
   }, [location, navigate]);
 
-
-  
-
-  const toggleCollapse = () => {
-    setCollapseOpen((data) => !data);
-  };
-
-  const closeCollapse = () => {
-    setCollapseOpen(false);
-  };
-
   const handleBackToOwner = () => {
-    const token = localStorage.getItem('token');
-    
-    
-    // Remove WhatsApp view state
+    const token = localStorage.getItem("token");
     if (token) {
       localStorage.removeItem(`${token}_isWhatsAppView`);
     }
-    
-    // Reset WhatsApp view state
     setIsWhatsAppView(false);
-    
-    // Close the collapse
-    closeCollapse();
-    
-    // Navigate to dashboard
     navigate("/admin/dashboard");
   };
 
   const createLinks = (routes) => {
     const currentRoutes = isWhatsAppView ? whatsAppRoutes : routes;
-  
+
     return currentRoutes
       .filter((prop) => {
-        // Hide Login/Register links when the user is logged in
         if (isLoggedIn && (prop.name === "Login" || prop.name === "Register")) {
           return false;
         }
-        
-        // Filter out routes marked as not to be shown in sidebar
         return prop.showInSidebar !== false;
       })
       .map((prop, key) => {
-        // Handle "Back to Owner" only when in WhatsApp view
         if (prop.name === "Back to Owner" && isWhatsAppView) {
           return (
             <NavItem key={key}>
@@ -241,15 +161,14 @@ const defaultRoutes = [
                 tag={NavLinkRRD}
                 onClick={handleBackToOwner}
                 className="text-primary"
-                        >
-                <i className={prop.icon} />
+              >
+                <i className={prop.icon} style={{ marginRight: "0.5rem" }} />
                 {prop.name}
               </NavLink>
             </NavItem>
           );
         }
-  
-        // Handle "Whatsapp" dropdown routes when not in WhatsApp view
+
         if (prop.name === "Whatsapp" && !isWhatsAppView) {
           return (
             <NavItem key={key}>
@@ -270,8 +189,7 @@ const defaultRoutes = [
             </NavItem>
           );
         }
-  
-        // Handle dropdown routes (Contacts, Agents, etc.)
+
         if (prop.dropdown) {
           return (
             <NavItem key={key}>
@@ -283,7 +201,7 @@ const defaultRoutes = [
                 <DropdownMenu className="dropdown-menu-arrow" right>
                   {prop.subRoutes.map((subRoute, subKey) => (
                     <DropdownItem to={prop.layout + subRoute.path} tag={Link} key={subKey}>
-                      <i className="fa fa-list mr-2" /> {subRoute.name}
+                      <i className={subRoute.icon || "fa fa-list mr-2"} /> {subRoute.name}
                     </DropdownItem>
                   ))}
                 </DropdownMenu>
@@ -291,16 +209,11 @@ const defaultRoutes = [
             </NavItem>
           );
         }
-  
-        // For all other regular routes
+
         return (
           <NavItem key={key}>
-            <NavLink
-              to={prop.layout + prop.path}
-              tag={NavLinkRRD}
-              onClick={closeCollapse}
-            >
-              <i className={prop.icon} />
+            <NavLink to={prop.layout + prop.path} tag={NavLinkRRD}>
+              <i className={prop.icon} style={{ marginRight: "0.5rem" }} />
               {prop.name}
             </NavLink>
           </NavItem>
@@ -308,7 +221,6 @@ const defaultRoutes = [
       });
   };
 
-  const { bgColor, routes = defaultRoutes, logo } = props;
   let navbarBrandProps;
   if (logo && logo.innerLink) {
     navbarBrandProps = {
@@ -323,64 +235,124 @@ const defaultRoutes = [
   }
 
   return (
-    <Navbar
-      className="navbar-vertical fixed-left navbar-light bg-white"
-      expand="md"
-      id="sidenav-main"
-      style={{
-        borderRight: '1px solid #e2e8f0'
-      }}
-    >
-      <Container fluid>
-        <button
-          className="navbar-toggler"
-          type="button"
-          onClick={toggleCollapse}
-        >
-          <span className="navbar-toggler-icon" />
-        </button>
-
-        {logo ? (
-          <NavbarBrand className="pt-0 pb-0" {...navbarBrandProps} style={{
-            height: '60px',
-            borderBottom: '1px solid #e2e8f0',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 1rem',
-            margin: 0
-          }}>
-            <div className="d-flex align-items-center side-responsive" style={{ marginRight: '0.5rem' }}>
-              <img
-                alt={logo.imgAlt}
-                className="navbar-brand-img"
-                src={require("../../assets/img/brand/free-waba-logo.png")}
-                style={{ height: "32px", width: "auto" }}
-              />
+    <>
+      {/* Mobile Overlay */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+          }}
+          onClick={toggleSidebar}
+        />
+      )}
+      
+      <Navbar
+        className="navbar-vertical navbar-light bg-white"
+        expand="md"
+        id="sidenav-main"
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "280px",
+          height: "100vh",
+          borderRight: "1px solid #e2e8f0",
+          zIndex: 1000,
+          transform: isSidebarOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.3s ease",
+          boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+          overflowY: "auto",
+          overflowX: "hidden"
+        }}
+      >
+        <Container fluid style={{ 
+          padding: 0, 
+          height: "100%", 
+          display: "flex", 
+          flexDirection: "column",
+          overflow: "hidden"
+        }}>
+          {logo ? (
+            <NavbarBrand
+              className="pt-0 pb-0"
+              {...navbarBrandProps}
+              style={{
+                height: "60px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                padding: "0 1rem",
+                margin: 0,
+                flexShrink: 0, // Prevent brand from shrinking
+              }}
+            >
+              <div className="d-flex align-items-center side-responsive" style={{ marginRight: "0.5rem" }}>
+                <img
+                  alt={logo.imgAlt}
+                  className="navbar-brand-img"
+                  src={logo.imgSrc}
+                  style={{ height: "32px", width: "auto" }}
+                />
+              </div>
+              <h2 className="mb-0" style={{ fontSize: "1.25rem", fontWeight: "600", lineHeight: "1", color: "#2d3748" }}>
+                CodoZap
+              </h2>
+            </NavbarBrand>
+          ) : null}
+          
+          <Nav
+            navbar
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              overflowX: "hidden",
+              padding: "1rem 0",
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+            }}>
+              {createLinks(routes)}
             </div>
-            <h2 className="mb-0" style={{ fontSize: '1.25rem', fontWeight: '600', lineHeight: '1' }}>CodoZap</h2>
-          </NavbarBrand>
-        ) : null}
-
-        <Collapse navbar isOpen={collapseOpen}>
-          <div className="navbar-collapse-header d-md-none">
-            <Row>
-              <Col className="collapse-close" xs="6">
-                <button
-                  className="navbar-toggler"
-                  type="button"
-                  onClick={toggleCollapse}
-                >
-                  <span />
-                  <span />
-                </button>
-              </Col>
-            </Row>
-          </div>
-
-          <Nav navbar>{createLinks(routes)}</Nav>
-        </Collapse>
-      </Container>
-    </Navbar>
+          </Nav>
+          
+          {isLoggedIn && (
+            <div style={{
+              padding: "1rem",
+              borderTop: "1px solid #e2e8f0",
+              flexShrink: 0,
+            }}>
+              <button
+                onClick={handleLogOut}
+                className="btn  btn-block"
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+background: "linear-gradient(135deg, #3487daff, #8b5cf6)",
+                  color: "#ffffff",
+                }}
+              >
+                <i className="ni ni-user-run" />
+                Logout
+              </button>
+            </div>
+          )}
+        </Container>
+      </Navbar>
+    </>
   );
 };
 
@@ -396,6 +368,8 @@ Sidebar.propTypes = {
     imgSrc: PropTypes.string.isRequired,
     imgAlt: PropTypes.string.isRequired,
   }),
+  isSidebarOpen: PropTypes.bool.isRequired,
+  toggleSidebar: PropTypes.func.isRequired,
 };
 
 export default Sidebar;
