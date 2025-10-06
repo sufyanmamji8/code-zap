@@ -324,9 +324,12 @@ const defaultRoutes = [
 
   return (
     <Navbar
-      className="navbar-vertical fixed-left navbar-light bg-white border"
+      className="navbar-vertical fixed-left navbar-light bg-white"
       expand="md"
       id="sidenav-main"
+      style={{
+        borderRight: '1px solid #e2e8f0'
+      }}
     >
       <Container fluid>
         <button
@@ -338,20 +341,23 @@ const defaultRoutes = [
         </button>
 
         {logo ? (
-          <NavbarBrand className="pt-0" {...navbarBrandProps}>
-            <div className="d-flex align-items-center">
-              <div className="d-flex align-items-center side-responsive">
+          <NavbarBrand className="pt-0 pb-0" {...navbarBrandProps} style={{
+            height: '60px',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 1rem',
+            margin: 0
+          }}>
+            <div className="d-flex align-items-center side-responsive" style={{ marginRight: '0.5rem' }}>
               <img
                 alt={logo.imgAlt}
-                className="navbar-brand-img mt-4"
+                className="navbar-brand-img"
                 src={require("../../assets/img/brand/free-waba-logo.png")}
-                style={{ height: "100%", width: "auto" }}
+                style={{ height: "32px", width: "auto" }}
               />
-              </div>
-              <h2 className="mt-4">CodoZap</h2>
-
             </div>
-
+            <h2 className="mb-0" style={{ fontSize: '1.25rem', fontWeight: '600', lineHeight: '1' }}>CodoZap</h2>
           </NavbarBrand>
         ) : null}
 

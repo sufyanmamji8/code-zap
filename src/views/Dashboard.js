@@ -231,7 +231,7 @@ const Dashboard = () => {
 
         <div className="meta-info mb-3">
           <small className="text-muted d-flex align-items-center">
-            <span className="me-2" role="img" aria-label="calendar"> 📅 </span>
+            <span className="me-2" role="img" aria-label="calendar"> 📅 &nbsp; </span>
              Created: {formatDate(account.createdAt)}
           </small>
         </div>

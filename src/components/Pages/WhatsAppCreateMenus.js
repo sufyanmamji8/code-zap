@@ -81,8 +81,7 @@ const styles = `
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: white;
   min-height: 100vh;
 }
 
@@ -407,7 +406,7 @@ body {
   color: white;
   border: none;
   border-radius: var(--radius-xl);
-  padding: var(--space-5) var(--space-8);
+  padding: 0.75rem;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;

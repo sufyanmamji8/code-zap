@@ -1,6 +1,5 @@
 import React from "react";
 import { useLocation, Route, Routes, Navigate } from "react-router-dom";
-import { Container } from "reactstrap";
 
 // core components
 import AuthNavbar from "components/Navbars/AuthNavbar.js";
@@ -13,13 +12,16 @@ const Auth = (props) => {
   const location = useLocation();
 
   React.useEffect(() => {
-    // Remove any background classes that might interfere
-    document.body.classList.remove("bg-default");
-    document.body.style.background = "transparent";
-    document.body.style.overflow = "hidden"; // Prevent body scroll
+    // Set consistent background for all auth pages
+    document.body.classList.add("bg-white");
+    document.body.style.background = "#fafbfc";
+    document.body.style.margin = "0";
+    document.body.style.padding = "0";
+    document.body.style.overflow = "hidden";
     
     return () => {
-      document.body.style.overflow = "auto"; // Restore scroll when leaving
+      document.body.classList.remove("bg-white");
+      document.body.style.overflow = "auto";
     };
   }, []);
   
@@ -45,56 +47,65 @@ const Auth = (props) => {
 
   return (
     <>
-      <div className="main-content" ref={mainContent} style={{ 
-        background: "transparent", 
-        minHeight: "100vh",
-        overflow: "hidden"
-      }}>
-        <AuthNavbar />
-        <Container fluid className="auth-container-custom" style={{ 
-          padding: 0, 
-          margin: 0,
+      <div 
+        className="main-content" 
+        ref={mainContent} 
+        style={{ 
+          background: "#fafbfc",
+          minHeight: "100vh",
           height: "100vh",
+          width: "100vw",
+          margin: 0,
+          padding: 0,
+          overflow: "hidden"
+        }}
+      >
+        {/* Remove Container component completely to avoid any padding/margin issues */}
+        <div style={{ 
+          height: "100vh",
+          width: "100vw",
+          margin: 0,
+          padding: 0,
           overflow: "hidden"
         }}>
           <Routes>
             {getRoutes(routes)}
             <Route path="*" element={<Navigate to="/auth/login" replace />} />
           </Routes>
-        </Container>
+        </div>
       </div>
-      <AuthFooter />
+      
+      {/* Remove footer if it's causing layout issues */}
+      {/* <AuthFooter /> */}
       
       <style>
         {`
         body {
-          margin: 0;
-          padding: 0;
-          background: transparent !important;
-          overflow: hidden;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fafbfc !important;
+          overflow: hidden !important;
+          height: 100vh !important;
+          width: 100vw !important;
+        }
+        
+        html, #root {
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          height: 100vh !important;
+          width: 100vw !important;
         }
         
         .main-content {
-          background: transparent !important;
+          background: #fafbfc !important;
         }
         
-        .auth-container-custom {
-          background: transparent !important;
-        }
-        
-        /* Remove any default styles that might be interfering */
-        .bg-default {
-          background: transparent !important;
-        }
-        
-        .fill-default {
-          fill: transparent !important;
-        }
-        
-        /* Ensure no scroll bars */
-        html, body, #root {
-          overflow: hidden !important;
-          height: 100vh !important;
+        /* Remove any bootstrap container styles */
+        .container, .container-fluid {
+          margin: 0 !important;
+          padding: 0 !important;
+          max-width: none !important;
         }
         `}
       </style>

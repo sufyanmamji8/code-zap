@@ -245,20 +245,16 @@ const WhatsAppChats = () => {
     }
   };
 
-  // Auto-scroll to bottom when messages load
+  // Auto-scroll to bottom when messages load - instant, no animation
   useEffect(() => {
     if (messages.length > 0 && chatEndRef.current) {
-      setTimeout(() => {
-        if (chatEndRef.current) {
-          chatEndRef.current.scrollIntoView({ behavior: "smooth" });
-        }
-      }, 100);
+      // Use instant scroll, no smooth behavior
+      chatEndRef.current.scrollIntoView({ behavior: "auto", block: "end" });
     }
   }, [messages]);
 
   const fetchMessages = async (contactPhoneNumber) => {
     if (!businessId || !contactPhoneNumber) return;
-
     try {
       setLoading(true);
       const response = await axios.post(
@@ -867,7 +863,7 @@ const WhatsAppChats = () => {
       className="d-flex flex-column"
       style={{
         backgroundColor: "#f0f4f8",
-        height: "100%",
+        height: "calc(100vh - 120px)",
         padding: "10px",
         position: "relative",
         overflow: "hidden",
@@ -955,8 +951,6 @@ const WhatsAppChats = () => {
           msOverflowStyle: "none",
           scrollbarWidth: "none",
           WebkitOverflowScrolling: "touch",
-          height: "calc(100% - 130px)",
-          maxHeight: "100%",
           position: "relative"
         }}
       >
@@ -984,13 +978,14 @@ const WhatsAppChats = () => {
           return (
             <div
               key={contact.phoneNumber || Math.random()}
-              onClick={() =>
+              onClick={(e) => {
+                e.preventDefault();
                 setSelectedUser({
                   ...contact,
                   senderName: displayName,
                   flag: country?.flag || "🌐",
-                })
-              }
+                });
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -1206,11 +1201,10 @@ const WhatsAppChats = () => {
         xs="12"
         md="8"
         style={{
-          height: "calc(100vh - 100px)",
+          height: "calc(100vh - 120px)",
           padding: 0,
           display: "flex",
           flexDirection: "column",
-          backgroundColor: "#f4f8fb",
           position: "relative",
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='64' height='64' viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 16c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zm33.414-6l5.95-5.95L45.95.636 40 6.586 34.05.636 32.636 2.05 38.586 8l-5.95 5.95 1.414 1.414L40 9.414l5.95 5.95 1.414-1.414L41.414 8zM40 48c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm0-2c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6zM9.414 40l5.95-5.95-1.414-1.414L8 38.586l-5.95-5.95L.636 34.05 6.586 40l-5.95 5.95 1.414 1.414L8 41.414l5.95 5.95 1.414-1.414L9.414 40z' fill='%239C92AC' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`,
           backgroundColor: "#efeae2",
@@ -1224,6 +1218,7 @@ const WhatsAppChats = () => {
               padding: "10px 20px",
               backgroundColor: "rgb(0, 168, 132)",
               borderBottom: "1px solid rgb(224, 224, 224)",
+              flexShrink: 0,
             }}
             className="user_select"
           >
@@ -1282,7 +1277,6 @@ const WhatsAppChats = () => {
                 flex: 1,
                 padding: "20px",
                 overflowY: "auto",
-                marginBottom: isMobileView ? "60px" : 0,
                 msOverflowStyle: "none",
                 scrollbarWidth: "none",
                 position: "relative",
@@ -1363,14 +1357,9 @@ const WhatsAppChats = () => {
 
             <div
               style={{
-                padding: "5px 4px",
-                position: isMobileView ? "fixed" : "relative",
-                bottom: 0,
-                left: isMobileView ? 0 : "auto",
-                right: isMobileView ? 0 : "auto",
-                width: isMobileView ? "100%" : "auto",
-                zIndex: 2,
-                backgroundColor: "transparent",
+                padding: "10px 15px",
+                backgroundColor: "#f0f2f5",
+                flexShrink: 0,
               }}
             >
               <div
@@ -1520,11 +1509,12 @@ const WhatsAppChats = () => {
   return (
     <div
       style={{
-        height: "85vh",
+        minHeight: "calc(100vh - 100px)",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
         position: "relative",
+        paddingTop: "80px",
       }}
     >
       <style>
@@ -1539,17 +1529,17 @@ const WhatsAppChats = () => {
         `}
       </style>
       {renderNewChatModal()}
-     <Container
-  fluid
-  style={{
-    marginTop: "5rem",
-    flex: 1,
-    padding: "18px 15px 0 15px",
-    minHeight: 0,
-    zIndex: 1,
-  }}
->
-        <Row style={{ height: "100%" }}>
+      <Container
+        fluid
+        style={{
+          flex: 1,
+          padding: "0",
+          minHeight: 0,
+          height: "100%",
+          marginTop: "0",
+        }}
+      >
+        <Row style={{ height: "100%", margin: 0 }}>
           {(!selectedUser || !isMobileView) && renderUserList()}
           {(selectedUser || !isMobileView) && renderChatWindow()}
         </Row>

@@ -70,14 +70,13 @@
 
 }
 
+
 .navbar-top .container-fluid {
-    justify-content: end;
+    justify-content: space-between;
 }
 .navbar-top .container-fluid > a {
     display: none !important;
 }
-
-
 /* .navbar-dark {
     margin: 11px 0 0;
 } */

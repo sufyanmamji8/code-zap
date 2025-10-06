@@ -33,13 +33,13 @@ const Login = () => {
   const submitHandler = async (e) => {
     e.preventDefault();
     setLoading(true);
-  
+
     if (!input.loginEmail || !input.loginPassword) {
       toast.error("Email and password are required.");
       setLoading(false);
       return;
     }
-  
+
     try {
       const res = await axios.post(`${USER_API_ENDPOINT}/login`, {
         email: input.loginEmail,
@@ -50,7 +50,7 @@ const Login = () => {
         },
         withCredentials: true,
       });
-  
+
       if (res.data.success) {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("fullName", res.data.user.fullname);
@@ -89,7 +89,7 @@ const Login = () => {
           />
         </div>
       )}
-      
+
       <div className="login-page-wrapper">
         <Row className="login-main-row">
           {/* Form Section */}
@@ -99,7 +99,7 @@ const Login = () => {
                 <h2 className="login-title">Welcome Back</h2>
                 <p className="login-subtitle">Sign in to your account to continue</p>
               </div>
-              
+
               <Form role="form" onSubmit={submitHandler} className="login-form">
                 <FormGroup className="login-form-group">
                   <InputGroup className="login-input-group">
@@ -161,8 +161,8 @@ const Login = () => {
 
                 <div className="login-signup-link">
                   <span>Don't have an account? </span>
-                  <a 
-                    href="#signup" 
+                  <a
+                    href="#signup"
                     onClick={(e) => {
                       e.preventDefault();
                       navigate("/auth/register");
@@ -178,12 +178,20 @@ const Login = () => {
           {/* Image Section */}
           <Col lg="6" md="6" className="login-image-section">
             <div className="login-image-content">
-              <div className="login-image-icon">
-                <i className="ni ni-lock-circle-open" />
+              <div className="floating-shapes">
+                <div className="shape shape-1"></div>
+                <div className="shape shape-2"></div>
+                <div className="shape shape-3"></div>
+                <div className="shape shape-4"></div>
               </div>
-              <h3 className="login-image-title">Secure Access</h3>
+             <img
+  src="/undraw_sign-in_uva0.svg"
+  alt="Create Account"
+  className="login-illustration-img" // ← CHANGE FROM register-illustration-img TO login-illustration-img
+/>
+              <h3 className="login-image-title">Welcome to CodoZap</h3>
               <p className="login-image-text">
-                Access your account securely with our enterprise-grade authentication system. 
+                Access your account securely with our enterprise-grade authentication system.
                 Your data is protected with the highest security standards.
               </p>
               <div className="login-features">
@@ -207,53 +215,107 @@ const Login = () => {
 
       <style>
         {`
-        .login-page-wrapper {
-          height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0;
-          margin: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-          overflow: hidden;
-          background: transparent;
-        }
+      .login-page-wrapper {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #ffffff;
+}
+
 
         .login-main-row {
           width: 100%;
           height: 100vh;
           margin: 0;
           align-items: stretch;
-          border-radius: 0;
-          box-shadow: none;
           overflow: hidden;
-          background: transparent;
         }
-
-        .login-form-section {
-          padding: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: transparent;
-        }
+.login-form-section {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff; /* ← CHANGE FROM #fafbfc TO #ffffff */
+}
 
         .login-image-section {
           padding: 0;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f8fafc;
-          color: #2d3748;
-          border-left: 1px solid #e2e8f0;
+          background: linear-gradient(135deg, #47a0dcff 0%, #9599E2 100%);
+          color: white;
+          position: relative;
+          overflow: hidden;
         }
 
-        .login-form-container {
+        .floating-shapes {
+          position: absolute;
+          top: 0;
+          left: 0;
           width: 100%;
-          max-width: 400px;
-          padding: 2.5rem;
-          background: transparent;
+          height: 100%;
+          pointer-events: none;
         }
+
+        .shape {
+          position: absolute;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.15);
+          animation: float 6s ease-in-out infinite;
+        }
+
+        .shape-1 {
+          width: 120px;
+          height: 120px;
+          top: 15%;
+          left: 10%;
+          animation-delay: 0s;
+        }
+
+        .shape-2 {
+          width: 80px;
+          height: 80px;
+          bottom: 25%;
+          right: 15%;
+          animation-delay: 2s;
+        }
+
+        .shape-3 {
+          width: 100px;
+          height: 100px;
+          top: 60%;
+          left: 20%;
+          animation-delay: 4s;
+        }
+
+        .shape-4 {
+          width: 60px;
+          height: 60px;
+          top: 25%;
+          right: 25%;
+          animation-delay: 1s;
+        }
+
+        @keyframes float {
+          0%, 100% { 
+            transform: translateY(0px) rotate(0deg); 
+          }
+          50% { 
+            transform: translateY(-25px) rotate(10deg); 
+          }
+        }
+
+       .login-form-container {
+  width: 100%;
+  max-width: 500px;
+  padding: 3rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: none; 
+}
 
         .login-form-header {
           text-align: center;
@@ -261,17 +323,22 @@ const Login = () => {
         }
 
         .login-title {
-          font-size: 2rem;
+          font-size: 2.25rem;
           font-weight: 700;
-          color: #1a202c;
-          margin-bottom: 0.5rem;
+          color: #446483ff;
+          margin-bottom: 0.75rem;
+          background: linear-gradient(135deg, #47a0dcff 0%, #9599E2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .login-subtitle {
-          color: #718096;
-          font-size: 1rem;
+          color: #7f8c8d;
+          font-size: 1.1rem;
           margin: 0;
           font-weight: 400;
+          line-height: 1.6;
         }
 
         .login-form {
@@ -283,38 +350,39 @@ const Login = () => {
         }
 
         .login-input-group {
-          border: 1.5px solid #e2e8f0;
-          border-radius: 8px;
+          border: 2px solid #e8f4fe;
+          border-radius: 12px;
           overflow: hidden;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
           background: white;
         }
 
         .login-input-group:focus-within {
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          border-color: #8BC6EC;
+          box-shadow: 0 0 0 4px rgba(139, 198, 236, 0.15);
+          transform: translateY(-2px);
         }
 
         .login-input-icon {
-          background: #f8fafc;
+          background: #f8fbfe;
           border: none;
-          color: #667eea;
-          padding: 0.875rem 1rem;
-          border-right: 1.5px solid #e2e8f0;
+          color: #8BC6EC;
+          padding: 1rem 1.25rem;
+          border-right: 2px solid #e8f4fe;
         }
 
         .login-form-input {
           border: none;
           background: white;
-          padding: 0.875rem 1rem;
-          font-size: 0.95rem;
-          color: #2d3748;
+          padding: 1rem 1.25rem;
+          font-size: 1rem;
+          color: #2c3e50;
           font-weight: 500;
           width: 100%;
         }
 
         .login-form-input::placeholder {
-          color: #a0aec0;
+          color: #bdc3c7;
           font-weight: 400;
         }
 
@@ -339,51 +407,53 @@ const Login = () => {
         }
 
         .login-checkbox {
-          margin-right: 0.5rem;
-          transform: scale(1.1);
-          accent-color: #667eea;
+          margin-right: 0.75rem;
+          transform: scale(1.2);
+          accent-color: #8BC6EC;
           cursor: pointer;
         }
 
         .login-checkbox-label {
-          color: #4a5568;
-          font-size: 0.9rem;
+          color: #7f8c8d;
+          font-size: 0.95rem;
           margin: 0;
           cursor: pointer;
           font-weight: 500;
         }
 
         .login-forgot-link {
-          color: #667eea;
+          color: #8BC6EC;
           text-decoration: none;
-          font-size: 0.9rem;
+          font-size: 0.95rem;
           white-space: nowrap;
           font-weight: 500;
           transition: color 0.2s ease;
         }
 
         .login-forgot-link:hover {
-          color: #5a67d8;
+          color: #7ab5e0;
           text-decoration: underline;
         }
 
         .login-submit-btn {
           width: 100%;
-          background: #667eea;
+          background: linear-gradient(135deg, #47a0dcff 0%, #9599E2 100%);
           border: none;
-          border-radius: 8px;
-          padding: 1rem 1.5rem;
+          border-radius: 12px;
+          padding: 0.7rem 0.7rem;
           font-weight: 600;
-          font-size: 1rem;
+          font-size: 1.1rem;
           color: white;
           margin-bottom: 2rem;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
           cursor: pointer;
+          position: relative;
+          overflow: hidden;
         }
 
         .login-submit-btn:hover:not(:disabled) {
-          background: #5a67d8;
-          transform: translateY(-1px);
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(139, 198, 236, 0.3);
         }
 
         .login-submit-btn:disabled {
@@ -394,47 +464,58 @@ const Login = () => {
 
         .login-signup-link {
           text-align: center;
-          color: #718096;
-          font-size: 0.9rem;
+          color: #7f8c8d;
+          font-size: 1rem;
           font-weight: 500;
         }
 
         .login-signup-link a {
-          color: #667eea;
+          color: #8BC6EC;
           text-decoration: none;
           font-weight: 600;
           transition: color 0.2s ease;
         }
 
         .login-signup-link a:hover {
-          color: #5a67d8;
+          color: #7ab5e0;
           text-decoration: underline;
         }
 
         .login-image-content {
-          max-width: 380px;
-          padding: 2.5rem;
+          max-width: 500px;
+          padding: 3rem;
           text-align: center;
+          position: relative;
+          z-index: 2;
         }
+.login-illustration {
+  margin-bottom: 2rem;
+}
 
-        .login-image-icon {
-          font-size: 3rem;
-          margin-bottom: 1.5rem;
-          color: #667eea;
-        }
+.login-illustration-img {
+  width: 100%;
+  max-width: 300px !important; /* Force this value */
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease;
+}
 
+.login-illustration-img:hover {
+  transform: scale(1.02);
+}
         .login-image-title {
-          font-size: 1.5rem;
+          font-size: 2rem;
           font-weight: 700;
-          margin-bottom: 1rem;
-          color: #2d3748;
+          margin-bottom: 1.5rem;
+          color: white;
         }
 
         .login-image-text {
-          color: #718096;
-          line-height: 1.6;
-          margin-bottom: 2rem;
-          font-size: 0.95rem;
+          opacity: 0.95;
+          line-height: 1.7;
+          margin-bottom: 2.5rem;
+          font-size: 1.1rem;
           font-weight: 400;
         }
 
@@ -445,16 +526,23 @@ const Login = () => {
         .login-feature {
           display: flex;
           align-items: center;
-          margin-bottom: 0.75rem;
-          color: #4a5568;
-          font-size: 0.9rem;
-          font-weight: 500;
+          margin-bottom: 1rem;
+          opacity: 0.95;
+          font-size: 1.05rem;
+          transition: transform 0.2s ease;
+        }
+
+        .login-feature:hover {
+          transform: translateX(5px);
         }
 
         .login-feature i {
-          margin-right: 0.75rem;
-          font-size: 1rem;
-          color: #48bb78;
+          margin-right: 1rem;
+          font-size: 1.2rem;
+          color: #a8e6cf;
+          background: rgba(168, 230, 207, 0.15);
+          padding: 0.5rem;
+          border-radius: 50%;
         }
 
         .login-loading-overlay {
@@ -478,7 +566,7 @@ const Login = () => {
         /* Mobile Responsive */
         @media (max-width: 768px) {
           .login-page-wrapper {
-            padding: 0;
+            height: 100vh;
           }
 
           .login-main-row {
@@ -495,11 +583,12 @@ const Login = () => {
 
           .login-form-container {
             max-width: 100%;
-            padding: 2rem 1.5rem;
+            padding: 2rem;
+            margin: 1rem;
           }
 
           .login-title {
-            font-size: 1.75rem;
+            font-size: 2rem;
           }
 
           .login-options {
@@ -511,25 +600,25 @@ const Login = () => {
 
         @media (max-width: 576px) {
           .login-form-container {
-            padding: 1.5rem 1rem;
+            padding: 1.5rem;
           }
 
           .login-title {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
           }
 
           .login-form-input {
-            padding: 0.75rem 0.875rem;
-            font-size: 0.9rem;
+            padding: 0.875rem 1rem;
+            font-size: 0.95rem;
           }
 
           .login-input-icon {
-            padding: 0.75rem 0.875rem;
+            padding: 0.875rem 1rem;
           }
 
           .login-submit-btn {
-            padding: 0.875rem 1.25rem;
-            font-size: 0.9rem;
+            padding: 1rem 1.25rem;
+            font-size: 1rem;
           }
         }
         `}

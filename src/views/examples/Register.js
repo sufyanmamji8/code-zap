@@ -116,9 +116,9 @@ const Register = () => {
       <div className="register-page-wrapper">
         <Row className="register-main-row">
           {/* Form Section */}
-          <Col lg="6" md="6" className="register-form-section mt-6">
+          <Col lg="6" md="6" className="register-form-section">
             <div className="register-form-container">
-              <div className="register-form-header ">
+              <div className="register-form-header">
                 <h2 className="register-title">Create Account</h2>
                 <p className="register-subtitle">Get started with your free account today</p>
               </div>
@@ -279,10 +279,21 @@ const Register = () => {
           {/* Image Section */}
           <Col lg="6" md="6" className="register-image-section">
             <div className="register-image-content">
-              <div className="register-image-icon">
-                <i className="ni ni-collection" />
+              <div className="floating-shapes">
+                <div className="shape shape-1"></div>
+                <div className="shape shape-2"></div>
+                <div className="shape shape-3"></div>
+                <div className="shape shape-4"></div>
               </div>
-              <h3 className="register-image-title">Start Your Journey</h3>
+              <div className="register-illustration">
+                <img 
+                                   src="/undraw_authentication_tbfc.svg"
+
+                  alt="Create Account" 
+                  className="register-illustration-img"
+                />
+              </div>
+              <h3 className="register-image-title">Start Your Codozap Journey</h3>
               <p className="register-image-text">
                 Join thousands of users who trust our platform. 
                 Create your account today and unlock all the features 
@@ -311,14 +322,11 @@ const Register = () => {
         {`
         .register-page-wrapper {
           height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0;
+          width: 100vw;
           margin: 0;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+          padding: 0;
           overflow: hidden;
-          background: transparent;
+          background: #ffffff;
         }
 
         .register-main-row {
@@ -326,10 +334,7 @@ const Register = () => {
           height: 100vh;
           margin: 0;
           align-items: stretch;
-          border-radius: 0;
-          box-shadow: none;
           overflow: hidden;
-          background: transparent;
         }
 
         .register-form-section {
@@ -337,7 +342,7 @@ const Register = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: transparent;
+          background: #ffffff;
         }
 
         .register-image-section {
@@ -345,35 +350,98 @@ const Register = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f8fafc;
-          color: #2d3748;
-          border-left: 1px solid #e2e8f0;
+          background: linear-gradient(135deg, #47a0dcff 0%, #9599E2 100%);
+          color: white;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .floating-shapes {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+        }
+
+        .shape {
+          position: absolute;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.15);
+          animation: float 6s ease-in-out infinite;
+        }
+
+        .shape-1 {
+          width: 120px;
+          height: 120px;
+          top: 15%;
+          left: 10%;
+          animation-delay: 0s;
+        }
+
+        .shape-2 {
+          width: 80px;
+          height: 80px;
+          bottom: 25%;
+          right: 15%;
+          animation-delay: 2s;
+        }
+
+        .shape-3 {
+          width: 100px;
+          height: 100px;
+          top: 60%;
+          left: 20%;
+          animation-delay: 4s;
+        }
+
+        .shape-4 {
+          width: 60px;
+          height: 60px;
+          top: 25%;
+          right: 25%;
+          animation-delay: 1s;
+        }
+
+        @keyframes float {
+          0%, 100% { 
+            transform: translateY(0px) rotate(0deg); 
+          }
+          50% { 
+            transform: translateY(-25px) rotate(10deg); 
+          }
         }
 
         .register-form-container {
           width: 100%;
-          max-width: 450px;
-          padding: 2.5rem;
-          background: transparent;
-          overflow-y: auto;
-          max-height: 100vh;
+          max-width: 470px;
+          padding: 2rem;
+          background: #ffffff;
+          border-radius: 20px;
+          box-shadow: none;
+          overflow: hidden;
         }
 
         .register-form-header {
           text-align: center;
-          margin-bottom: 2.5rem;
+          margin-bottom: 2rem;
         }
 
         .register-title {
-          font-size: 2rem;
+          font-size: 2.25rem;
           font-weight: 700;
-          color: #1a202c;
+          color: #2c3e50;
           margin-bottom: 0.5rem;
+          background: linear-gradient(135deg, #47a0dcff 0%, #9599E2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .register-subtitle {
-          color: #718096;
-          font-size: 1rem;
+          color: #7f8c8d;
+          font-size: 1.1rem;
           margin: 0;
           font-weight: 400;
         }
@@ -383,50 +451,51 @@ const Register = () => {
         }
 
         .register-form-group {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1.25rem;
         }
 
         .register-form-label {
           display: block;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           font-weight: 600;
-          color: #374151;
+          color: #2c3e50;
           margin-bottom: 0.5rem;
         }
 
         .register-input-group {
-          border: 1.5px solid #e2e8f0;
-          border-radius: 8px;
+          border: 1.5px solid #e8f4fe;
+          border-radius: 10px;
           overflow: hidden;
           transition: all 0.2s ease;
           background: white;
         }
 
         .register-input-group:focus-within {
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          border-color: #8BC6EC;
+          box-shadow: 0 0 0 3px rgba(139, 198, 236, 0.15);
         }
 
         .register-input-icon {
-          background: #f8fafc;
+          background: #f8fbfe;
           border: none;
-          color: #667eea;
-          padding: 0.875rem 1rem;
-          border-right: 1.5px solid #e2e8f0;
+          color: #8BC6EC;
+          padding: 0.75rem 1rem;
+          border-right: 1.5px solid #e8f4fe;
         }
 
         .register-form-input {
           border: none;
+                    font-size: 1rem;
+
           background: white;
-          padding: 0.875rem 1rem;
-          font-size: 0.95rem;
-          color: #2d3748;
+          padding: 0.75rem 1rem;
+          color: #2c3e50;
           font-weight: 500;
           width: 100%;
         }
 
         .register-form-input::placeholder {
-          color: #a0aec0;
+          color: #bdc3c7;
           font-weight: 400;
         }
 
@@ -437,17 +506,17 @@ const Register = () => {
         }
 
         .register-form-input-standalone {
-          border: 1.5px solid #e2e8f0;
-          border-radius: 8px;
-          padding: 0.875rem 1rem;
-          font-size: 0.95rem;
+          border: 1.5px solid #e8f4fe;
+          border-radius: 10px;
+          padding: 0.75rem 1rem;
+          font-size: 0.875rem;
           transition: all 0.2s ease;
           background: white;
         }
 
         .register-form-input-standalone:focus {
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          border-color: #8BC6EC;
+          box-shadow: 0 0 0 3px rgba(139, 198, 236, 0.15);
           background: white;
         }
 
@@ -458,58 +527,58 @@ const Register = () => {
         .register-dropdown-toggle {
           width: 100%;
           background: white;
-          border: 1.5px solid #e2e8f0;
-          color: #374151;
+          border: 1.5px solid #e8f4fe;
+          color: #2c3e50;
           text-align: left;
-          border-radius: 8px;
-          padding: 0.875rem 1rem;
-          font-size: 0.95rem;
+          border-radius: 10px;
+          padding: 0.75rem 1rem;
+          font-size: 0.875rem;
           font-weight: 500;
           transition: all 0.2s ease;
         }
 
         .register-dropdown-toggle:focus {
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          border-color: #8BC6EC;
+          box-shadow: 0 0 0 3px rgba(139, 198, 236, 0.15);
         }
 
         .register-dropdown-menu {
           width: 100%;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 8px;
+          border: 1.5px solid #e8f4fe;
+          border-radius: 10px;
           margin-top: 0.25rem;
           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
 
         .register-dropdown-menu .dropdown-item {
           padding: 0.75rem 1rem;
-          font-size: 0.9rem;
-          color: #374151;
+          font-size: 0.95rem;
+          color: #2c3e50;
           transition: all 0.2s ease;
         }
 
         .register-dropdown-menu .dropdown-item:hover {
-          background: #f7fafc;
-          color: #667eea;
+          background: #f8fbfe;
+          color: #8BC6EC;
         }
 
         .register-submit-btn {
           width: 100%;
-          background: #667eea;
+          background: linear-gradient(135deg, #47a0dcff 0%, #9599E2 100%);
           border: none;
-          border-radius: 8px;
-          padding: 1rem 1.5rem;
+          border-radius: 10px;
+          padding: 0.875rem 1.5rem;
           font-weight: 600;
-          font-size: 1rem;
+          font-size: 1.1rem;
           color: white;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
           transition: all 0.2s ease;
           cursor: pointer;
         }
 
         .register-submit-btn:hover:not(:disabled) {
-          background: #5a67d8;
-          transform: translateY(-1px);
+          transform: translateY(-2px);
+          box-shadow: 0 10px 25px rgba(139, 198, 236, 0.3);
         }
 
         .register-submit-btn:disabled {
@@ -520,47 +589,61 @@ const Register = () => {
 
         .register-login-link {
           text-align: center;
-          color: #718096;
-          font-size: 0.9rem;
+          color: #7f8c8d;
+          font-size: 0.85rem;
           font-weight: 500;
         }
 
         .register-link-accent {
-          color: #667eea;
+          color: #8BC6EC;
           text-decoration: none;
           font-weight: 600;
           transition: color 0.2s ease;
         }
 
         .register-link-accent:hover {
-          color: #5a67d8;
+          color: #7ab5e0;
           text-decoration: underline;
         }
 
         .register-image-content {
           max-width: 400px;
-          padding: 2.5rem;
+          padding: 2rem;
           text-align: center;
+          position: relative;
+          z-index: 2;
         }
 
-        .register-image-icon {
-          font-size: 3rem;
-          margin-bottom: 1.5rem;
-          color: #667eea;
-        }
+.register-illustration {
+  margin-bottom: 1.5rem;
+}
+
+.register-illustration-img {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  border-radius: 15px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease;
+  background: transparent; /* Ensures no background color is applied */
+}
+
+.register-illustration-img:hover {
+  transform: scale(1.02);
+}
 
         .register-image-title {
-          font-size: 1.5rem;
+          font-size: 2rem;
           font-weight: 700;
           margin-bottom: 1rem;
-          color: #2d3748;
+          color: white;
         }
 
         .register-image-text {
-          color: #718096;
+          opacity: 0.95;
           line-height: 1.6;
           margin-bottom: 2rem;
-          font-size: 0.95rem;
+          font-size: 1.05rem;
           font-weight: 400;
         }
 
@@ -572,15 +655,23 @@ const Register = () => {
           display: flex;
           align-items: center;
           margin-bottom: 0.75rem;
-          color: #4a5568;
-          font-size: 0.9rem;
+          color: white;
+          font-size: 1.05rem;
           font-weight: 500;
+          transition: transform 0.2s ease;
+        }
+
+        .register-feature:hover {
+          transform: translateX(5px);
         }
 
         .register-feature i {
           margin-right: 0.75rem;
-          font-size: 1rem;
-          color: #48bb78;
+          font-size: 0.9rem;
+          color: #a8e6cf;
+          background: rgba(168, 230, 207, 0.15);
+          padding: 0.4rem;
+          border-radius: 50%;
         }
 
         .register-loading-overlay {
@@ -597,14 +688,14 @@ const Register = () => {
         }
 
         .register-lottie-animation {
-          width: 120px;
-          height: 120px;
+          width: 100px;
+          height: 100px;
         }
 
         /* Mobile Responsive */
         @media (max-width: 768px) {
           .register-page-wrapper {
-            padding: 0;
+            height: 100vh;
           }
 
           .register-main-row {
@@ -621,45 +712,61 @@ const Register = () => {
 
           .register-form-container {
             max-width: 100%;
-            padding: 2rem 1.5rem;
-          }
-
-          .register-title {
-            font-size: 1.75rem;
-          }
-        }
-
-        @media (max-width: 576px) {
-          .register-form-container {
-            padding: 1.5rem 1rem;
+            padding: 1.5rem;
+            margin: 1rem;
           }
 
           .register-title {
             font-size: 1.5rem;
           }
+        }
+
+        @media (max-width: 576px) {
+          .register-form-container {
+            padding: 1.25rem;
+          }
+
+          .register-title {
+            font-size: 1.375rem;
+          }
 
           .register-form-input {
-            padding: 0.75rem 0.875rem;
-            font-size: 0.9rem;
+            padding: 0.675rem 0.875rem;
+            font-size: 0.85rem;
           }
 
           .register-input-icon {
-            padding: 0.75rem 0.875rem;
+            padding: 0.675rem 0.875rem;
           }
 
           .register-form-input-standalone {
-            padding: 0.75rem 0.875rem;
-            font-size: 0.9rem;
+            padding: 0.675rem 0.875rem;
+            font-size: 0.85rem;
           }
 
           .register-dropdown-toggle {
-            padding: 0.75rem 0.875rem;
-            font-size: 0.9rem;
+            padding: 0.675rem 0.875rem;
+            font-size: 0.85rem;
           }
 
           .register-submit-btn {
-            padding: 0.875rem 1.25rem;
-            font-size: 0.9rem;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.85rem;
+          }
+        }
+
+        /* Extra small devices */
+        @media (max-width: 400px) {
+          .register-form-container {
+            padding: 1rem;
+          }
+
+          .register-title {
+            font-size: 1.25rem;
+          }
+
+          .register-subtitle {
+            font-size: 0.8rem;
           }
         }
         `}
